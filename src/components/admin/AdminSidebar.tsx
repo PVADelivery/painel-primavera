@@ -8,7 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-const items = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+const items: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/deliveries", label: "Corridas", icon: Truck },
   { to: "/admin/chat", label: "Chat", icon: MessageSquare },
@@ -16,7 +17,7 @@ const items = [
   { to: "/admin/drivers", label: "Entregadores", icon: Bike },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
   { to: "/admin/reports", label: "Financeiro", icon: DollarSign },
-] as const;
+];
 
 export function AdminSidebar() {
   const { profile, signOut } = useAuth();
