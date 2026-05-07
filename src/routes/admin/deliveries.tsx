@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card } from "@/components/admin/StatsCard";
+
 import { useDeliveries } from "@/services/deliveries";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
