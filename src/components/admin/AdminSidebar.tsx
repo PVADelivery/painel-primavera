@@ -48,7 +48,7 @@ export function AdminSidebar() {
           return (
             <Link
               key={item.to}
-              to={item.to}
+              to={item.to as "/admin"}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
