@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_clips: {
+        Row: {
+          added_at: string
+          album_id: string
+          clip_id: string
+        }
+        Insert: {
+          added_at?: string
+          album_id: string
+          clip_id: string
+        }
+        Update: {
+          added_at?: string
+          album_id?: string
+          clip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_clips_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_clips_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "clips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      albums: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          id: string
+          is_system: boolean
+          name: string
+          owner_id: string
+          system_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name: string
+          owner_id: string
+          system_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name?: string
+          owner_id?: string
+          system_key?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           body: string
@@ -40,6 +106,56 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      clips: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          favorite: boolean
+          game_id: string | null
+          id: string
+          liked: boolean
+          owner_id: string
+          thumbnail_url: string | null
+          title: string
+          video_url: string | null
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          favorite?: boolean
+          game_id?: string | null
+          id?: string
+          liked?: boolean
+          owner_id: string
+          thumbnail_url?: string | null
+          title: string
+          video_url?: string | null
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          favorite?: boolean
+          game_id?: string | null
+          id?: string
+          liked?: boolean
+          owner_id?: string
+          thumbnail_url?: string | null
+          title?: string
+          video_url?: string | null
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clips_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       companies: {
         Row: {
@@ -254,6 +370,93 @@ export type Database = {
           user_id?: string | null
           vehicle_plate?: string | null
           vehicle_type?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      games: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          followers_count: number
+          id: string
+          name: string
+          trending: boolean
+          upcoming: boolean
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          followers_count?: number
+          id?: string
+          name: string
+          trending?: boolean
+          upcoming?: boolean
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          followers_count?: number
+          id?: string
+          name?: string
+          trending?: boolean
+          upcoming?: boolean
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          pinned: boolean
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          read?: boolean
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
