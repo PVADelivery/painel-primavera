@@ -16,10 +16,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Rota — Gestão de Entregas" },
-      { name: "description", content: "Plataforma de gestão de entregas last-mile em tempo real" },
+      { title: "Primavera Delivery — Gestão de Entregas" },
+      { name: "description", content: "Plataforma Primavera Delivery — gestão de entregas last-mile em tempo real" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

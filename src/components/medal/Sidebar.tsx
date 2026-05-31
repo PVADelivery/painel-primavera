@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Film, FolderOpen, Gamepad2, Diamond, UserPlus, Smartphone, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import icon from "@/assets/primavera-icon.png";
 
 const items = [
   { to: "/app", label: "Home", icon: Home, exact: true },
@@ -16,8 +17,8 @@ export function MedalSidebar() {
   return (
     <aside className="flex h-full w-16 shrink-0 flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-3">
       <div className="flex flex-col items-center gap-1">
-        <Link to="/app" className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black text-lg">
-          M
+        <Link to="/app" className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-black overflow-hidden">
+          <img src={icon} alt="Primavera Delivery" className="h-10 w-10 object-contain" />
         </Link>
         {items.map((it) => {
           const active = it.exact ? path === it.to : path.startsWith(it.to);
