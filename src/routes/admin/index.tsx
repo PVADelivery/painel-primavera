@@ -53,7 +53,7 @@ function DashboardPage() {
     return range.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
       const total = deliveries
-        .filter((d) => d.status === "delivered" && d.delivered_at?.startsWith(dayStr))
+        .filter((d) => d.status === "delivered" && d.completed_at?.startsWith(dayStr))
         .reduce((s, d) => s + Number(d.value || 0), 0);
       return { day: format(day, "dd/MM", { locale: ptBR }), value: total };
     });
@@ -172,11 +172,11 @@ function DashboardPage() {
               {drivers.map((d) => (
                 <div key={d.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50 transition-colors">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-                    {d.full_name.charAt(0)}
+                    {(d.full_name || "?").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-sm font-medium">{d.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{d.vehicle_type} {d.vehicle_plate ? `· ${d.vehicle_plate}` : ""}</p>
+                    <p className="text-xs text-muted-foreground">{d.vehicle_type || "Moto"} {d.vehicle_plate ? `· ${d.vehicle_plate}` : ""}</p>
                   </div>
                   <span className={`flex items-center gap-1.5 text-xs font-medium ${d.online ? "text-success" : "text-muted-foreground"}`}>
                     <span className={`h-2 w-2 rounded-full ${d.online ? "bg-success animate-pulse" : "bg-muted-foreground/40"}`} />
@@ -201,7 +201,7 @@ function DashboardPage() {
                 <div key={d.id} className="flex items-center justify-between rounded-lg p-2 hover:bg-muted/50">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{d.customer_name || "Cliente"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{d.dropoff_address}</p>
+                    <p className="text-xs text-muted-foreground truncate">{d.address}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <DeliveryStatusBadge status={d.status} />

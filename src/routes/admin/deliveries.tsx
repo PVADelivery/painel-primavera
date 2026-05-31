@@ -22,8 +22,7 @@ function DeliveriesPage() {
     return data.filter((d) =>
       !q ||
       d.customer_name?.toLowerCase().includes(q) ||
-      d.dropoff_address?.toLowerCase().includes(q) ||
-      d.pickup_address?.toLowerCase().includes(q)
+      d.address?.toLowerCase().includes(q)
     );
   }, [data, query]);
 
@@ -64,7 +63,7 @@ function DeliveriesPage() {
                 {filtered.map((d) => (
                   <tr key={d.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-medium">{d.customer_name || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground truncate max-w-xs">{d.dropoff_address}</td>
+                    <td className="px-4 py-3 text-muted-foreground truncate max-w-xs">{d.address}</td>
                     <td className="px-4 py-3"><DeliveryStatusBadge status={d.status} /></td>
                     <td className="px-4 py-3 text-right font-semibold">
                       {Number(d.value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}

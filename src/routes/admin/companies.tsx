@@ -19,7 +19,7 @@ function CompaniesPage() {
   const { data = [], isLoading } = useCompanies();
   const create = useCreateCompany();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", document: "", city: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "" });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +27,7 @@ function CompaniesPage() {
       await create.mutateAsync(form);
       toast.success("Empresa cadastrada");
       setOpen(false);
-      setForm({ name: "", phone: "", email: "", document: "", city: "" });
+      setForm({ name: "", phone: "", address: "" });
     } catch (err) { toast.error((err as Error).message); }
   };
 
@@ -46,12 +46,8 @@ function CompaniesPage() {
             <DialogHeader><DialogTitle>Cadastrar empresa</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
               <div><Label>Nome</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div><Label>CNPJ</Label><Input value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Telefone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              </div>
-              <div><Label>Cidade</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
+              <div><Label>Telefone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+              <div><Label>Endereço</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
               <Button type="submit" disabled={create.isPending} className="w-full">Cadastrar</Button>
             </form>
           </DialogContent>
@@ -77,13 +73,12 @@ function CompaniesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="truncate font-semibold">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.city || "—"}</p>
+                  <p className="text-xs text-muted-foreground">{c.address || "—"}</p>
                 </div>
               </div>
               <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                {c.document && <p>CNPJ: {c.document}</p>}
                 {c.phone && <p>{c.phone}</p>}
-                {c.email && <p className="truncate">{c.email}</p>}
+                <p>{c.is_active ? "Ativa" : "Inativa"}</p>
               </div>
             </Card>
           ))}

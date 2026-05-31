@@ -10,18 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AppProfileRouteImport } from './routes/app/profile'
-import { Route as AppNotificationsRouteImport } from './routes/app/notifications'
-import { Route as AppGamesRouteImport } from './routes/app/games'
-import { Route as AppFriendsRouteImport } from './routes/app/friends'
-import { Route as AppDiscoverRouteImport } from './routes/app/discover'
-import { Route as AppClipsRouteImport } from './routes/app/clips'
-import { Route as AppChatRouteImport } from './routes/app/chat'
-import { Route as AppAlbumsRouteImport } from './routes/app/albums'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminProfileRouteImport } from './routes/admin/profile'
@@ -35,65 +25,15 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AppProfileRoute = AppProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppNotificationsRoute = AppNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppGamesRoute = AppGamesRouteImport.update({
-  id: '/games',
-  path: '/games',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFriendsRoute = AppFriendsRouteImport.update({
-  id: '/friends',
-  path: '/friends',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDiscoverRoute = AppDiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClipsRoute = AppClipsRouteImport.update({
-  id: '/clips',
-  path: '/clips',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppChatRoute = AppChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAlbumsRoute = AppAlbumsRouteImport.update({
-  id: '/albums',
-  path: '/albums',
-  getParentRoute: () => AppRoute,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/admin/reports',
@@ -133,7 +73,6 @@ const AdminChatRoute = AdminChatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
@@ -142,16 +81,7 @@ export interface FileRoutesByFullPath {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/app/albums': typeof AppAlbumsRoute
-  '/app/chat': typeof AppChatRoute
-  '/app/clips': typeof AppClipsRoute
-  '/app/discover': typeof AppDiscoverRoute
-  '/app/friends': typeof AppFriendsRoute
-  '/app/games': typeof AppGamesRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/profile': typeof AppProfileRoute
   '/admin/': typeof AdminIndexRoute
-  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -163,21 +93,11 @@ export interface FileRoutesByTo {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/app/albums': typeof AppAlbumsRoute
-  '/app/chat': typeof AppChatRoute
-  '/app/clips': typeof AppClipsRoute
-  '/app/discover': typeof AppDiscoverRoute
-  '/app/friends': typeof AppFriendsRoute
-  '/app/games': typeof AppGamesRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/profile': typeof AppProfileRoute
   '/admin': typeof AdminIndexRoute
-  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
@@ -186,22 +106,12 @@ export interface FileRoutesById {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/app/albums': typeof AppAlbumsRoute
-  '/app/chat': typeof AppChatRoute
-  '/app/clips': typeof AppClipsRoute
-  '/app/discover': typeof AppDiscoverRoute
-  '/app/friends': typeof AppFriendsRoute
-  '/app/games': typeof AppGamesRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/profile': typeof AppProfileRoute
   '/admin/': typeof AdminIndexRoute
-  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
     | '/login'
     | '/admin/chat'
     | '/admin/companies'
@@ -210,16 +120,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
-    | '/app/albums'
-    | '/app/chat'
-    | '/app/clips'
-    | '/app/discover'
-    | '/app/friends'
-    | '/app/games'
-    | '/app/notifications'
-    | '/app/profile'
     | '/admin/'
-    | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,20 +132,10 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
-    | '/app/albums'
-    | '/app/chat'
-    | '/app/clips'
-    | '/app/discover'
-    | '/app/friends'
-    | '/app/games'
-    | '/app/notifications'
-    | '/app/profile'
     | '/admin'
-    | '/app'
   id:
     | '__root__'
     | '/'
-    | '/app'
     | '/login'
     | '/admin/chat'
     | '/admin/companies'
@@ -253,21 +144,11 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
-    | '/app/albums'
-    | '/app/chat'
-    | '/app/clips'
-    | '/app/discover'
-    | '/app/friends'
-    | '/app/games'
-    | '/app/notifications'
-    | '/app/profile'
     | '/admin/'
-    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   AdminChatRoute: typeof AdminChatRoute
   AdminCompaniesRoute: typeof AdminCompaniesRoute
@@ -288,13 +169,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -302,75 +176,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/app/profile': {
-      id: '/app/profile'
-      path: '/profile'
-      fullPath: '/app/profile'
-      preLoaderRoute: typeof AppProfileRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/notifications': {
-      id: '/app/notifications'
-      path: '/notifications'
-      fullPath: '/app/notifications'
-      preLoaderRoute: typeof AppNotificationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/games': {
-      id: '/app/games'
-      path: '/games'
-      fullPath: '/app/games'
-      preLoaderRoute: typeof AppGamesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/friends': {
-      id: '/app/friends'
-      path: '/friends'
-      fullPath: '/app/friends'
-      preLoaderRoute: typeof AppFriendsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/discover': {
-      id: '/app/discover'
-      path: '/discover'
-      fullPath: '/app/discover'
-      preLoaderRoute: typeof AppDiscoverRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/clips': {
-      id: '/app/clips'
-      path: '/clips'
-      fullPath: '/app/clips'
-      preLoaderRoute: typeof AppClipsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/chat': {
-      id: '/app/chat'
-      path: '/chat'
-      fullPath: '/app/chat'
-      preLoaderRoute: typeof AppChatRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/albums': {
-      id: '/app/albums'
-      path: '/albums'
-      fullPath: '/app/albums'
-      preLoaderRoute: typeof AppAlbumsRouteImport
-      parentRoute: typeof AppRoute
     }
     '/admin/reports': {
       id: '/admin/reports'
@@ -424,35 +235,8 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppRouteChildren {
-  AppAlbumsRoute: typeof AppAlbumsRoute
-  AppChatRoute: typeof AppChatRoute
-  AppClipsRoute: typeof AppClipsRoute
-  AppDiscoverRoute: typeof AppDiscoverRoute
-  AppFriendsRoute: typeof AppFriendsRoute
-  AppGamesRoute: typeof AppGamesRoute
-  AppNotificationsRoute: typeof AppNotificationsRoute
-  AppProfileRoute: typeof AppProfileRoute
-  AppIndexRoute: typeof AppIndexRoute
-}
-
-const AppRouteChildren: AppRouteChildren = {
-  AppAlbumsRoute: AppAlbumsRoute,
-  AppChatRoute: AppChatRoute,
-  AppClipsRoute: AppClipsRoute,
-  AppDiscoverRoute: AppDiscoverRoute,
-  AppFriendsRoute: AppFriendsRoute,
-  AppGamesRoute: AppGamesRoute,
-  AppNotificationsRoute: AppNotificationsRoute,
-  AppProfileRoute: AppProfileRoute,
-  AppIndexRoute: AppIndexRoute,
-}
-
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   AdminChatRoute: AdminChatRoute,
   AdminCompaniesRoute: AdminCompaniesRoute,
