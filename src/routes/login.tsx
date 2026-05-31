@@ -22,7 +22,7 @@ function LoginPage() {
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
-    if (user && rolesLoaded) navigate({ to: "/admin" });
+    if (user && rolesLoaded) navigate({ to: "/app" });
   }, [user, rolesLoaded, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
