@@ -1,11 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import icon from "@/assets/primavera-icon.png";
 import { toast } from "sonner";
@@ -17,6 +12,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { signIn, signUp, user, rolesLoaded } = useAuth();
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,84 +22,124 @@ function LoginPage() {
     if (user && rolesLoaded) navigate({ to: "/app" });
   }, [user, rolesLoaded, navigate]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Bem-vindo!");
+    if (mode === "signin") {
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) toast.error(error.message);
+      else toast.success("Bem-vindo!");
+    } else {
+      const { error } = await signUp(email, password, fullName);
+      setLoading(false);
+      if (error) toast.error(error.message);
+      else {
+        toast.success("Conta criada! Você já pode entrar.");
+        setMode("signin");
+      }
+    }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await signUp(email, password, fullName);
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Conta criada! Você já pode entrar.");
-  };
+  const isSignup = mode === "signup";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
-      <div className="w-full max-w-md animate-in fade-in duration-500">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 shadow-card">
-            <img src={icon} alt="Primavera Delivery" className="h-12 w-12 object-contain" />
-            <span className="text-2xl font-bold tracking-tight text-white">
-              Primavera <span className="text-primary">Delivery</span>
-            </span>
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="w-full max-w-md">
+        <div className="mb-10 flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black">
+            <img src={icon} alt="Delivery Primavera" className="h-12 w-12 object-contain" />
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Gestão de entregas em tempo real</p>
+          <span className="text-2xl font-bold tracking-tight text-foreground">
+            Delivery <span className="text-foreground">Primavera</span>
+          </span>
         </div>
 
-        <Card className="p-6 shadow-card">
-          <Tabs defaultValue="signin">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar conta</TabsTrigger>
-            </TabsList>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Painel do Lojista
+        </p>
+        <h1 className="text-5xl font-extrabold tracking-tight text-foreground">
+          {isSignup ? "Criar conta" : "Entrar na conta"}
+        </h1>
+        <p className="mt-3 text-base text-muted-foreground">
+          {isSignup ? "Comece em poucos segundos." : "Bom te ver de novo."}
+        </p>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
-                </Button>
-              </form>
-            </TabsContent>
+        <form onSubmit={onSubmit} className="mt-10 space-y-5">
+          {isSignup && (
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-foreground">
+                Nome completo
+              </label>
+              <input
+                id="name"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="h-14 w-full rounded-full border border-border bg-card px-5 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          )}
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email2">Email</Label>
-                  <Input id="email2" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password2">Senha</Label>
-                  <Input id="password2" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta"}
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  O primeiro usuário cadastrado será o administrador.
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </Card>
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-foreground">
+              E-mail
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-14 w-full rounded-full border border-border bg-card px-5 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
+              Senha
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-14 w-full rounded-full border border-border bg-card px-5 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex h-14 w-full items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground shadow-sm transition hover:brightness-95 disabled:opacity-60"
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isSignup ? (
+              "Criar conta"
+            ) : (
+              "Entrar"
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 space-y-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            {isSignup ? "Já tem conta?" : "Não tem conta?"}{" "}
+            <button
+              type="button"
+              onClick={() => setMode(isSignup ? "signin" : "signup")}
+              className="font-bold text-primary hover:underline"
+            >
+              {isSignup ? "Entrar" : "Criar uma"}
+            </button>
+          </p>
+          <a href="#" className="block text-sm text-muted-foreground hover:text-foreground">
+            Acesso de lojista parceiro →
+          </a>
+        </div>
       </div>
     </div>
   );
