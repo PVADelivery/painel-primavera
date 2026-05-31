@@ -1,6 +1,7 @@
 import { Search, Gem, MessageSquare, Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { ThemeToggle } from "./ThemeToggle";
+import logo from "@/assets/primavera-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,10 +48,9 @@ export function MedalTopbar() {
         </button>
       </div>
 
-      <div className="ml-2 hidden items-center gap-4 text-sm font-semibold text-muted-foreground md:flex">
-        <span>Esperando Pelo Jogo</span>
-        <span className="text-foreground">Clipe 30s</span>
-      </div>
+      <Link to="/app" className="ml-2 flex items-center">
+        <img src={logo} alt="Primavera Delivery" className="h-9 object-contain" />
+      </Link>
 
       <div className="ml-auto flex items-center gap-2">
         <button className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground hover:bg-accent hover:text-accent-foreground">

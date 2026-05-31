@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Truck, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logo from "@/assets/primavera-logo.png";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -47,11 +48,10 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
       <div className="w-full max-w-md animate-in fade-in duration-500">
         <div className="mb-8 flex flex-col items-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card">
-            <Truck className="h-7 w-7" />
+          <div className="flex items-center justify-center rounded-2xl bg-black p-3 shadow-card">
+            <img src={logo} alt="Primavera Delivery" className="h-16 object-contain" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight">Rota Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gestão de entregas em tempo real</p>
+          <p className="mt-4 text-sm text-muted-foreground">Gestão de entregas em tempo real</p>
         </div>
 
         <Card className="p-6 shadow-card">
