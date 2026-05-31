@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import icon from "@/assets/primavera-icon.png";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const items: NavItem[] = [
@@ -32,12 +33,12 @@ export function AdminSidebar() {
   const SidebarContent = (
     <>
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Truck className="h-5 w-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black">
+          <img src={icon} alt="Primavera Delivery" className="h-9 w-9 object-contain" />
         </div>
-        <div>
-          <p className="text-sm font-bold leading-tight">Rota</p>
-          <p className="text-xs text-muted-foreground leading-tight">Admin</p>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold leading-tight">Primavera Delivery</p>
+          <p className="text-xs text-muted-foreground leading-tight">Painel Admin</p>
         </div>
       </div>
 
