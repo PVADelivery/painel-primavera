@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useRegions } from "@/services/regions";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin } from "lucide-react";
 
@@ -15,7 +16,7 @@ function RegionsPage() {
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Regiões</h1>
-        <p className="text-sm text-muted-foreground">Áreas de cobertura e tarifas</p>
+        <p className="text-sm text-muted-foreground">Áreas de cobertura</p>
       </div>
       <Card className="p-5 shadow-card mb-4">
         <div className="flex h-72 items-center justify-center rounded-lg bg-gradient-to-br from-muted to-secondary text-muted-foreground">
@@ -38,12 +39,11 @@ function RegionsPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {data.map((r) => (
             <Card key={r.id} className="p-5 shadow-card">
-              <p className="font-semibold">{r.name}</p>
-              <p className="text-xs text-muted-foreground">{r.city}</p>
-              <div className="mt-3 flex gap-4 text-sm">
-                <span>Base: <strong>R$ {Number(r.base_price).toFixed(2)}</strong></span>
-                <span>/km: <strong>R$ {Number(r.price_per_km).toFixed(2)}</strong></span>
+              <div className="flex items-center justify-between">
+                <p className="font-semibold">{r.name}</p>
+                <Badge variant={r.is_active ? "default" : "outline"}>{r.is_active ? "Ativa" : "Inativa"}</Badge>
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">{r.city} — {r.state}</p>
             </Card>
           ))}
         </div>
