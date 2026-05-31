@@ -51,7 +51,7 @@ export function MedalTopbar() {
       <Link to="/app" className="ml-2 flex items-center gap-2">
         <img src={icon} alt="Primavera Delivery" className="h-9 w-9 object-contain" />
         <span className="text-lg font-bold tracking-tight">
-          Primavera <span className="text-primary">Delivery</span>
+          Primavera Delivery
         </span>
       </Link>
 
