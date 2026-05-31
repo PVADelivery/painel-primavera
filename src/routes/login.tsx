@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import logo from "@/assets/primavera-logo.png";
+import icon from "@/assets/primavera-icon.png";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -48,8 +48,11 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
       <div className="w-full max-w-md animate-in fade-in duration-500">
         <div className="mb-8 flex flex-col items-center">
-          <div className="flex items-center justify-center rounded-2xl bg-black p-3 shadow-card">
-            <img src={logo} alt="Primavera Delivery" className="h-16 object-contain" />
+          <div className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 shadow-card">
+            <img src={icon} alt="Primavera Delivery" className="h-12 w-12 object-contain" />
+            <span className="text-2xl font-bold tracking-tight text-white">
+              Primavera <span className="text-primary">Delivery</span>
+            </span>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Gestão de entregas em tempo real</p>
         </div>
