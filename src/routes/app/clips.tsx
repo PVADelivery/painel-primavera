@@ -52,7 +52,8 @@ function ClipsPage() {
 
   const toggle = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: "liked" | "favorite"; value: boolean }) => {
-      const { error } = await supabase.from("clips").update({ [field]: value }).eq("id", id);
+      const patch = field === "liked" ? { liked: value } : { favorite: value };
+      const { error } = await supabase.from("clips").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clips"] }),
