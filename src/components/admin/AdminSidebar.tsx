@@ -2,9 +2,10 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
-  MapPin, DollarSign, LogOut, Menu, X, User as UserIcon
+  MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import icon from "@/assets/primavera-icon.png";
@@ -22,6 +23,7 @@ const items: NavItem[] = [
 
 export function AdminSidebar() {
   const { profile, signOut } = useAuth();
+  const { theme, toggle } = useTheme();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -79,9 +81,18 @@ export function AdminSidebar() {
           </div>
           <UserIcon className="h-4 w-4 text-muted-foreground" />
         </Link>
-        <Button variant="ghost" size="sm" onClick={signOut} className="mt-1 w-full justify-start text-muted-foreground hover:text-destructive">
-          <LogOut className="mr-2 h-4 w-4" /> Sair
-        </Button>
+        <div className="mt-2 flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={toggle} className="flex-1 justify-center text-muted-foreground hover:text-foreground">
+            {theme === "dark" ? (
+              <><Sun className="mr-2 h-4 w-4" /> Claro</>
+            ) : (
+              <><Moon className="mr-2 h-4 w-4" /> Escuro</>
+            )}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut} className="flex-1 justify-center text-muted-foreground hover:text-destructive">
+            <LogOut className="mr-2 h-4 w-4" /> Sair
+          </Button>
+        </div>
       </div>
     </>
   );
