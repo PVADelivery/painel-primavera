@@ -48,6 +48,9 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 10px 30px -10px hsl(48 100% 50% / 0.25), 0 4px 12px -2px rgb(0 0 0 / 0.08);
+  --shadow-glow: 0 0 40px -10px hsl(48 100% 50% / 0.45);
+  --shadow-elevated: 0 20px 50px -20px rgb(0 0 0 / 0.18), 0 2px 6px -1px rgb(0 0 0 / 0.06);
 }
 
 :root {

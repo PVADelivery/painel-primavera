@@ -72,28 +72,33 @@ function DashboardPage() {
 
   return (
     <AdminLayout>
-      {/* Toolbar */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Visão geral em tempo real</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-            </span>
-            Live
+      {/* Hero header */}
+      <div className="mb-6 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                </span>
+                AO VIVO
+              </span>
+              <span className="text-xs capitalize text-muted-foreground">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Visão geral em tempo real da sua operação</p>
           </div>
-          <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as typeof period)} variant="outline" size="sm">
-            <ToggleGroupItem value="1">Hoje</ToggleGroupItem>
-            <ToggleGroupItem value="7">7 dias</ToggleGroupItem>
-            <ToggleGroupItem value="30">30 dias</ToggleGroupItem>
-          </ToggleGroup>
-          <Button size="sm" variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as typeof period)} variant="outline" size="sm" className="rounded-xl border border-border/80 bg-background/60 p-1 shadow-sm backdrop-blur">
+              <ToggleGroupItem value="1" className="rounded-lg data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow">Hoje</ToggleGroupItem>
+              <ToggleGroupItem value="7" className="rounded-lg data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow">7 dias</ToggleGroupItem>
+              <ToggleGroupItem value="30" className="rounded-lg data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow">30 dias</ToggleGroupItem>
+            </ToggleGroup>
+            <Button size="sm" variant="outline" onClick={() => refetch()} className="rounded-xl">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
