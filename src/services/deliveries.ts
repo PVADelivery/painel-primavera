@@ -394,3 +394,15 @@ export function useDeliveryTracking(orderId?: string | null) {
 
   return { order, delivery: (order as any)?.deliveries };
 }
+
+export function useCreateDelivery() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: any) => {
+      const { data, error } = await supabase.from("deliveries").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["deliveries"] }),
+  });
+}
