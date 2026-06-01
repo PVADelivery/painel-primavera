@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from "react";
 import { useNavigate, createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";

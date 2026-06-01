@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useContext, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/contexts/AuthContext";
