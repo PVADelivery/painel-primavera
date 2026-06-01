@@ -1,27 +1,57 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { useQuery } from "@tanstack/react-query";
 
-export type Company = Database["public"]["Tables"]["companies"]["Row"];
+export async function fetchCompanies() {
+  const response = await supabase.from("companies").select("*").order("name");
+  console.log("FETCH COMPANIES RESPONSE:", response);
+  if (response.error) throw response.error;
+  return response.data ?? [];
+}
 
 export function useCompanies() {
   return useQuery({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: fetchCompanies,
   });
 }
 
-export function useCreateCompany() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: Database["public"]["Tables"]["companies"]["Insert"]) => {
-      const { error } = await supabase.from("companies").insert(input);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["companies"] }),
+
+export async function fetchCompanyByUserId(userId: string) {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("*")
+    .eq("user_id", userId);
+  
+  if (error) throw error;
+  
+  if (!data || data.length === 0) {
+    // Fallback para administradores
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (profile?.role === "admin") {
+      const { data: fallbackCompanies } = await supabase
+        .from("companies")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      if (fallbackCompanies && fallbackCompanies.length > 0) {
+        return fallbackCompanies[0];
+      }
+    }
+    return null;
+  }
+  
+  return data.find(c => !c.name.toLowerCase().includes("teste")) || data[0];
+}
+
+export function useCompany(userId?: string) {
+  return useQuery({
+    queryKey: ["company", userId],
+    queryFn: () => (userId ? fetchCompanyByUserId(userId) : null),
+    enabled: !!userId,
   });
 }
