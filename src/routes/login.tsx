@@ -10,13 +10,11 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, signUp, user, rolesLoaded } = useAuth();
+  const { signIn, user, rolesLoaded } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
 
   useEffect(() => {
     if (user && rolesLoaded) navigate({ to: "/admin" });
@@ -25,23 +23,11 @@ function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    if (mode === "signin") {
-      const { error } = await signIn(email, password);
-      setLoading(false);
-      if (error) toast.error(error.message);
-      else toast.success("Bem-vindo!");
-    } else {
-      const { error } = await signUp(email, password, fullName);
-      setLoading(false);
-      if (error) toast.error(error.message);
-      else {
-        toast.success("Conta criada! Você já pode entrar.");
-        setMode("signin");
-      }
-    }
+    const { error } = await signIn(email, password);
+    setLoading(false);
+    if (error) toast.error(error.message);
+    else toast.success("Bem-vindo!");
   };
-
-  const isSignup = mode === "signup";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -56,31 +42,16 @@ function LoginPage() {
         </div>
 
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Painel do Lojista
+          Painel Administrativo
         </p>
         <h1 className="text-5xl font-extrabold tracking-tight text-foreground">
-          {isSignup ? "Criar conta" : "Entrar na conta"}
+          Entrar na conta
         </h1>
         <p className="mt-3 text-base text-muted-foreground">
-          {isSignup ? "Comece em poucos segundos." : "Bom te ver de novo."}
+          Acesso restrito para administradores.
         </p>
 
         <form onSubmit={onSubmit} className="mt-10 space-y-5">
-          {isSignup && (
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-foreground">
-                Nome completo
-              </label>
-              <input
-                id="name"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="h-14 w-full rounded-full border border-border bg-card px-5 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-          )}
-
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               E-mail
@@ -115,31 +86,9 @@ function LoginPage() {
             disabled={loading}
             className="flex h-14 w-full items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground shadow-sm transition hover:brightness-95 disabled:opacity-60"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isSignup ? (
-              "Criar conta"
-            ) : (
-              "Entrar"
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
           </button>
         </form>
-
-        <div className="mt-8 space-y-3 text-center">
-          <p className="text-sm text-muted-foreground">
-            {isSignup ? "Já tem conta?" : "Não tem conta?"}{" "}
-            <button
-              type="button"
-              onClick={() => setMode(isSignup ? "signin" : "signup")}
-              className="font-bold text-primary hover:underline"
-            >
-              {isSignup ? "Entrar" : "Criar uma"}
-            </button>
-          </p>
-          <a href="#" className="block text-sm text-muted-foreground hover:text-foreground">
-            Acesso de lojista parceiro →
-          </a>
-        </div>
       </div>
     </div>
   );
