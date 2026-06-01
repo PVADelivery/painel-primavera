@@ -33,8 +33,8 @@ function DashboardPage() {
   const { data: drivers = [], isLoading: loadingDrv } = useDrivers();
 
   const stats = useMemo(() => {
-    const inTransit = deliveries.filter((d) => d.status === "in_transit").length;
-    const delivered = deliveries.filter((d) => d.status === "delivered");
+    const inTransit = deliveries.filter((d) => d.status === "in_route").length;
+    const delivered = deliveries.filter((d) => d.status === "completed");
     const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
     const onlineDrivers = drivers.filter((d) => d.online).length;
     return {
@@ -53,7 +53,7 @@ function DashboardPage() {
     return range.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
       const total = deliveries
-        .filter((d) => d.status === "delivered" && d.completed_at?.startsWith(dayStr))
+        .filter((d) => d.status === "completed" && d.completed_at?.startsWith(dayStr))
         .reduce((s, d) => s + Number(d.value || 0), 0);
       return { day: format(day, "dd/MM", { locale: ptBR }), value: total };
     });
@@ -64,7 +64,7 @@ function DashboardPage() {
     deliveries.forEach((d) => { counts[d.status] = (counts[d.status] || 0) + 1; });
     const colors: Record<string, string> = {
       pending: "hsl(38 92% 50%)", broadcasted: "hsl(210 100% 52%)", accepted: "hsl(217 91% 50%)",
-      collecting: "hsl(32 95% 52%)", in_transit: "hsl(280 70% 55%)", delivered: "hsl(145 63% 42%)",
+      collecting: "hsl(32 95% 52%)", in_route: "hsl(280 70% 55%)", completed: "hsl(145 63% 42%)",
       cancelled: "hsl(0 84% 60%)", returned: "hsl(220 10% 50%)",
     };
     return Object.entries(counts).map(([name, value]) => ({ name, value, fill: colors[name] || "#888" }));

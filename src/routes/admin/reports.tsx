@@ -13,7 +13,7 @@ export const Route = createFileRoute("/admin/reports")({
 function ReportsPage() {
   const { data = [] } = useDeliveries({ sinceDays: 30 });
   const stats = useMemo(() => {
-    const delivered = data.filter((d) => d.status === "delivered");
+    const delivered = data.filter((d) => d.status === "completed");
     const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
     const commission = delivered.reduce((s, d) => s + Number(d.commission || 0), 0);
     const ticket = delivered.length ? revenue / delivered.length : 0;

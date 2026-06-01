@@ -16,7 +16,7 @@ export function useRealtimeDeliveries() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "deliveries" }, (payload) => {
         const d = payload.new as { status?: string; customer_name?: string };
         const emoji: Record<string, string> = {
-          delivered: "✅", in_transit: "🏍️", cancelled: "❌", accepted: "👍", collecting: "📥",
+          completed: "✅", in_route: "🏍️", cancelled: "❌", accepted: "👍", collecting: "📥",
         };
         if (d.status && emoji[d.status]) {
           toast.message(`${emoji[d.status]} ${d.customer_name || "Entrega"} — ${d.status}`);
