@@ -37,9 +37,21 @@ export function useAdminRealtime() {
       )
       .subscribe();
 
+    const notificationsChannel = supabase
+      .channel(`admin-notifications-${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "system_logs" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["system-stats"] });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(deliverablesChannel);
       supabase.removeChannel(driversChannel);
+      supabase.removeChannel(notificationsChannel);
     };
   }, []); // Run only once on mount
 }
