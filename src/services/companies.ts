@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export async function fetchCompanies() {
   const response = await supabase.from("companies").select("*").order("name");
@@ -53,5 +53,16 @@ export function useCompany(userId?: string) {
     queryKey: ["company", userId],
     queryFn: () => (userId ? fetchCompanyByUserId(userId) : null),
     enabled: !!userId,
+  });
+}
+
+export function useCreateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: any) => {
+      const { error } = await supabase.from('companies').insert(input);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
   });
 }
