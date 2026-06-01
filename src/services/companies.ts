@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export async function fetchCompanies() {
@@ -64,5 +65,17 @@ export function useCreateCompany() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+}
+
+export function useMyCompany() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-company', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('companies').select('*').eq('user_id', user!.id).maybeSingle();
+      return data;
+    },
   });
 }
