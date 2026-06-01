@@ -11,3 +11,8 @@ export function useRegions() {
     },
   });
 }
+
+export async function updateRegionPrice(id: string, price: number) {
+  const { error } = await supabase.from("regions").update({ price }).eq("id", id);
+  if (error) throw error;
+}
