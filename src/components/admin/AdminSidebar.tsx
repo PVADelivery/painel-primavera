@@ -33,11 +33,8 @@ export function AdminSidebar() {
   const SidebarContent = (
     <>
       <div className="flex h-20 items-center gap-3 border-b border-sidebar-border/60 px-5">
-        <div className="relative">
-          <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-md" />
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-amber-500 shadow-lg shadow-primary/30 ring-1 ring-primary/40">
-            <img src={icon} alt="Primavera Delivery" className="h-10 w-10 object-contain drop-shadow" />
-          </div>
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-foreground shadow-elevated ring-1 ring-border/70">
+          <img src={icon} alt="Primavera Delivery" className="h-10 w-10 object-contain" />
         </div>
         <div className="min-w-0">
           <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">Primavera Delivery</p>
