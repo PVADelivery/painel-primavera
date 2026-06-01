@@ -100,9 +100,9 @@ function RegionsPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-foreground">
-                      R$ {Number(r.price || 0).toFixed(2)}
+                      R$ {Number((r as any).price ?? 0).toFixed(2)}
                     </span>
-                    <Button variant="link" size="sm" className="h-6 px-2 text-xs" onClick={() => handleEdit(r.id, Number(r.price || 0))}>
+                    <Button variant="link" size="sm" className="h-6 px-2 text-xs" onClick={() => handleEdit(r.id, Number((r as any).price ?? 0))}>
                       Editar
                     </Button>
                   </div>
