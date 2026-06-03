@@ -13,6 +13,7 @@ import icon from "@/assets/primavera-icon.png";
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const items: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/admin/tracking", label: "Rastreio", icon: MapPin },
   { to: "/admin/deliveries", label: "Corridas", icon: Truck },
   { to: "/admin/chat", label: "Chat", icon: MessageSquare },
   { to: "/admin/companies", label: "Empresas", icon: Building2 },
