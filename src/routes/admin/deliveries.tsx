@@ -7,16 +7,30 @@ import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card as UICard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Package } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/deliveries")({
   component: DeliveriesPage,
 });
 
 function DeliveriesPage() {
+  const queryClient = useQueryClient();
   const { data = [], isLoading } = useDeliveries();
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-deliveries-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "deliveries" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["deliveries"] });
+        queryClient.invalidateQueries({ queryKey: ["delivery-stats"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
