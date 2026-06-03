@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDrivers } from "@/services/drivers";
 import { useEffect, useState, useMemo } from "react";
-import Map, { Marker, NavigationControl } from "react-map-gl";
+import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 import { Bike, Navigation } from "lucide-react";
