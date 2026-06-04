@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminProfileRouteImport } from './routes/admin/profile'
@@ -33,6 +34,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTrackingRoute = AdminTrackingRouteImport.update({
+  id: '/admin/tracking',
+  path: '/admin/tracking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/tracking': typeof AdminTrackingRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/tracking': typeof AdminTrackingRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/tracking': typeof AdminTrackingRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/tracking'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/tracking'
     | '/admin'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/tracking'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   AdminProfileRoute: typeof AdminProfileRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminTrackingRoute: typeof AdminTrackingRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/tracking': {
+      id: '/admin/tracking'
+      path: '/admin/tracking'
+      fullPath: '/admin/tracking'
+      preLoaderRoute: typeof AdminTrackingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/reports': {
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminProfileRoute: AdminProfileRoute,
   AdminRegionsRoute: AdminRegionsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminTrackingRoute: AdminTrackingRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport

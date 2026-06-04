@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { CityServiceList } from "@/components/admin/CityServiceList";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+const MapLibre = (maplibregl as any).Map ? maplibregl : ((maplibregl as any).default || maplibregl);
 import { useDrivers } from "@/services/drivers";
 
 const escapeHtml = (s: unknown): string =>
@@ -60,15 +62,27 @@ function RegionsPage() {
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
-    const m = new maplibregl.Map({
+    const m = new MapLibre.Map({
       container: mapContainerRef.current,
       style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
       center: [-56.0974, -15.5989],
       zoom: 11,
     });
-    m.addControl(new maplibregl.NavigationControl(), "bottom-right");
+    m.addControl(new MapLibre.NavigationControl(), "bottom-right");
     mapRef.current = m;
-    return () => { m.remove(); mapRef.current = null; };
+
+    const resizeObserver = new ResizeObserver(() => {
+      m.resize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      m.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   // Auto-center map on regions when they first load
@@ -88,7 +102,7 @@ function RegionsPage() {
     if (allCoords.length === 0) return;
     const lngs = allCoords.map(c => c[0]);
     const lats = allCoords.map(c => c[1]);
-    const bounds = new maplibregl.LngLatBounds(
+    const bounds = new MapLibre.LngLatBounds(
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)]
     );
@@ -221,9 +235,9 @@ function RegionsPage() {
         </div>
       `;
 
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new MapLibre.Marker({ element: el })
         .setLngLat([lng, lat])
-        .setPopup(new maplibregl.Popup({ offset: 25, closeButton: false }).setHTML(popupContent))
+        .setPopup(new MapLibre.Popup({ offset: 25, closeButton: false }).setHTML(popupContent))
         .addTo(m);
 
       driverMarkersRef.current.push(marker);
@@ -468,7 +482,11 @@ function RegionsPage() {
       <div className="flex flex-col lg:flex-row h-[calc(100vh-73px)] w-full relative">
         {/* Map */}
         <div className="flex-1 relative h-full min-h-[300px]">
-          <div ref={mapContainerRef} className="absolute inset-0" />
+          <div 
+            ref={mapContainerRef} 
+            className="absolute inset-0 w-full h-full" 
+            style={{ width: "100%", height: "100%" }} 
+          />
 
           {/* City search */}
           <div className="absolute top-4 right-4 w-72 z-10">
