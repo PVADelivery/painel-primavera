@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { GenerateInviteDialog } from "@/components/admin/GenerateInviteDialog";
 import { useCompanies, useCreateCompany } from "@/services/companies";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,10 +39,12 @@ function CompaniesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Empresas</h1>
           <p className="text-sm text-muted-foreground">Lojistas conectados à sua operação</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Nova empresa</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <GenerateInviteDialog fixedRole="company" triggerLabel="Convidar Empresa" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" /> Nova empresa</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Cadastrar empresa</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
@@ -52,6 +55,7 @@ function CompaniesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
