@@ -23,12 +23,12 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
     setLoading(true);
     try {
       const token = crypto.randomUUID();
-      // Convite válido por 30 dias
+      // Convite vÃ¡lido por 30 dias
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado. Faça login e tente novamente.");
+      if (!user) throw new Error("UsuÃ¡rio nÃ£o autenticado. FaÃ§a login e tente novamente.");
 
       const { error } = await (supabase as any).from("invitations").insert({
         token,
@@ -41,7 +41,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
 
       if (error) {
         if (error.code === '42501') {
-          throw new Error("Sem permissão para criar convites. Verifique se você é administrador.");
+          throw new Error("Sem permissÃ£o para criar convites. Verifique se vocÃª Ã© administrador.");
         }
         throw new Error(error.message || "Erro ao salvar convite no banco de dados");
       }
@@ -53,7 +53,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
         
       const link = `${baseUrl}/${token}`;
       setInviteLink(link);
-      toast.success("Link de convite gerado! Válido por 30 dias.");
+      toast.success("Link de convite gerado! VÃ¡lido por 30 dias.");
     } catch (err: any) {
       console.error('[GenerateInvite] Erro:', err);
       toast.error(err.message || "Erro ao gerar convite");
@@ -66,7 +66,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
     if (inviteLink) {
       navigator.clipboard.writeText(inviteLink);
       setCopied(true);
-      toast.success("Link copiado para a área de transferência!");
+      toast.success("Link copiado para a Ã¡rea de transferÃªncia!");
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -98,8 +98,8 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
                 <Select value={role} onValueChange={(v: any) => setRole(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="driver">🏍️ Entregador</SelectItem>
-                    <SelectItem value="company">🏪 Empresa (Lojista)</SelectItem>
+                    <SelectItem value="driver">Entregador</SelectItem>
+                    <SelectItem value="company">Empresa (Lojista)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -110,7 +110,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              O link gerado será válido por <strong>30 dias</strong> e permitirá que o parceiro realize o próprio cadastro no sistema.
+              O link gerado serÃ¡ vÃ¡lido por <strong>30 dias</strong> e permitirÃ¡ que o parceiro realize o prÃ³prio cadastro no sistema.
             </p>
             <Button className="w-full" onClick={generateLink} disabled={loading}>
               {loading ? "Gerando..." : "Gerar Link de Convite"}
@@ -130,7 +130,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
             </div>
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={reset}>Gerar outro</Button>
-              <Button className="flex-1" onClick={() => setOpen(false)}>Concluído</Button>
+              <Button className="flex-1" onClick={() => setOpen(false)}>ConcluÃ­do</Button>
             </div>
           </div>
         )}
@@ -138,3 +138,4 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
     </Dialog>
   );
 }
+
