@@ -9,19 +9,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Plus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Building2, Plus, MoreHorizontal, Trash, Power } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/admin/companies")({
   component: CompaniesPage,
 });
 
 function CompaniesPage() {
+  const qc = useQueryClient();
   const { data = [], isLoading } = useCompanies();
   const create = useCreateCompany();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
+
+  const handleToggleActive = async (companyId: string, isActive: boolean) => {
+    const { error } = await supabase.from("companies").update({ is_active: !isActive }).eq("id", companyId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(isActive ? "Empresa desativada" : "Empresa ativada");
+      qc.invalidateQueries({ queryKey: ["companies"] });
+    }
+  };
+
+  const handleDelete = async (companyId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta empresa?")) return;
+    const { error } = await supabase.from("companies").delete().eq("id", companyId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Empresa excluída");
+      qc.invalidateQueries({ queryKey: ["companies"] });
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,15 +94,33 @@ function CompaniesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {data.map((c) => (
-            <Card key={c.id} className="p-5 shadow-card">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <Building2 className="h-5 w-5" />
+            <Card key={c.id} className="p-5 shadow-card hover:shadow-card-hover transition-all group">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate font-semibold">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.address || "—"}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate font-semibold">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.address || "—"}</p>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100">
+                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleToggleActive(c.id, !!c.is_active)}>
+                      <Power className="h-4 w-4 mr-2" />
+                      {c.is_active ? "Desativar" : "Ativar"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDelete(c.id)}>
+                      <Trash className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                 {c.phone && <p>{c.phone}</p>}
