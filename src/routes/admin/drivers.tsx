@@ -200,15 +200,17 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     try {
       const res = await supabase.rpc("create_admin_user", {
-        email: form.email, 
-        password: form.password, 
-        full_name: form.fullName,
-        phone: form.phone, 
-        document: form.document, 
-        role: "driver",
-        vehicle: form.vehicle, 
-        license_plate: form.licensePlate,
-        commission_rate: parseFloat(form.commissionRate) || 15,
+        payload: {
+          email: form.email, 
+          password: form.password, 
+          full_name: form.fullName,
+          phone: form.phone, 
+          document: form.document, 
+          role: "driver",
+          vehicle: form.vehicle, 
+          license_plate: form.licensePlate,
+          commission_rate: parseFloat(form.commissionRate) || 15,
+        }
       });
       if (res.error) throw new Error(res.error.message);
       const data = res.data as any;
