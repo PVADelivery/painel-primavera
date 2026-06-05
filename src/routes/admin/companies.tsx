@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { CreateCompanyForm } from "@/components/admin/CreateCompanyForm";
 import { GenerateInviteDialog } from "@/components/admin/GenerateInviteDialog";
 import { useCompanies, useCreateCompany } from "@/services/companies";
 import { Card } from "@/components/ui/card";
@@ -45,14 +46,12 @@ function CompaniesPage() {
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Nova empresa</Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Cadastrar empresa</DialogTitle></DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div><Label>Nome</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div><Label>Telefone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-              <div><Label>Endereço</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-              <Button type="submit" disabled={create.isPending} className="w-full">Cadastrar</Button>
-            </form>
+          <DialogContent 
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            className="sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl"
+          >
+            <DialogHeader><DialogTitle className="text-2xl font-black">Cadastrar Empresa</DialogTitle></DialogHeader>
+            <CreateCompanyForm onSuccess={() => setOpen(false)} />
           </DialogContent>
         </Dialog>
         </div>
