@@ -106,7 +106,7 @@ function CompaniesPage() {
                   </div>
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100">
+                  <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-muted transition-colors">
                     <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
