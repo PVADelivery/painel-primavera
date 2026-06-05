@@ -28,14 +28,18 @@ export function CreateCompanyForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await supabase.functions.invoke("create-admin", {
-        body: {
-          email: form.email, password: form.password, fullName: form.responsibleName,
-          phone: form.phone, document: form.document, role: "company",
-          companyName: form.companyName, address: form.address, regionId: form.regionId || null,
-          latitude: form.latitude ? parseFloat(form.latitude) : null,
-          longitude: form.longitude ? parseFloat(form.longitude) : null,
-        },
+      const res = await supabase.rpc("create_admin_user", {
+        email: form.email, 
+        password: form.password, 
+        full_name: form.responsibleName,
+        phone: form.phone, 
+        document: form.document, 
+        role: "company",
+        company_name: form.companyName, 
+        address: form.address, 
+        region_id: form.regionId || null,
+        latitude: form.latitude ? parseFloat(form.latitude) : null,
+        longitude: form.longitude ? parseFloat(form.longitude) : null,
       });
       if (res.error) throw new Error(res.error.message);
       const data = res.data as any;
