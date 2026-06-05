@@ -199,13 +199,16 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await supabase.functions.invoke("create-admin", {
-        body: {
-          email: form.email, password: form.password, fullName: form.fullName,
-          phone: form.phone, document: form.document, role: "driver",
-          vehicle: form.vehicle, licensePlate: form.licensePlate,
-          commissionRate: parseFloat(form.commissionRate) || 15,
-        },
+      const res = await supabase.rpc("create_admin_user", {
+        email: form.email, 
+        password: form.password, 
+        full_name: form.fullName,
+        phone: form.phone, 
+        document: form.document, 
+        role: "driver",
+        vehicle: form.vehicle, 
+        license_plate: form.licensePlate,
+        commission_rate: parseFloat(form.commissionRate) || 15,
       });
       if (res.error) throw new Error(res.error.message);
       const data = res.data as any;
