@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (userError || !requester) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
     if (roleError || !roleData) {
       return new Response(JSON.stringify({ error: "Unauthorized: Admin role required" }), {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     if (!email || !password || !role) {
       return new Response(JSON.stringify({ error: "email, password e role são obrigatórios" }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     const validRoles = ["admin", "driver", "company", "customer"];
     if (!validRoles.includes(role)) {
       return new Response(JSON.stringify({ error: "Role inválido" }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -78,19 +78,18 @@ Deno.serve(async (req) => {
 
     if (authError) {
       return new Response(JSON.stringify({ error: authError.message }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const userId = authData.user.id;
 
-    // Update profile
-    const { error: profileError } = await supabase.from("profiles").upsert({
-      user_id: userId,
+    // Update profile (since handle_new_user trigger already inserted the row)
+    const { error: profileError } = await supabase.from("profiles").update({
       full_name: fullName || "",
       phone: phone || null,
-    });
+    }).eq("user_id", userId);
     if (profileError) throw new Error("Profile error: " + profileError.message);
 
     // Ensure they only have the chosen role
@@ -131,7 +130,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

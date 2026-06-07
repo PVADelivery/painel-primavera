@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { CreateCompanyForm } from "@/components/admin/CreateCompanyForm";
 import { GenerateInviteDialog } from "@/components/admin/GenerateInviteDialog";
+import { EditCompanyDialog } from "@/components/admin/EditCompanyDialog";
 import { useCompanies, useCreateCompany } from "@/services/companies";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ function CompaniesPage() {
                     <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <EditCompanyDialog company={c} />
                     <DropdownMenuItem onClick={() => handleToggleActive(c.id, !!c.is_active)}>
                       <Power className="h-4 w-4 mr-2" />
                       {c.is_active ? "Desativar" : "Ativar"}
