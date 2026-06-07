@@ -85,42 +85,45 @@ Deno.serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Update profile with active status (admin-created users skip approval)
-    await supabase.from("profiles").upsert({
+    // Update profile
+    const { error: profileError } = await supabase.from("profiles").upsert({
       user_id: userId,
       full_name: fullName || "",
       phone: phone || null,
-      document: document || null,
-      status: "active",
-      role: role,
     });
+    if (profileError) throw new Error("Profile error: " + profileError.message);
 
+    // Ensure they only have the chosen role
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    
     // Assign role
-    await supabase.from("user_roles").insert({
+    const { error: roleInsertError } = await supabase.from("user_roles").insert({
       user_id: userId,
       role,
     });
+    if (roleInsertError) throw new Error("Role error: " + roleInsertError.message);
 
     // If driver, create delivery_drivers record
     if (role === "driver") {
-      await supabase.from("delivery_drivers").insert({
+      const { error: driverError } = await supabase.from("delivery_drivers").insert({
         user_id: userId,
         vehicle: vehicle || "motorcycle",
         license_plate: licensePlate || null,
         commission_rate: commissionRate ?? 15,
       });
+      if (driverError) throw new Error("Driver error: " + driverError.message);
     }
 
     // If company, create companies record
     if (role === "company") {
-      await supabase.from("companies").insert({
+      const { error: companyError } = await supabase.from("companies").insert({
         user_id: userId,
         name: companyName || fullName || "",
         phone: phone || null,
-        email: email || null,
         address: address || null,
         region_id: regionId || null,
       });
+      if (companyError) throw new Error("Company error: " + companyError.message);
     }
 
     return new Response(JSON.stringify({ success: true, userId }), {
