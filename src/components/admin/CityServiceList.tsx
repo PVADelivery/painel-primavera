@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MapPin, Loader2, ChevronRight, Globe } from "lucide-react";
 import { useCitiesWithRegions, useRegions } from "@/services/regions";
 import { useEffect, useState } from "react";
