@@ -380,6 +380,69 @@ export type Database = {
           },
         ]
       }
+      platform_cash_flow: {
+        Row: {
+          id: string
+          description: string
+          category: string
+          amount: number
+          type: string
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          description: string
+          category: string
+          amount: number
+          type: string
+          date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          description?: string
+          category?: string
+          amount?: number
+          type?: string
+          date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json | null
+          id: string
+          read_at: string | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
