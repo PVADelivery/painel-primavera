@@ -10,15 +10,15 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, user, rolesLoaded } = useAuth();
+  const { signIn, signOut, user, rolesLoaded, hasRole } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    if (user && rolesLoaded) navigate({ to: "/admin" });
-  }, [user, rolesLoaded, navigate]);
+    if (user && rolesLoaded && hasRole("admin")) navigate({ to: "/admin" });
+  }, [user, rolesLoaded, hasRole, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +51,21 @@ function LoginPage() {
           Acesso restrito para administradores.
         </p>
 
+        {user && rolesLoaded && !hasRole("admin") ? (
+          <div className="mt-10 rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-sm text-foreground">
+            <p className="font-semibold">Esta conta não tem acesso administrativo.</p>
+            <p className="mt-2 text-muted-foreground">
+              Saia e entre com uma conta administradora para acessar o painel.
+            </p>
+            <button
+              type="button"
+              onClick={signOut}
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm transition hover:brightness-95"
+            >
+              Sair da conta atual
+            </button>
+          </div>
+        ) : (
         <form onSubmit={onSubmit} className="mt-10 space-y-5">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
@@ -89,6 +104,7 @@ function LoginPage() {
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
           </button>
         </form>
+        )}
       </div>
     </div>
   );
