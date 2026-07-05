@@ -201,17 +201,24 @@ function ReportsPage() {
                           {cfForm.type === 'expense' ? (
                             <>
                               <SelectItem value="Repasse Motoboy">Repasse Motoboy</SelectItem>
-                              <SelectItem value="Taxas">Taxas e Impostos</SelectItem>
-                              <SelectItem value="Marketing">Marketing / Tráfego</SelectItem>
-                              <SelectItem value="Manutenção">Manutenção de Sistema</SelectItem>
-                              <SelectItem value="Outros">Outras Despesas</SelectItem>
+                              <SelectItem value="Thyelle - pessoal">Thyelle - pessoal</SelectItem>
+                              <SelectItem value="Abastecimento">Abastecimento</SelectItem>
+                              <SelectItem value="Oficina - manutenção">Oficina - manutenção</SelectItem>
+                              <SelectItem value="Fixo Mensal - empresa">Fixo Mensal - empresa</SelectItem>
+                              <SelectItem value="Aluguel">Aluguel</SelectItem>
+                              <SelectItem value="Luz">Luz</SelectItem>
+                              <SelectItem value="Internet - telefone">Internet - telefone</SelectItem>
+                              <SelectItem value="Água">Água</SelectItem>
+                              <SelectItem value="Papelaria - limpeza">Papelaria - limpeza</SelectItem>
+                              <SelectItem value="Veículo">Veículo</SelectItem>
+                              <SelectItem value="Outras Despesas">Outras Despesas</SelectItem>
                             </>
                           ) : (
                             <>
-                              <SelectItem value="Comissão Lojista">Comissão de Lojistas</SelectItem>
-                              <SelectItem value="Taxa de Entrega">Taxa de Entrega</SelectItem>
-                              <SelectItem value="Mensalidade">Mensalidades</SelectItem>
-                              <SelectItem value="Outros">Outras Receitas</SelectItem>
+                              <SelectItem value="Venda - cupom 5,00">Venda - cupom 5,00</SelectItem>
+                              <SelectItem value="Venda - cupom 6,00">Venda - cupom 6,00</SelectItem>
+                              <SelectItem value="Açaí primavera">Açaí primavera</SelectItem>
+                              <SelectItem value="Outras Receitas">Outras Receitas</SelectItem>
                             </>
                           )}
                         </SelectContent>
