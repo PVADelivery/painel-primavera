@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
+import { Route as AdminStoreSalesRouteImport } from './routes/admin/store-sales'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminProfileRouteImport } from './routes/admin/profile'
@@ -20,6 +22,7 @@ import { Route as AdminDriversRouteImport } from './routes/admin/drivers'
 import { Route as AdminDeliveriesRouteImport } from './routes/admin/deliveries'
 import { Route as AdminCompaniesRouteImport } from './routes/admin/companies'
 import { Route as AdminChatRouteImport } from './routes/admin/chat'
+import { Route as AdminBasesRouteImport } from './routes/admin/bases'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -36,9 +39,19 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminTrackingRoute = AdminTrackingRouteImport.update({
   id: '/admin/tracking',
   path: '/admin/tracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoreSalesRoute = AdminStoreSalesRouteImport.update({
+  id: '/admin/store-sales',
+  path: '/admin/store-sales',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
@@ -76,10 +89,16 @@ const AdminChatRoute = AdminChatRouteImport.update({
   path: '/admin/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminBasesRoute = AdminBasesRouteImport.update({
+  id: '/admin/bases',
+  path: '/admin/bases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/bases': typeof AdminBasesRoute
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
@@ -87,12 +106,15 @@ export interface FileRoutesByFullPath {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/bases': typeof AdminBasesRoute
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
@@ -100,13 +122,16 @@ export interface FileRoutesByTo {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/bases': typeof AdminBasesRoute
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
@@ -114,7 +139,9 @@ export interface FileRoutesById {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -122,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/admin/bases'
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
@@ -129,12 +157,15 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/store-sales'
     | '/admin/tracking'
+    | '/invite/$token'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/admin/bases'
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
@@ -142,12 +173,15 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/store-sales'
     | '/admin/tracking'
+    | '/invite/$token'
     | '/admin'
   id:
     | '__root__'
     | '/'
     | '/login'
+    | '/admin/bases'
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
@@ -155,13 +189,16 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/store-sales'
     | '/admin/tracking'
+    | '/invite/$token'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  AdminBasesRoute: typeof AdminBasesRoute
   AdminChatRoute: typeof AdminChatRoute
   AdminCompaniesRoute: typeof AdminCompaniesRoute
   AdminDeliveriesRoute: typeof AdminDeliveriesRoute
@@ -169,7 +206,9 @@ export interface RootRouteChildren {
   AdminProfileRoute: typeof AdminProfileRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminStoreSalesRoute: typeof AdminStoreSalesRoute
   AdminTrackingRoute: typeof AdminTrackingRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -196,11 +235,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/tracking': {
       id: '/admin/tracking'
       path: '/admin/tracking'
       fullPath: '/admin/tracking'
       preLoaderRoute: typeof AdminTrackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/store-sales': {
+      id: '/admin/store-sales'
+      path: '/admin/store-sales'
+      fullPath: '/admin/store-sales'
+      preLoaderRoute: typeof AdminStoreSalesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/reports': {
@@ -252,12 +305,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/bases': {
+      id: '/admin/bases'
+      path: '/admin/bases'
+      fullPath: '/admin/bases'
+      preLoaderRoute: typeof AdminBasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  AdminBasesRoute: AdminBasesRoute,
   AdminChatRoute: AdminChatRoute,
   AdminCompaniesRoute: AdminCompaniesRoute,
   AdminDeliveriesRoute: AdminDeliveriesRoute,
@@ -265,7 +326,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminProfileRoute: AdminProfileRoute,
   AdminRegionsRoute: AdminRegionsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminStoreSalesRoute: AdminStoreSalesRoute,
   AdminTrackingRoute: AdminTrackingRoute,
+  InviteTokenRoute: InviteTokenRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -2,7 +2,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
-  MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon
+  MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon,
+  Globe, ShoppingBag
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -15,9 +16,11 @@ const items: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/tracking", label: "Rastreio", icon: MapPin },
   { to: "/admin/deliveries", label: "Corridas", icon: Truck },
+  { to: "/admin/store-sales", label: "Vendas Lojas", icon: ShoppingBag },
   { to: "/admin/chat", label: "Chat", icon: MessageSquare },
   { to: "/admin/companies", label: "Empresas", icon: Building2 },
   { to: "/admin/drivers", label: "Entregadores", icon: Bike },
+  { to: "/admin/bases", label: "Bases", icon: Globe },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
   { to: "/admin/reports", label: "Financeiro", icon: DollarSign },
 ];
