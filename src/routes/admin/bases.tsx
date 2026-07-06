@@ -16,6 +16,7 @@ export const Route = createFileRoute('/admin/bases')({
 });
 
 function BasesPage() {
+  const { data: cities, isLoading } = useCities();
   const { mutateAsync: createCity } = useCreateCity();
   const { mutateAsync: updateCity } = useUpdateCity();
   const { mutateAsync: deleteCity } = useDeleteCity();
