@@ -22,36 +22,47 @@ function LoginPage() {
     if (user && rolesLoaded && hasRole("admin")) navigate({ to: "/admin" });
   }, [user, rolesLoaded, hasRole, navigate]);
 
-  const formatError = (err: unknown): string => {
-    if (!err) return "Erro desconhecido";
-    if (typeof err === "string") return err;
-    const e = err as { message?: string; error_description?: string; msg?: string; status?: number; name?: string };
-    const msg = e.message || e.error_description || e.msg;
-    if (msg && msg.trim()) return e.status ? `${msg} (${e.status})` : msg;
-    try {
-      const json = JSON.stringify(err);
-      if (json && json !== "{}") return json;
-    } catch {}
-    return e.name || "Falha ao entrar";
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setLoading(true);
+
     try {
-      const { error } = await signIn(email, password);
+      console.log("👉 Iniciando tentativa de login com email:", email);
+      const result = await signIn(email, password);
+      console.log("👈 Resposta bruta do signIn:", result);
+      
+      const { error } = result;
+
       if (error) {
-        const msg = formatError(error);
+        console.error("🚨 ERRO DETALHADO RETORNADO PELO SUPABASE:");
+        console.dir(error, { depth: null });
+        console.error("Stringify do erro:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        
+        let msg = "Falha ao entrar";
+        if (error.message && error.message !== "{}") {
+           msg = error.message;
+        } else if (error.name) {
+           msg = error.name;
+        }
+        
+        if ((error as any).status) {
+           msg += ` (Status: ${(error as any).status})`;
+        }
+
         setErrorMsg(msg);
         toast.error(msg);
       } else {
         toast.success("Bem-vindo!");
       }
     } catch (err) {
-      const msg = formatError(err);
-      setErrorMsg(msg);
-      toast.error(msg);
+      console.error("🚨 EXCEÇÃO NÃO TRATADA CAPTURADA NO CATCH:");
+      console.dir(err, { depth: null });
+      console.error("Stringify da exceção:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Erro Crítico: ${msg}`);
+      toast.error(`Erro Crítico: ${msg}`);
     } finally {
       setLoading(false);
     }
