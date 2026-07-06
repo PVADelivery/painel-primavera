@@ -42,8 +42,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
         if (error.code === '42501') {
           throw new Error("Sem permissão para criar convites. Verifique se você é administrador.");
         }
-        const dbUrl = import.meta.env.VITE_SUPABASE_URL || 'URL_NAO_ENCONTRADA';
-        throw new Error(`(BANCO ERRADO: ${dbUrl}) - ${error.message}`);
+        throw new Error(error.message || "Erro ao salvar convite no banco de dados");
       }
 
       const currentRole = fixedRole || role;
