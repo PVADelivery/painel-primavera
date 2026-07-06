@@ -139,8 +139,8 @@ function InvitePage() {
       if (!isCompany && signInData.user) {
         try {
            await supabase.from("delivery_drivers").update({ 
-             vehicle_type: formData.vehicle as any, 
-             vehicle_plate: formData.licensePlate.toUpperCase() 
+             vehicle: formData.vehicle as any, 
+             license_plate: formData.licensePlate.toUpperCase() 
            }).eq("user_id", signInData.user.id);
         } catch (drvErr) {
            console.error("Erro ao salvar dados do veiculo:", drvErr);
