@@ -23,7 +23,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
     setLoading(true);
     try {
       const token = crypto.randomUUID();
-      // Convite vÃ¡lido por 30 dias
+      // Convite válido por 30 dias
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -53,7 +53,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
         
       const link = `${baseUrl}/${token}`;
       setInviteLink(link);
-      toast.success("Link de convite gerado! VÃ¡lido por 30 dias.");
+      toast.success("Link de convite gerado! Válido por 30 dias.");
     } catch (err: any) {
       console.error('[GenerateInvite] Erro:', err);
       toast.error(err.message || "Erro ao gerar convite");
@@ -110,7 +110,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              O link gerado serÃ¡ vÃ¡lido por <strong>30 dias</strong> e permitirÃ¡ que o parceiro realize o prÃ³prio cadastro no sistema.
+              O link gerado será válido por <strong>30 dias</strong> e permitirá que o parceiro realize o próprio 
             </p>
             <Button className="w-full" onClick={generateLink} disabled={loading}>
               {loading ? "Gerando..." : "Gerar Link de Convite"}
