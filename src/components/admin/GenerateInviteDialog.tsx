@@ -30,7 +30,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado. Faça login e tente novamente.");
 
-      const { error } = await (supabase as any).from("invitations").insert({
+      const { error } = await (supabase as any).from("system_invitations").insert({
         token,
         role: fixedRole || role,
         email: `convite_${token.slice(0, 8)}@primaveradelivery.com`,
