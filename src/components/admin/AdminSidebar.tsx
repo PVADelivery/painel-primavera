@@ -10,6 +10,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import icon from "@/assets/primavera-icon.png";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const items: NavItem[] = [
@@ -86,13 +87,7 @@ export function AdminSidebar() {
           <UserIcon className="h-4 w-4 text-muted-foreground" />
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={toggle} className="flex-1 justify-center text-muted-foreground hover:text-foreground">
-            {theme === "dark" ? (
-              <><Sun className="mr-2 h-4 w-4" /> Claro</>
-            ) : (
-              <><Moon className="mr-2 h-4 w-4" /> Escuro</>
-            )}
-          </Button>
+          <ThemeToggle className="h-9 w-full rounded-md" />
           <Button variant="ghost" size="sm" onClick={signOut} className="flex-1 justify-center text-muted-foreground hover:text-destructive">
             <LogOut className="mr-2 h-4 w-4" /> Sair
           </Button>
