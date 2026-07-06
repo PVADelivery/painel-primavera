@@ -16,18 +16,45 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && rolesLoaded && hasRole("admin")) navigate({ to: "/admin" });
   }, [user, rolesLoaded, hasRole, navigate]);
 
+  const formatError = (err: unknown): string => {
+    if (!err) return "Erro desconhecido";
+    if (typeof err === "string") return err;
+    const e = err as { message?: string; error_description?: string; msg?: string; status?: number; name?: string };
+    const msg = e.message || e.error_description || e.msg;
+    if (msg && msg.trim()) return e.status ? `${msg} (${e.status})` : msg;
+    try {
+      const json = JSON.stringify(err);
+      if (json && json !== "{}") return json;
+    } catch {}
+    return e.name || "Falha ao entrar";
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Bem-vindo!");
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        const msg = formatError(error);
+        setErrorMsg(msg);
+        toast.error(msg);
+      } else {
+        toast.success("Bem-vindo!");
+      }
+    } catch (err) {
+      const msg = formatError(err);
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
