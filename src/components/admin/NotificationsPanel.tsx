@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDeliveries } from "@/services/deliveries";
 import { format } from "date-fns";

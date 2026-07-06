@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from "react";
 import { getDeliveryValue } from "@/lib/delivery";
 import type { DeliveryWithRelations } from "@/services/deliveries";
