@@ -131,6 +131,15 @@ function LoginPage() {
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
           </button>
+
+          {errorMsg && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            >
+              {errorMsg}
+            </div>
+          )}
         </form>
         )}
       </div>
