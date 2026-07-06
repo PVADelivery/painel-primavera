@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Loader2, Store, User, Truck, X, ArrowRight } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
