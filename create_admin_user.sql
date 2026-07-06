@@ -4,7 +4,7 @@
 -- =====================================================================
 -- Troque a senha abaixo se quiser outra:
 --   Email: acaiprimaveradelivery01@gmail.com
---   Senha: PrimaveraAdmin@2026
+--   Senha: 79507950THY@z
 -- =====================================================================
 
 create extension if not exists pgcrypto;
@@ -12,7 +12,7 @@ create extension if not exists pgcrypto;
 do $$
 declare
   v_email    text := 'acaiprimaveradelivery01@gmail.com';
-  v_password text := 'PrimaveraAdmin@2026';
+  v_password text := '79507950THY@z';
   v_user_id  uuid;
 begin
   select id into v_user_id from auth.users where email = v_email;
