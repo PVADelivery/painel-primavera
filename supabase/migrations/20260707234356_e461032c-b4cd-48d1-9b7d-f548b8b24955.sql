@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS invitations_public_update ON public.invitations;
+CREATE POLICY invitations_admin_update ON public.invitations FOR UPDATE USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
