@@ -22,46 +22,49 @@ export type DriverWithProfile = {
 };
 
 export async function fetchDrivers(): Promise<DriverWithProfile[]> {
-  // delivery_drivers already has: full_name, phone, document, avatar_url,
-  // vehicle_type, vehicle_plate, status, is_online, rating, etc.
-  
-  const { data: drivers, error } = await supabase
+  // 1. Get all users with role 'driver'
+  const { data: roles, error: rolesError } = await supabase
+    .from("user_roles")
+    .select("user_id")
+    .eq("role", "driver");
+
+  if (rolesError) throw rolesError;
+  const userIds = roles?.map(r => r.user_id) || [];
+
+  if (userIds.length === 0) return [];
+
+  // 2. Fetch profiles
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("user_id", userIds);
+
+  // 3. Fetch delivery_drivers
+  const { data: deliveryDrivers } = await supabase
     .from("delivery_drivers")
     .select("*")
-    .order("created_at", { ascending: false });
+    .in("user_id", userIds);
 
-  if (error) throw error;
-  if (!drivers) return [];
+  return userIds.map(uid => {
+    const profile = profiles?.find(p => p.user_id === uid);
+    const dd = deliveryDrivers?.find(d => d.user_id === uid) || {};
 
-  // Also fetch profiles as fallback for name/phone (in case delivery_drivers is empty)
-  const userIds = drivers.map(d => d.user_id);
-  const { data: profiles } = userIds.length > 0
-    ? await supabase
-        .from("profiles")
-        .select("user_id, full_name, phone, avatar_url, document")
-        .in("user_id", userIds)
-    : { data: [] };
-
-  return drivers.map(driver => {
-    const raw = driver as any;
-    const profile = profiles?.find(p => p.user_id === driver.user_id);
     return {
-      id: driver.id,
-      user_id: driver.user_id,
-      // Use delivery_drivers columns directly, fallback to profiles
-      full_name: raw.full_name || profile?.full_name || "Entregador",
-      phone: raw.phone || profile?.phone || null,
-      document: raw.document || profile?.document || null,
-      avatar_url: raw.avatar_url || profile?.avatar_url || null,
-      vehicle_type: raw.vehicle_type || raw.vehicle || "motorcycle",
-      vehicle_plate: raw.vehicle_plate || raw.license_plate || null,
-      is_online: raw.is_online ?? raw.online ?? false,
-      rating: Number(driver.rating) || 5.0,
-      latitude: raw.latitude || raw.current_latitude || null,
-      longitude: raw.longitude || raw.current_longitude || null,
-      status: raw.status || "active",
-      commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 0.40,
-      created_at: driver.created_at,
+      id: dd.id || uid,
+      user_id: uid,
+      full_name: profile?.full_name || dd.full_name || "Entregador",
+      phone: profile?.phone || dd.phone || null,
+      document: profile?.document || dd.document || null,
+      avatar_url: profile?.avatar_url || dd.avatar_url || null,
+      vehicle_type: dd.vehicle_type || dd.vehicle || "motorcycle",
+      vehicle_plate: dd.vehicle_plate || dd.license_plate || null,
+      is_online: dd.is_online ?? dd.online ?? false,
+      rating: Number(dd.rating) || 5.0,
+      latitude: dd.latitude || dd.current_latitude || null,
+      longitude: dd.longitude || dd.current_longitude || null,
+      status: dd.status || profile?.status || "active",
+      commission_rate: dd.commission_rate !== null && dd.commission_rate !== undefined ? Number(dd.commission_rate) : 15,
+      created_at: dd.created_at || profile?.created_at,
     } as DriverWithProfile;
   });
 }
