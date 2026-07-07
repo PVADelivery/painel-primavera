@@ -4,7 +4,8 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useState } from "react";
 import { BikeIcon } from "@/components/icons/BikeIcon";
 import { useDrivers, useToggleDriverOnline } from "@/services/drivers";
-import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power } from "lucide-react";
+import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power, Trash2, Edit2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +55,10 @@ function DriversPage() {
     }
   };
 
+  const vehicleLabel: Record<string, string> = {
+    motorcycle: "🏍️ Moto", bicycle: "🚲 Bicicleta", car: "🚗 Carro", van: "🚐 Van", truck: "🚛 Caminhão",
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 bg-card shadow-card p-6 rounded-2xl border border-border/50">
@@ -82,82 +87,80 @@ function DriversPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="rounded-2xl bg-card shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Entregador</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Veículo</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Placa</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Telefone</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Comissão</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rating</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Online</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
+              ) : (drivers ?? []).length === 0 ? (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum entregador encontrado</td></tr>
+              ) : (
+                (drivers ?? []).map((d) => (
+                  <tr key={d.id} className="border-b border-border hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                          {d.avatar_url ? <img src={d.avatar_url} className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-primary">{(d.full_name || "?")[0]}</span>}
+                        </div>
+                        <span className="font-medium">{d.full_name || "—"}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{vehicleLabel[d.vehicle_type || "motorcycle"] || d.vehicle_type}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{d.vehicle_plate || "—"}</td>
+                    <td className="px-4 py-3">{d.phone || "—"}</td>
+                    <td className="px-4 py-3 font-semibold text-primary">R$ {Number(d.commission_rate ?? 0.40).toFixed(2).replace('.', ',')}</td>
+                    <td className="px-4 py-3">⭐ {Number(d.rating || 0).toFixed(1)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${d.status === "active" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        {d.status === "active" ? "Ativo" : d.status === "suspended" ? "Suspenso" : d.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${d.is_online ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                        <span className={`w-2 h-2 rounded-full ${d.is_online ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                        {d.is_online ? "Online" : "Offline"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(d)}>
+                            <Edit2 className="h-4 w-4 mr-2" />Editar Informações
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleOnline(d.id, !!d.is_online)}>
+                            <Power className="h-4 w-4 mr-2" />{d.is_online ? "Colocar Offline" : "Colocar Online"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(d.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" />Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(drivers ?? []).map((driver) => (
-            <div key={driver.id} className="bg-card rounded-xl p-5 shadow-card hover:shadow-card-hover transition-all border border-border group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                      {driver.avatar_url ? (
-                        <img src={driver.avatar_url} className="w-full h-full object-cover" />
-                      ) : (
-                        <BikeIcon className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card ${driver.is_online ? "bg-success" : "bg-muted-foreground"}`} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">{driver.full_name || "—"}</p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${driver.is_online ? "text-success" : "text-muted-foreground"}`}>
-                      {driver.is_online ? "● Online" : "● Offline"}
-                    </span>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100">
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(driver)}>
-                      Editar Dados
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleToggleOnline(driver.id, driver.is_online || false)}>
-                      <Power className="h-4 w-4 mr-2" />
-                      {driver.is_online ? "Ficar Offline" : "Ficar Online"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(driver.id)}>
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground">{driver.vehicle_type}</span>
-                  {driver.vehicle_plate && (
-                    <span className="bg-muted px-2 py-0.5 rounded text-xs font-mono text-foreground">{driver.vehicle_plate}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 font-bold text-foreground">
-                  <Star className="h-3.5 w-3.5 text-warning fill-warning" />
-                  {Number(driver.rating).toFixed(1)}
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                <span>★ {Number(driver.rating ?? 5).toFixed(1)}</span>
-                {driver.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> {driver.phone}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-          {(drivers ?? []).length === 0 && (
-            <div className="col-span-full p-12 text-center">
-              <BikeIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhum entregador cadastrado</p>
-            </div>
-          )}
-        </div>
-      )}
+      </div>
 
       {selectedDriver && (
         <EditDriverDialog
