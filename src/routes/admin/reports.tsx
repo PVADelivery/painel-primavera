@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDeliveries } from "@/services/deliveries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
-import { DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, Trash2, Pencil, Calendar, Tag } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 export const Route = createFileRoute("/admin/reports")({
@@ -40,6 +41,7 @@ function ReportsPage() {
     type: "expense",
     date: new Date().toISOString().split("T")[0]
   });
+  const [editingCf, setEditingCf] = useState(null);
 
   const fetchCashFlow = async () => {
     setIsLoadingCF(true);
@@ -93,6 +95,27 @@ function ReportsPage() {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Lançamento excluído" });
+      fetchCashFlow();
+    }
+  };
+
+  const handleUpdateCashFlow = async (e) => {
+    e.preventDefault();
+    if (!editingCf.description || !editingCf.category || !editingCf.amount || !editingCf.date) return;
+
+    const { error } = await supabase.from('platform_cash_flow').update({
+      description: editingCf.description,
+      category: editingCf.category,
+      amount: Number(editingCf.amount),
+      type: editingCf.type,
+      date: editingCf.date
+    }).eq('id', editingCf.id);
+
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Lançamento atualizado com sucesso!" });
+      setEditingCf(null);
       fetchCashFlow();
     }
   };
@@ -265,37 +288,49 @@ function ReportsPage() {
                   <CardTitle>Histórico de Movimentações</CardTitle>
                   <CardDescription>Lançamentos recentes da plataforma</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 sm:p-6">
                   {isLoadingCF ? (
                     <div className="flex justify-center p-8 text-muted-foreground">Carregando fluxo de caixa...</div>
                   ) : cashFlows.length === 0 ? (
-                    <div className="text-center p-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <div className="text-center p-12 text-muted-foreground border-2 border-dashed rounded-2xl mx-4 sm:mx-0">
                       Nenhum lançamento encontrado.
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:px-0 px-2">
                       {cashFlows.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-full ${item.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                              {item.type === 'income' ? <ArrowUpCircle className="h-5 w-5" /> : <ArrowDownCircle className="h-5 w-5" />}
+                        <div key={item.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-2xl hover:border-primary/40 bg-card hover:shadow-card transition-all relative overflow-hidden">
+                          {/* Left visual bar depending on type */}
+                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.type === 'income' ? 'bg-green-500' : 'bg-red-500'}`} />
+                          
+                          <div className="flex items-center gap-4 pl-2 mb-3 sm:mb-0">
+                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'income' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                              {item.type === 'income' ? <ArrowUpCircle className="h-6 w-6" /> : <ArrowDownCircle className="h-6 w-6" />}
                             </div>
                             <div>
-                              <p className="font-medium text-sm">{item.description}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="bg-secondary px-2 py-0.5 rounded-full">{item.category}</span>
-                                <span>{new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                              <p className="font-bold text-base text-foreground leading-none">{item.description}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs font-semibold text-muted-foreground flex-wrap">
+                                <span className="flex items-center gap-1 bg-secondary/80 text-secondary-foreground px-2.5 py-1 rounded-md">
+                                  <Tag className="h-3 w-3" /> {item.category}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" /> {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className={`font-bold ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className="flex items-center justify-between sm:justify-end gap-6 pl-2 sm:pl-0 border-t sm:border-none pt-3 sm:pt-0 mt-2 sm:mt-0">
+                            <span className={`text-xl font-black tracking-tight ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                               {item.type === 'income' ? '+' : '-'} 
                               {Number(item.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </span>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCashFlow(item.id)} className="h-8 w-8 text-muted-foreground hover:text-red-500">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" onClick={() => setEditingCf(item)} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCashFlow(item.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -306,6 +341,89 @@ function ReportsPage() {
             </div>
           </div>
         </TabsContent>
+
+        {/* Dialog for Editing Cash Flow */}
+        <Dialog open={!!editingCf} onOpenChange={(open) => { if (!open) setEditingCf(null); }}>
+          <DialogContent className="sm:max-w-[425px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="font-black text-2xl">Editar Lançamento</DialogTitle>
+              <DialogDescription>
+                Atualize as informações de receita ou despesa.
+              </DialogDescription>
+            </DialogHeader>
+            {editingCf && (
+              <form onSubmit={handleUpdateCashFlow} className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <Label>Tipo de Lançamento</Label>
+                  <Select value={editingCf.type} onValueChange={(val) => setEditingCf({ ...editingCf, type: val })}>
+                    <SelectTrigger className="rounded-xl h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Entrada (Receita)</SelectItem>
+                      <SelectItem value="expense">Saída (Despesa)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Input value={editingCf.description} onChange={(e) => setEditingCf({ ...editingCf, description: e.target.value })} required className="rounded-xl h-11" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Valor (R$)</Label>
+                    <Input type="number" step="0.01" min="0" value={editingCf.amount} onChange={(e) => setEditingCf({ ...editingCf, amount: e.target.value })} required className="rounded-xl h-11" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input type="date" value={editingCf.date} onChange={(e) => setEditingCf({ ...editingCf, date: e.target.value })} required className="rounded-xl h-11" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select value={editingCf.category} onValueChange={(val) => setEditingCf({ ...editingCf, category: val })}>
+                    <SelectTrigger className="rounded-xl h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {editingCf.type === 'expense' ? (
+                        <>
+                          <SelectItem value="Repasse Motoboy">Repasse Motoboy</SelectItem>
+                          <SelectItem value="Thyelle - pessoal">Thyelle - pessoal</SelectItem>
+                          <SelectItem value="Abastecimento">Abastecimento</SelectItem>
+                          <SelectItem value="Oficina - manutenção">Oficina - manutenção</SelectItem>
+                          <SelectItem value="Fixo Mensal - empresa">Fixo Mensal - empresa</SelectItem>
+                          <SelectItem value="Aluguel">Aluguel</SelectItem>
+                          <SelectItem value="Luz">Luz</SelectItem>
+                          <SelectItem value="Internet - telefone">Internet - telefone</SelectItem>
+                          <SelectItem value="Água">Água</SelectItem>
+                          <SelectItem value="Papelaria - limpeza">Papelaria - limpeza</SelectItem>
+                          <SelectItem value="Veículo">Veículo</SelectItem>
+                          <SelectItem value="Outras Despesas">Outras Despesas</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="Venda - cupom 5,00">Venda - cupom 5,00</SelectItem>
+                          <SelectItem value="Venda - cupom 6,00">Venda - cupom 6,00</SelectItem>
+                          <SelectItem value="Açaí primavera">Açaí primavera</SelectItem>
+                          <SelectItem value="Outras Receitas">Outras Receitas</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <DialogFooter className="mt-6 pt-4 border-t border-border">
+                  <Button type="button" variant="ghost" onClick={() => setEditingCf(null)} className="rounded-xl h-11 font-bold">Cancelar</Button>
+                  <Button type="submit" className="rounded-xl h-11 font-bold px-6">Salvar Alterações</Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </Tabs>
     </AdminLayout>
   );
