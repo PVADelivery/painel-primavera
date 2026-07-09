@@ -39,7 +39,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from("user_roles").select("role").eq("user_id", userId),
       supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
     ]);
-    setRoles((rolesData?.map((r) => r.role as AppRole)) ?? []);
+    
+    let userRoles = (rolesData?.map((r) => r.role as AppRole)) ?? [];
+    
+    // FALLBACK: Se user_roles falhar ou estiver vazio, tenta pegar do profiles
+    if (userRoles.length === 0 && profileData?.role) {
+      userRoles = [profileData.role as AppRole];
+    }
+    
+    setRoles(userRoles);
     setProfile(profileData ?? null);
     setRolesLoaded(true);
   };
