@@ -21,10 +21,7 @@ function AdminRidesPage() {
         .from("ride_requests")
         .select(`
           *,
-          driver:delivery_drivers(
-            id,
-            profiles(full_name)
-          )
+          driver:delivery_drivers(*)
         `)
         .order("created_at", { ascending: false });
 
@@ -140,8 +137,8 @@ function AdminRidesPage() {
                     <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.pickup_address}</td>
                     <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.dropoff_address}</td>
                     <td className="px-4 py-3">
-                      {r.driver?.profiles?.full_name ? (
-                        <span className="font-semibold text-foreground">{r.driver.profiles.full_name}</span>
+                      {r.driver?.full_name ? (
+                        <span className="font-semibold text-foreground">{r.driver.full_name}</span>
                       ) : (
                         <span className="text-muted-foreground italic">Não atribuído</span>
                       )}
