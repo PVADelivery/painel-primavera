@@ -35,20 +35,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const fetchUserData = async (userId: string) => {
-    const [{ data: rolesData }, { data: profileData }] = await Promise.all([
+    const [rolesRes, profileRes] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", userId),
       supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
     ]);
     
-    let userRoles = (rolesData?.map((r) => r.role as AppRole)) ?? [];
+    let userRoles = (rolesRes.data?.map((r) => r.role as AppRole)) ?? [];
     
     // FALLBACK: Se user_roles falhar ou estiver vazio, tenta pegar do profiles
-    if (userRoles.length === 0 && profileData?.role) {
-      userRoles = [profileData.role as AppRole];
+    if (userRoles.length === 0 && profileRes.data?.role) {
+      userRoles = [profileRes.data.role as AppRole];
     }
     
     setRoles(userRoles);
-    setProfile(profileData ?? null);
+    setProfile(profileRes.data ?? null);
     setRolesLoaded(true);
   };
 
