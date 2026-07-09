@@ -83,55 +83,67 @@ function CompaniesPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
+      <div className="rounded-2xl bg-card shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Endereço</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Telefone</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
+              ) : data.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada</td></tr>
+              ) : (
+                data.map((c) => (
+                  <tr key={c.id} className="border-b border-border hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent overflow-hidden shrink-0">
+                          {c.logo_url ? <img src={c.logo_url} className="w-full h-full object-cover" /> : <Building2 className="h-4 w-4" />}
+                        </div>
+                        <span className="font-semibold">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.address || "—"}</td>
+                    <td className="px-4 py-3">{c.phone || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${c.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        {c.is_active ? "Ativa" : "Inativa"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <EditCompanyDialog company={c} />
+                          <DropdownMenuItem onClick={() => handleToggleActive(c.id, !!c.is_active)}>
+                            <Power className="h-4 w-4 mr-2" />
+                            {c.is_active ? "Desativar" : "Ativar"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDelete(c.id)}>
+                            <Trash className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : data.length === 0 ? (
-        <Card className="p-16 text-center shadow-card">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground/40" />
-          <p className="mt-4 text-sm text-muted-foreground">Nenhuma empresa cadastrada</p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {data.map((c) => (
-            <Card key={c.id} className="p-5 shadow-card hover:shadow-card-hover transition-all group">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                    <Building2 className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate font-semibold">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.address || "—"}</p>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-muted transition-colors">
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <EditCompanyDialog company={c} />
-                    <DropdownMenuItem onClick={() => handleToggleActive(c.id, !!c.is_active)}>
-                      <Power className="h-4 w-4 mr-2" />
-                      {c.is_active ? "Desativar" : "Ativar"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDelete(c.id)}>
-                      <Trash className="h-4 w-4 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                {c.phone && <p>{c.phone}</p>}
-                <p>{c.is_active ? "Ativa" : "Inativa"}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      </div>
 
       {/* ── BONASOFT Watermark ── */}
       <div className="pt-8 pb-4 flex justify-center opacity-40 select-none pointer-events-none">
