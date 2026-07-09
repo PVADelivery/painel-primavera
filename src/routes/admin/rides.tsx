@@ -13,7 +13,21 @@ export const Route = createFileRoute("/admin/rides")({
 
 function AdminRidesPage() {
   const [rides, setRides] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchDrivers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("delivery_drivers")
+        .select("*")
+        .eq("active", true); // Busca motoristas ativos
+      if (error) throw error;
+      setDrivers(data ?? []);
+    } catch (err: any) {
+      console.error("Erro ao carregar motoristas:", err);
+    }
+  };
 
   const fetchRides = async () => {
     try {
@@ -36,6 +50,7 @@ function AdminRidesPage() {
 
   useEffect(() => {
     fetchRides();
+    fetchDrivers();
 
     // Inscrição em tempo real
     const channel = supabase
@@ -49,6 +64,25 @@ function AdminRidesPage() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const handleAssignDriver = async (rideId: string, driverId: string) => {
+    try {
+      const { error } = await supabase
+        .from("ride_requests")
+        .update({ 
+          driver_id: driverId, 
+          status: "accepted", 
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", rideId);
+
+      if (error) throw error;
+      toast.success("Motorista atribuído com sucesso!");
+      fetchRides();
+    } catch (err: any) {
+      toast.error("Erro ao atribuir motorista: " + err.message);
+    }
+  };
 
   const handleCancel = async (id: string) => {
     if (!confirm("Tem certeza que deseja cancelar esta corrida?")) return;
@@ -139,6 +173,24 @@ function AdminRidesPage() {
                     <td className="px-4 py-3">
                       {r.driver?.full_name ? (
                         <span className="font-semibold text-foreground">{r.driver.full_name}</span>
+                      ) : r.status === "pending" ? (
+                        <select
+                          className="text-xs bg-background border border-border rounded px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none max-w-[160px]"
+                          onChange={(e) => {
+                            const driverId = e.target.value;
+                            if (driverId) {
+                              handleAssignDriver(r.id, driverId);
+                            }
+                          }}
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Atribuir motorista...</option>
+                          {drivers.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.full_name} ({d.vehicle_type === "taxi" ? "🚗 Carro" : "🏍️ Moto"})
+                            </option>
+                          ))}
+                        </select>
                       ) : (
                         <span className="text-muted-foreground italic">Não atribuído</span>
                       )}
