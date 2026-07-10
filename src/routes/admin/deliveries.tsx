@@ -87,9 +87,9 @@ function DeliveriesPage() {
   const updateStatus = useUpdateDeliveryStatus();
   const reassignMut = useReassignDelivery();
 
-  const rawDeliveries = data?.data ?? [];
+  const rawDeliveries = qData?.data ?? [];
   const deliveries = useUniqueDeliveries(rawDeliveries);
-  const totalCount = data?.count ?? 0;
+  const totalCount = qData?.count ?? 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const onlineDrivers = (drivers ?? []).filter((d) => d.is_online);

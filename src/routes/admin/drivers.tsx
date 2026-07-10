@@ -97,7 +97,7 @@ function DriversPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Placa</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Telefone</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Comissão</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rating</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Avaliação</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Online</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
