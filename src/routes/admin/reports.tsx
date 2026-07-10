@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDeliveries } from "@/services/deliveries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
-import { DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, Trash2, Pencil, Calendar, Tag } from "lucide-react";
+import { DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, Trash2, Pencil, Calendar, Tag, Plus, X, Settings } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,44 @@ function ReportsPage() {
     date: new Date().toISOString().split("T")[0]
   });
   const [editingCf, setEditingCf] = useState(null);
+
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('cashFlowCategories');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      expense: ["Repasse Motoboy", "Thyelle - pessoal", "Abastecimento", "Oficina - manutenção", "Fixo Mensal - empresa", "Aluguel", "Luz", "Internet - telefone", "Água", "Papelaria - limpeza", "Veículo", "Outras Despesas"],
+      income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"]
+    };
+  });
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [manageCategoryType, setManageCategoryType] = useState('expense');
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const saveCategories = (newCats) => {
+    setCategories(newCats);
+    localStorage.setItem('cashFlowCategories', JSON.stringify(newCats));
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newCats = { ...categories };
+    if (!newCats[manageCategoryType].includes(newCategoryName.trim())) {
+      newCats[manageCategoryType].push(newCategoryName.trim());
+      saveCategories(newCats);
+    }
+    setNewCategoryName('');
+  };
+
+  const handleRemoveCategory = (cat) => {
+    if (!confirm(`Tem certeza que deseja remover a categoria "${cat}"?`)) return;
+    const newCats = { ...categories };
+    newCats[manageCategoryType] = newCats[manageCategoryType].filter(c => c !== cat);
+    saveCategories(newCats);
+  };
 
   const fetchCashFlow = async () => {
     setIsLoadingCF(true);
@@ -216,34 +254,24 @@ function ReportsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="category">Categoria</Label>
-                      <Select value={cfForm.category} onValueChange={(val) => setCfForm({ ...cfForm, category: val })}>
+                      <Select value={cfForm.category} onValueChange={(val) => {
+                        if (val === 'MANAGE_CATEGORIES') {
+                          setManageCategoryType(cfForm.type);
+                          setIsManageCategoriesOpen(true);
+                        } else {
+                          setCfForm({ ...cfForm, category: val });
+                        }
+                      }}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                          {cfForm.type === 'expense' ? (
-                            <>
-                              <SelectItem value="Repasse Motoboy">Repasse Motoboy</SelectItem>
-                              <SelectItem value="Thyelle - pessoal">Thyelle - pessoal</SelectItem>
-                              <SelectItem value="Abastecimento">Abastecimento</SelectItem>
-                              <SelectItem value="Oficina - manutenção">Oficina - manutenção</SelectItem>
-                              <SelectItem value="Fixo Mensal - empresa">Fixo Mensal - empresa</SelectItem>
-                              <SelectItem value="Aluguel">Aluguel</SelectItem>
-                              <SelectItem value="Luz">Luz</SelectItem>
-                              <SelectItem value="Internet - telefone">Internet - telefone</SelectItem>
-                              <SelectItem value="Água">Água</SelectItem>
-                              <SelectItem value="Papelaria - limpeza">Papelaria - limpeza</SelectItem>
-                              <SelectItem value="Veículo">Veículo</SelectItem>
-                              <SelectItem value="Outras Despesas">Outras Despesas</SelectItem>
-                            </>
-                          ) : (
-                            <>
-                              <SelectItem value="Venda - cupom 5,00">Venda - cupom 5,00</SelectItem>
-                              <SelectItem value="Venda - cupom 6,00">Venda - cupom 6,00</SelectItem>
-                              <SelectItem value="Açaí primavera">Açaí primavera</SelectItem>
-                              <SelectItem value="Outras Receitas">Outras Receitas</SelectItem>
-                            </>
-                          )}
+                          {categories[cfForm.type]?.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                          <SelectItem value="MANAGE_CATEGORIES" className="text-primary font-bold">
+                            ⚙️ Gerenciar Categorias...
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -384,34 +412,24 @@ function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label>Categoria</Label>
-                  <Select value={editingCf.category} onValueChange={(val) => setEditingCf({ ...editingCf, category: val })}>
+                  <Select value={editingCf.category} onValueChange={(val) => {
+                    if (val === 'MANAGE_CATEGORIES') {
+                      setManageCategoryType(editingCf.type);
+                      setIsManageCategoriesOpen(true);
+                    } else {
+                      setEditingCf({ ...editingCf, category: val });
+                    }
+                  }}>
                     <SelectTrigger className="rounded-xl h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {editingCf.type === 'expense' ? (
-                        <>
-                          <SelectItem value="Repasse Motoboy">Repasse Motoboy</SelectItem>
-                          <SelectItem value="Thyelle - pessoal">Thyelle - pessoal</SelectItem>
-                          <SelectItem value="Abastecimento">Abastecimento</SelectItem>
-                          <SelectItem value="Oficina - manutenção">Oficina - manutenção</SelectItem>
-                          <SelectItem value="Fixo Mensal - empresa">Fixo Mensal - empresa</SelectItem>
-                          <SelectItem value="Aluguel">Aluguel</SelectItem>
-                          <SelectItem value="Luz">Luz</SelectItem>
-                          <SelectItem value="Internet - telefone">Internet - telefone</SelectItem>
-                          <SelectItem value="Água">Água</SelectItem>
-                          <SelectItem value="Papelaria - limpeza">Papelaria - limpeza</SelectItem>
-                          <SelectItem value="Veículo">Veículo</SelectItem>
-                          <SelectItem value="Outras Despesas">Outras Despesas</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="Venda - cupom 5,00">Venda - cupom 5,00</SelectItem>
-                          <SelectItem value="Venda - cupom 6,00">Venda - cupom 6,00</SelectItem>
-                          <SelectItem value="Açaí primavera">Açaí primavera</SelectItem>
-                          <SelectItem value="Outras Receitas">Outras Receitas</SelectItem>
-                        </>
-                      )}
+                      {categories[editingCf.type]?.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                      <SelectItem value="MANAGE_CATEGORIES" className="text-primary font-bold">
+                        ⚙️ Gerenciar Categorias...
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -422,6 +440,69 @@ function ReportsPage() {
                 </DialogFooter>
               </form>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog for Managing Categories */}
+        <Dialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
+          <DialogContent className="sm:max-w-[425px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="font-black text-2xl flex items-center gap-2">
+                <Settings className="h-6 w-6 text-primary" />
+                Gerenciar Categorias
+              </DialogTitle>
+              <DialogDescription>
+                Adicione ou remova categorias de {manageCategoryType === 'expense' ? 'despesas' : 'receitas'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-2">
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Nova categoria..." 
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCategory();
+                    }
+                  }}
+                  className="rounded-xl"
+                />
+                <Button onClick={handleAddCategory} className="rounded-xl shrink-0 h-10 w-10 p-0">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="border rounded-2xl overflow-hidden mt-4 bg-muted/30">
+                <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                  {categories[manageCategoryType]?.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Nenhuma categoria cadastrada.</div>
+                  ) : (
+                    categories[manageCategoryType]?.map(cat => (
+                      <div key={cat} className="flex items-center justify-between p-2 hover:bg-card border border-transparent hover:border-border rounded-xl group transition-all">
+                        <span className="text-sm font-medium">{cat}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveCategory(cat)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-2 pt-4 border-t border-border">
+              <Button type="button" onClick={() => setIsManageCategoriesOpen(false)} className="rounded-xl h-11 font-bold w-full">
+                Concluído
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </Tabs>
