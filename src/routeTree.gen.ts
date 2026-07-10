@@ -15,6 +15,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
 import { Route as AdminStoreSalesRouteImport } from './routes/admin/store-sales'
+import { Route as AdminRidesRouteImport } from './routes/admin/rides'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminProfileRouteImport } from './routes/admin/profile'
@@ -52,6 +53,11 @@ const AdminTrackingRoute = AdminTrackingRouteImport.update({
 const AdminStoreSalesRoute = AdminStoreSalesRouteImport.update({
   id: '/admin/store-sales',
   path: '/admin/store-sales',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRidesRoute = AdminRidesRouteImport.update({
+  id: '/admin/rides',
+  path: '/admin/rides',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/rides': typeof AdminRidesRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/rides': typeof AdminRidesRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/rides': typeof AdminRidesRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/rides'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/rides'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/admin/profile'
     | '/admin/regions'
     | '/admin/reports'
+    | '/admin/rides'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   AdminProfileRoute: typeof AdminProfileRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminRidesRoute: typeof AdminRidesRoute
   AdminStoreSalesRoute: typeof AdminStoreSalesRoute
   AdminTrackingRoute: typeof AdminTrackingRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/store-sales'
       fullPath: '/admin/store-sales'
       preLoaderRoute: typeof AdminStoreSalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/rides': {
+      id: '/admin/rides'
+      path: '/admin/rides'
+      fullPath: '/admin/rides'
+      preLoaderRoute: typeof AdminRidesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/reports': {
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminProfileRoute: AdminProfileRoute,
   AdminRegionsRoute: AdminRegionsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminRidesRoute: AdminRidesRoute,
   AdminStoreSalesRoute: AdminStoreSalesRoute,
   AdminTrackingRoute: AdminTrackingRoute,
   InviteTokenRoute: InviteTokenRoute,
@@ -334,3 +355,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

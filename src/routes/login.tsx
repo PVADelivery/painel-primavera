@@ -96,6 +96,13 @@ function LoginPage() {
             <p className="mt-2 text-muted-foreground">
               Saia e entre com uma conta administradora para acessar o painel.
             </p>
+            <div className="mt-4 bg-black/50 p-3 rounded text-xs font-mono break-all text-white">
+              <p>DEBUG INFO (Por favor envie foto disto para a I.A):</p>
+              <p>User ID: {user.id}</p>
+              <p>Roles em memória: {JSON.stringify(useAuth().roles)}</p>
+              <p>Role no profile: {useAuth().profile?.role || "null"}</p>
+              <p>Email: {user.email}</p>
+            </div>
             <button
               type="button"
               onClick={signOut}
