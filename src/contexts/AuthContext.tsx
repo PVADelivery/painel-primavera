@@ -42,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     let userRoles = (rolesRes.data?.map((r) => r.role as AppRole)) ?? [];
     
-    // FALLBACK: Se user_roles falhar ou estiver vazio, tenta pegar do profiles
-    if (userRoles.length === 0 && profileRes.data?.role) {
-      userRoles = [profileRes.data.role as AppRole];
+    // FALLBACK MISTO: Se a pessoa tem um cargo na profiles (como 'admin'), 
+    // precisamos garantir que ele seja incorporado, mesmo se ela já tiver 
+    // recebido um cargo de 'company' pela tabela user_roles.
+    if (profileRes.data?.role && !userRoles.includes(profileRes.data.role as AppRole)) {
+      userRoles.push(profileRes.data.role as AppRole);
     }
     
     setRoles(userRoles);
