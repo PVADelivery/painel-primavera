@@ -89,7 +89,7 @@ function DeliveriesPage() {
 
   const rawDeliveries = qData?.data ?? [];
   const deliveries = useUniqueDeliveries(rawDeliveries);
-  const totalCount = qData?.count ?? 0;
+  const totalCount = qData?.length ?? 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const onlineDrivers = (drivers ?? []).filter((d) => d.is_online);
@@ -207,16 +207,8 @@ function DeliveriesPage() {
   };
 
   return (
-    <AdminLayout title="Entregas" subtitle="Gestão de corridas e ordens de serviço">
-      {showNewForm ? (
-        <NewDeliveryForm
-          isAdmin
-          onSaved={handleDeliveryCreated}
-          onClose={() => setShowNewForm(false)}
-        />
-      ) : (
-        <>
-          <div className="flex justify-end mb-4">
+    <AdminLayout>
+      <div className="flex flex-col gap-3 mb-5">
              <button
                onClick={() => setShowNewForm(true)}
                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-black flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
@@ -740,8 +732,6 @@ function DeliveriesPage() {
           )}
         </DialogContent>
       </Dialog>
-        </>
-      )}
     </AdminLayout>
   );
 }
