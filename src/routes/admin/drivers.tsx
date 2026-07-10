@@ -285,9 +285,11 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
                 </button>
               ))}
             </div>
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <FieldInput label="Placa" value={form.licensePlate} onChange={(v) => set("licensePlate", v.toUpperCase())} placeholder="ABC1234" />
+              <FieldInput label="Comissão por Corrida (R$)" type="number" value={form.commissionRate} onChange={(v) => set("commissionRate", v)} placeholder="15" />
+            </div>
           </div>
-          <FieldInput label="Placa" value={form.licensePlate} onChange={(v) => set("licensePlate", v)} placeholder="ABC-1234" />
-          <FieldInput label="Comissão (%)" type="number" value={form.commissionRate} onChange={(v) => set("commissionRate", v)} placeholder="15" />
         </div>
       )}
 

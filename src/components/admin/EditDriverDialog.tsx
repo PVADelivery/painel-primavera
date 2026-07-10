@@ -115,7 +115,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
               </div>
             </div>
             <div>
-              <Label>Comissão (%)</Label>
+              <Label>Comissão por Corrida (R$)</Label>
               <Input type="number" value={form.commission} onChange={e => set("commission", e.target.value)} />
             </div>
           </div>
