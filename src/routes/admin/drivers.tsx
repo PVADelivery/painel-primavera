@@ -26,6 +26,17 @@ function DriversPage() {
   const { data: drivers, isLoading } = useDrivers();
   const toggleOnline = useToggleDriverOnline();
   const qc = useQueryClient();
+    const [activeTab, setActiveTab] = useState("all");
+
+  const filteredDrivers = (drivers ?? []).filter((d) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "encomendas") return d.vehicle_type === "moto" || d.vehicle_type === "motorcycle";
+    if (activeTab === "carro") return d.vehicle_type === "carro" || d.vehicle_type === "car" || d.vehicle_type === "carro_aberto" || d.vehicle_type === "van" || d.vehicle_type === "truck";
+    if (activeTab === "taxi") return d.vehicle_type === "taxi";
+    if (activeTab === "mototaxi") return d.vehicle_type === "mototaxi" || d.vehicle_type === "moto_taxi";
+    return true;
+  });
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<any>(null);
@@ -87,7 +98,31 @@ function DriversPage() {
         </div>
       </div>
 
+      
+      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 border-b border-border hide-scrollbar">
+        {[
+          { id: "all", label: "Todos" },
+          { id: "encomendas", label: "Moto (Encomendas)" },
+          { id: "carro", label: "Carro (Encomendas)" },
+          { id: "taxi", label: "Táxi" },
+          { id: "mototaxi", label: "Moto Táxi" }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+              activeTab === tab.id 
+                ? "bg-primary text-primary-foreground shadow-md" 
+                : "bg-card text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="rounded-2xl bg-card shadow-card overflow-hidden">
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -106,10 +141,10 @@ function DriversPage() {
             <tbody>
               {isLoading ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-              ) : (drivers ?? []).length === 0 ? (
+              ) : filteredDrivers.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum entregador encontrado</td></tr>
               ) : (
-                (drivers ?? []).map((d) => (
+                filteredDrivers.map((d) => (
                   <tr key={d.id} className="border-b border-border hover:bg-muted/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
