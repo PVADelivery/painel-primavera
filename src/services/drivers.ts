@@ -18,6 +18,7 @@ export type DriverWithProfile = {
   longitude: number | null;
   status?: string | null;
   commission_rate?: number | null;
+  service_types?: string[] | null;
   created_at?: string;
 };
 
@@ -61,6 +62,7 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       longitude: raw.longitude || raw.current_longitude || null,
       status: raw.status || "active",
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 0.40,
+      service_types: raw.service_types || [],
       created_at: driver.created_at,
     } as DriverWithProfile;
   });
@@ -111,6 +113,7 @@ export function useOnlineDrivers() {
           latitude: raw.latitude || raw.current_latitude || null,
           longitude: raw.longitude || raw.current_longitude || null,
           status: raw.status || "active",
+          service_types: raw.service_types || [],
           created_at: driver.created_at,
         } as DriverWithProfile;
       });

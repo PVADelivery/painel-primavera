@@ -30,10 +30,24 @@ function DriversPage() {
 
   const filteredDrivers = (drivers ?? []).filter((d) => {
     if (activeTab === "all") return true;
-    if (activeTab === "encomendas") return d.vehicle_type === "moto" || d.vehicle_type === "motorcycle";
-    if (activeTab === "carro") return d.vehicle_type === "carro" || d.vehicle_type === "car" || d.vehicle_type === "carro_aberto" || d.vehicle_type === "van" || d.vehicle_type === "truck";
-    if (activeTab === "taxi") return d.vehicle_type === "taxi";
-    if (activeTab === "mototaxi") return d.vehicle_type === "mototaxi" || d.vehicle_type === "moto_taxi";
+    const services = Array.isArray(d.service_types) ? d.service_types : [];
+    
+    if (activeTab === "encomendas") {
+      return services.includes("delivery_moto") || 
+             (services.length === 0 && (d.vehicle_type === "moto" || d.vehicle_type === "motorcycle" || !d.vehicle_type));
+    }
+    if (activeTab === "carro") {
+      return services.includes("delivery_car") || services.includes("delivery_carro_aberto") || 
+             (services.length === 0 && (d.vehicle_type === "carro" || d.vehicle_type === "car" || d.vehicle_type === "carro_aberto" || d.vehicle_type === "van" || d.vehicle_type === "truck"));
+    }
+    if (activeTab === "taxi") {
+      return services.includes("taxi") || 
+             (services.length === 0 && d.vehicle_type === "taxi");
+    }
+    if (activeTab === "mototaxi") {
+      return services.includes("mototaxi") || 
+             (services.length === 0 && (d.vehicle_type === "mototaxi" || d.vehicle_type === "moto_taxi"));
+    }
     return true;
   });
 
