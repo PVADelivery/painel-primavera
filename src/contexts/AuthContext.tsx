@@ -35,18 +35,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const fetchUserData = async (userId: string) => {
-    const [rolesRes, profileRes] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-    ]);
+    // 1. Tenta buscar as roles usando a função segura (ignora RLS)
+    const { data: rpcRoles, error: rpcError } = await supabase.rpc("get_my_roles");
     
-    let userRoles = (rolesRes.data?.map((r) => r.role as AppRole)) ?? [];
-    
-    // FALLBACK: Se user_roles falhar ou estiver vazio, tenta pegar do profiles
-    if (userRoles.length === 0 && profileRes.data?.role) {
-      userRoles = [profileRes.data.role as AppRole];
+    let userRoles: AppRole[] = [];
+
+    if (!rpcError && rpcRoles) {
+      // Se a função existir e rodar com sucesso, usamos o resultado dela.
+      userRoles = rpcRoles.map((r: any) => r.role as AppRole);
+    } else {
+      // 2. FALLBACK SE A FUNÇÃO AINDA NÃO FOI CRIADA NO BANCO:
+      // Faz as consultas normais como antes
+      const [rolesRes, profileRes] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+      ]);
+      
+      userRoles = (rolesRes.data?.map((r) => r.role as AppRole)) ?? [];
+      
+      // Fallback antigo do profile (caso o user_roles esteja vazio)
+      if (userRoles.length === 0 && profileRes.data?.role) {
+        userRoles = [profileRes.data.role as AppRole];
+      }
     }
     
+    // ATUALIZA O PERFIL PARA OUTROS USOS DA APLICAÇÃO
+    const profileRes = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
+
     setRoles(userRoles);
     setProfile(profileRes.data ?? null);
     setRolesLoaded(true);
