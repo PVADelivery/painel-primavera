@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { useDirectory, useCreateDirectoryBusiness, useUpdateDirectoryBusiness, useDeleteDirectoryBusiness, DirectoryBusiness } from "@/services/directory";
+import { useDirectory, useCreateDirectoryBusiness, useUpdateDirectoryBusiness, useDeleteDirectoryBusiness, DirectoryBusiness, useDirectoryCategories, useUpdateDirectoryCategories } from "@/services/directory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -111,6 +111,7 @@ function DirectoryAdminPage() {
           <p className="text-sm text-muted-foreground">Gerencie os cartões de visita virtuais do app cliente</p>
         </div>
         <div className="flex items-center gap-2">
+          <CategoryManager />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Novo Cartão</Button>
@@ -260,5 +261,80 @@ function DirectoryAdminPage() {
         )}
       </div>
     </AdminLayout>
+  );
+}
+
+function CategoryManager() {
+  const { data: categories = [], isLoading } = useDirectoryCategories();
+  const update = useUpdateDirectoryCategories();
+  const [open, setOpen] = useState(false);
+  const [newCat, setNewCat] = useState("");
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCat.trim()) return;
+    // Evita duplicatas ignorando case sensitivity
+    if (categories.find(c => c.toLowerCase() === newCat.trim().toLowerCase())) {
+      toast.error("Categoria já existe");
+      return;
+    }
+    const updated = [...categories, newCat.trim()];
+    try {
+      await update.mutateAsync(updated);
+      setNewCat("");
+      toast.success("Categoria adicionada");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleRemove = async (cat: string) => {
+    if (!confirm(`Remover categoria "${cat}"?`)) return;
+    const updated = categories.filter(c => c !== cat);
+    try {
+      await update.mutateAsync(updated);
+      toast.success("Categoria removida");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Building2 className="mr-2 h-4 w-4" /> Categorias</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Gerenciar Categorias</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <form onSubmit={handleAdd} className="flex gap-2">
+            <Input 
+              value={newCat} 
+              onChange={e => setNewCat(e.target.value)} 
+              placeholder="Nova categoria..." 
+            />
+            <Button type="submit" disabled={update.isPending || isLoading}>Adicionar</Button>
+          </form>
+          <div className="border border-border rounded-xl divide-y max-h-[60vh] overflow-y-auto">
+            {isLoading ? (
+              <p className="p-4 text-center text-muted-foreground text-sm">Carregando...</p>
+            ) : categories.length === 0 ? (
+              <p className="p-4 text-center text-muted-foreground text-sm">Nenhuma categoria.</p>
+            ) : (
+              categories.map(cat => (
+                <div key={cat} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+                  <span className="font-medium text-sm">{cat}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemove(cat)} disabled={update.isPending}>
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
