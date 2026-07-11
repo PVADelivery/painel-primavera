@@ -31,7 +31,7 @@ export function useCreateDirectoryBusiness() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (business: Partial<DirectoryBusiness>) => {
-      const { data, error } = await supabase.from("business_directory").insert([business]).select().single();
+      const { data, error } = await supabase.from("business_directory").insert([business as any]).select().single();
       if (error) throw error;
       return data;
     },

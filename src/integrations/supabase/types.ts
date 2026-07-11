@@ -170,6 +170,57 @@ export type Database = {
         }
         Relationships: []
       }
+      business_directory: {
+        Row: {
+          address: string | null
+          card_image_url: string | null
+          card_style: string | null
+          category: string
+          created_at: string
+          featured: boolean
+          hours: string | null
+          id: string
+          name: string
+          phone: string | null
+          rating: number | null
+          updated_at: string
+          website: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          card_image_url?: string | null
+          card_style?: string | null
+          category?: string
+          created_at?: string
+          featured?: boolean
+          hours?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          card_image_url?: string | null
+          card_style?: string | null
+          category?: string
+          created_at?: string
+          featured?: boolean
+          hours?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       chat_sessions: {
         Row: {
           company_id: string
