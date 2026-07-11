@@ -151,7 +151,7 @@ export function useDeliveries(params?: UseDeliveriesParams) {
         };
       });
 
-      return normalizedData as unknown as DeliveryWithRelations[];
+      return { data: normalizedData as unknown as DeliveryWithRelations[], length: count };
     },
     enabled,
   });
