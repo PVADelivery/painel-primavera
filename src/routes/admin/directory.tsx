@@ -9,6 +9,7 @@ import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIco
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/admin/directory")({
   component: DirectoryAdminPage,
@@ -25,6 +26,7 @@ function DirectoryAdminPage() {
   const [form, setForm] = useState<Partial<DirectoryBusiness>>({});
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const resetForm = () => {
     setForm({
@@ -78,8 +80,8 @@ function DirectoryAdminPage() {
     setUploading(true);
     try {
       const ext = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${ext}`;
-      const filePath = `${fileName}`;
+      const fileName = `directory_${Math.random().toString(36).substring(2)}-${Date.now()}.${ext}`;
+      const filePath = user?.id ? `${user.id}/${fileName}` : `${fileName}`;
 
       // Requer um bucket chamado 'directory-assets' criado e público no Supabase
       // Se nao existir, vamos tentar 'avatars' que j sabemos que existe
