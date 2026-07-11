@@ -20,6 +20,7 @@ import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminProfileRouteImport } from './routes/admin/profile'
 import { Route as AdminDriversRouteImport } from './routes/admin/drivers'
+import { Route as AdminDirectoryRouteImport } from './routes/admin/directory'
 import { Route as AdminDeliveriesRouteImport } from './routes/admin/deliveries'
 import { Route as AdminCompaniesRouteImport } from './routes/admin/companies'
 import { Route as AdminChatRouteImport } from './routes/admin/chat'
@@ -80,6 +81,11 @@ const AdminDriversRoute = AdminDriversRouteImport.update({
   path: '/admin/drivers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDirectoryRoute = AdminDirectoryRouteImport.update({
+  id: '/admin/directory',
+  path: '/admin/directory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDeliveriesRoute = AdminDeliveriesRouteImport.update({
   id: '/admin/deliveries',
   path: '/admin/deliveries',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
+  '/admin/directory': typeof AdminDirectoryRoute
   '/admin/drivers': typeof AdminDriversRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
+  '/admin/directory': typeof AdminDirectoryRoute
   '/admin/drivers': typeof AdminDriversRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/admin/chat': typeof AdminChatRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/deliveries': typeof AdminDeliveriesRoute
+  '/admin/directory': typeof AdminDirectoryRoute
   '/admin/drivers': typeof AdminDriversRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/regions': typeof AdminRegionsRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
+    | '/admin/directory'
     | '/admin/drivers'
     | '/admin/profile'
     | '/admin/regions'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
+    | '/admin/directory'
     | '/admin/drivers'
     | '/admin/profile'
     | '/admin/regions'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/admin/chat'
     | '/admin/companies'
     | '/admin/deliveries'
+    | '/admin/directory'
     | '/admin/drivers'
     | '/admin/profile'
     | '/admin/regions'
@@ -214,6 +226,7 @@ export interface RootRouteChildren {
   AdminChatRoute: typeof AdminChatRoute
   AdminCompaniesRoute: typeof AdminCompaniesRoute
   AdminDeliveriesRoute: typeof AdminDeliveriesRoute
+  AdminDirectoryRoute: typeof AdminDirectoryRoute
   AdminDriversRoute: typeof AdminDriversRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDriversRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/directory': {
+      id: '/admin/directory'
+      path: '/admin/directory'
+      fullPath: '/admin/directory'
+      preLoaderRoute: typeof AdminDirectoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/deliveries': {
       id: '/admin/deliveries'
       path: '/admin/deliveries'
@@ -342,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminChatRoute: AdminChatRoute,
   AdminCompaniesRoute: AdminCompaniesRoute,
   AdminDeliveriesRoute: AdminDeliveriesRoute,
+  AdminDirectoryRoute: AdminDirectoryRoute,
   AdminDriversRoute: AdminDriversRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminRegionsRoute: AdminRegionsRoute,
@@ -355,13 +376,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
