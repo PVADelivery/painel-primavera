@@ -30,8 +30,22 @@ function DashboardPage() {
   const [period, setPeriod] = useState<"1" | "7" | "30">("7");
   const days = parseInt(period, 10);
 
-  const { data: deliveries = [], isLoading: loadingDel, refetch } = useDeliveries({ sinceDays: days });
-  const { data: drivers = [], isLoading: loadingDrv } = useDrivers();
+  const { data: deliveriesResult, isLoading: loadingDel, refetch } = useDeliveries({ sinceDays: days });
+  const { data: driversResult, isLoading: loadingDrv } = useDrivers();
+
+  const deliveries = useMemo(() => {
+    if (!deliveriesResult) return [];
+    if (Array.isArray(deliveriesResult)) return deliveriesResult;
+    if (deliveriesResult && Array.isArray(deliveriesResult.data)) return deliveriesResult.data;
+    return [];
+  }, [deliveriesResult]);
+
+  const drivers = useMemo(() => {
+    if (!driversResult) return [];
+    if (Array.isArray(driversResult)) return driversResult;
+    if (driversResult && Array.isArray((driversResult as any).data)) return (driversResult as any).data;
+    return [];
+  }, [driversResult]);
 
   const stats = useMemo(() => {
     const inTransit = deliveries.filter((d) => d.status === "in_route").length;

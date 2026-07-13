@@ -20,8 +20,15 @@ export const Route = createFileRoute("/admin/reports")({
 });
 
 function ReportsPage() {
-  const { data = [] } = useDeliveries({ sinceDays: 30 });
+  const { data: deliveriesResult } = useDeliveries({ sinceDays: 30 });
   const { toast } = useToast();
+
+  const data = useMemo(() => {
+    if (!deliveriesResult) return [];
+    if (Array.isArray(deliveriesResult)) return deliveriesResult;
+    if (deliveriesResult && Array.isArray(deliveriesResult.data)) return deliveriesResult.data;
+    return [];
+  }, [deliveriesResult]);
 
   const stats = useMemo(() => {
     const delivered = data.filter((d) => d.status === "completed");
