@@ -70,6 +70,7 @@ function RegionsPage() {
       style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
       center: [-56.0974, -15.5989],
       zoom: 11,
+      attributionControl: false,
     });
     m.addControl(new MapLibre.NavigationControl(), "bottom-right");
     mapRef.current = m;

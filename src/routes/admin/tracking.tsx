@@ -70,6 +70,7 @@ function TrackingPage() {
             mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             mapLib={maplibregl}
             style={{ width: "100%", height: "100%" }}
+            attributionControl={false}
           >
             <NavigationControl position="bottom-right" />
             
