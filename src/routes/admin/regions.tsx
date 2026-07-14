@@ -611,12 +611,12 @@ function RegionsPage() {
                   className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary"
                 />
               </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="text-sm font-medium mb-1.5 block text-foreground">Cor</label>
                   <div className="flex items-center gap-2">
-                    <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0" />
-                    <input value={editColor} onChange={(e) => setEditColor(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none font-mono" />
+                    <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 shrink-0" />
+                    <input value={editColor} onChange={(e) => setEditColor(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none font-mono" />
                   </div>
                 </div>
                 <div>
@@ -629,15 +629,15 @@ function RegionsPage() {
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Cupom de Pagamento</label>
-                  <input
-                    value={editCoupon}
-                    onChange={(e) => setEditCoupon(e.target.value)}
-                    placeholder="Ex: DESCONTO10"
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
-                  />
-                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block text-foreground">Cupom de Pagamento</label>
+                <input
+                  value={editCoupon}
+                  onChange={(e) => setEditCoupon(e.target.value)}
+                  placeholder="Ex: DESCONTO10"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block text-foreground">Cidade</label>
@@ -690,11 +690,9 @@ function RegionsPage() {
                   <input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Cupom de Pagamento</label>
-                  <input value={editCoupon} onChange={(e) => setEditCoupon(e.target.value)} placeholder="Ex: DESCONTO10" className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
-                </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Cupom de Pagamento</label>
+                <input value={editCoupon} onChange={(e) => setEditCoupon(e.target.value)} placeholder="Ex: DESCONTO10" className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
               </div>
               <div className="flex gap-2">
                 <button
