@@ -31,7 +31,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
   const updateRegion = useUpdateRegion();
 
   const { data: allDrivers } = useDrivers();
-  const drivers = allDrivers?.filter(d => d.status === "active" || d.status === "approved") || [];
+  const drivers = Array.isArray(allDrivers) ? allDrivers.filter(d => d.status === "active" || d.status === "approved") : [];
   const { data: regions } = useRegions();
   const { data: deliveriesData } = useDeliveries({ status: "in_transit" });
   const { data: companies } = useCompanies();

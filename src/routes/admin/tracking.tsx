@@ -21,7 +21,7 @@ function TrackingPage() {
     zoom: 12
   });
 
-  const onlineDrivers = useMemo(() => drivers.filter(d => d.online && d.latitude && d.longitude), [drivers]);
+  const onlineDrivers = useMemo(() => Array.isArray(drivers) ? drivers.filter(d => d.online && d.latitude && d.longitude) : [], [drivers]);
 
   return (
     <AdminLayout>

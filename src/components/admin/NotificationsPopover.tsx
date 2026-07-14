@@ -26,7 +26,7 @@ const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/286
 
 export function NotificationsPopover() {
   const { data: deliveriesData } = useDeliveries({ pageSize: 10 });
-  const deliveries = deliveriesData?.data ?? [];
+  const deliveries = Array.isArray(deliveriesData?.data) ? deliveriesData.data : [];
   const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
 
   const pendingDeliveries = deliveries.filter(d => d.status === "pending");

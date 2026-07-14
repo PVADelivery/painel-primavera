@@ -31,7 +31,7 @@ function RegionsPage() {
   const { data: regions, isLoading } = useRegions();
   const { data: allDrivers } = useDrivers();
   // Show all online drivers with a known location on the map
-  const drivers = allDrivers?.filter(d => d.is_online === true && d.latitude != null && d.longitude != null) || [];
+  const drivers = Array.isArray(allDrivers) ? allDrivers.filter(d => d.is_online === true && d.latitude != null && d.longitude != null) : [];
   const createRegion = useCreateRegion();
   const updateRegion = useUpdateRegion();
   const deleteRegion = useDeleteRegion();

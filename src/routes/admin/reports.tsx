@@ -31,7 +31,7 @@ function ReportsPage() {
   }, [deliveriesResult]);
 
   const stats = useMemo(() => {
-    const delivered = data.filter((d) => d.status === "completed");
+    const delivered = Array.isArray(data) ? data.filter((d) => d.status === "completed") : [];
     const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
     const commission = delivered.reduce((s, d) => s + Number(d.commission || 0), 0);
     const ticket = delivered.length ? revenue / delivered.length : 0;
@@ -107,8 +107,8 @@ function ReportsPage() {
   }, []);
 
   const cfStats = useMemo(() => {
-    const income = cashFlows.filter(c => c.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0);
-    const expense = cashFlows.filter(c => c.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const income = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
+    const expense = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
     return { income, expense, balance: income - expense };
   }, [cashFlows]);
 

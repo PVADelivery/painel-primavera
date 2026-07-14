@@ -48,6 +48,7 @@ function DashboardPage() {
   }, [driversResult]);
 
   const stats = useMemo(() => {
+    if (!Array.isArray(deliveries) || !Array.isArray(drivers)) return { inTransit: 0, revenue: 0, total: 0, delivered: 0, onlineDrivers: 0, totalDrivers: 0 };
     const inTransit = deliveries.filter((d) => d.status === "in_route").length;
     const delivered = deliveries.filter((d) => d.status === "completed");
     const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
@@ -63,6 +64,7 @@ function DashboardPage() {
   }, [deliveries, drivers]);
 
   const trendData = useMemo(() => {
+    if (!Array.isArray(deliveries)) return [];
     const start = startOfDay(subDays(new Date(), days - 1));
     const range = eachDayOfInterval({ start, end: new Date() });
     return range.map((day) => {
@@ -75,6 +77,7 @@ function DashboardPage() {
   }, [deliveries, days]);
 
   const statusData = useMemo(() => {
+    if (!Array.isArray(deliveries)) return [];
     const counts: Record<string, number> = {};
     deliveries.forEach((d) => { counts[d.status] = (counts[d.status] || 0) + 1; });
     const colors: Record<string, string> = {

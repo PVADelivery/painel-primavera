@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,14 @@ interface EditDriverDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const SERVICE_OPTIONS = [
+  { value: "delivery_moto", label: "Entregas (Moto)" },
+  { value: "delivery_car", label: "Entregas (Carro)" },
+  { value: "delivery_carro_aberto", label: "Frete (Carro Aberto)" },
+  { value: "taxi", label: "Táxi (Passageiros)" },
+  { value: "mototaxi", label: "Moto Táxi (Passageiros)" },
+];
 
 export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialogProps) {
   const [loading, setLoading] = useState(false);
@@ -26,9 +35,19 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
     vehicleType: driver?.vehicle_type || "motorcycle",
     vehiclePlate: driver?.vehicle_plate || "",
     commission: driver?.commission_rate?.toString() || "10",
+    serviceTypes: Array.isArray(driver?.service_types) ? driver.service_types : [],
   });
 
-  const set = (key: string, val: string) => setForm(p => ({ ...p, [key]: val }));
+  const set = (key: string, val: any) => setForm(p => ({ ...p, [key]: val }));
+
+  const toggleService = (val: string) => {
+    setForm(p => ({
+      ...p,
+      serviceTypes: p.serviceTypes.includes(val) 
+        ? p.serviceTypes.filter((t: string) => t !== val)
+        : [...p.serviceTypes, val]
+    }));
+  };
 
   const handleSubmit = async () => {
     if (!form.fullName || !form.phone) {
@@ -57,6 +76,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
           vehicle_type: form.vehicleType,
           vehicle_plate: form.vehiclePlate,
           commission_rate: parseFloat(form.commission),
+          service_types: form.serviceTypes,
         })
         .eq("id", driver.id);
 
@@ -74,7 +94,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Entregador: {driver?.full_name}</DialogTitle>
         </DialogHeader>
@@ -95,9 +115,31 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
                 <Input value={form.document} onChange={e => set("document", e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            
+            <div className="pt-2 border-t">
+              <Label className="text-base font-bold mb-3 block">Serviços Autorizados</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {SERVICE_OPTIONS.map(opt => (
+                  <div key={opt.value} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`srv-${opt.value}`} 
+                      checked={form.serviceTypes.includes(opt.value)}
+                      onCheckedChange={() => toggleService(opt.value)}
+                    />
+                    <label 
+                      htmlFor={`srv-${opt.value}`} 
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {opt.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t mt-2">
               <div>
-                <Label>Tipo de veículo</Label>
+                <Label>Veículo Principal</Label>
                 <Select value={form.vehicleType} onValueChange={v => set("vehicleType", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -110,7 +152,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
                 </Select>
               </div>
               <div>
-                <Label>Placa</Label>
+                <Label>Placa Principal</Label>
                 <Input value={form.vehiclePlate} onChange={e => set("vehiclePlate", e.target.value.toUpperCase())} />
               </div>
             </div>
@@ -121,7 +163,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-4">
+        <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Salvando..." : "Salvar Alterações"}
@@ -130,4 +172,4 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
       </DialogContent>
     </Dialog>
   );
-}
+}

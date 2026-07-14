@@ -21,11 +21,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function computeKpis(deliveries: DeliveryWithRelations[]) {
-  const total = deliveries.length;
-  const delivered = deliveries.filter(d => d.status === "delivered");
-  const cancelled = deliveries.filter(d => d.status === "cancelled").length;
-  const pending = deliveries.filter(d => d.status === "pending" || d.status === "broadcasted").length;
-  const inTransit = deliveries.filter(d => d.status === "in_transit" || d.status === "collecting" || d.status === "accepted").length;
+  const safeDeliveries = Array.isArray(deliveries) ? deliveries : [];
+  const total = safeDeliveries.length;
+  const delivered = safeDeliveries.filter(d => d.status === "delivered");
+  const cancelled = safeDeliveries.filter(d => d.status === "cancelled").length;
+  const pending = safeDeliveries.filter(d => d.status === "pending" || d.status === "broadcasted").length;
+  const inTransit = safeDeliveries.filter(d => d.status === "in_transit" || d.status === "collecting" || d.status === "accepted").length;
   const revenue = delivered.reduce((s, d) => s + Number(d.value ?? 0), 0);
   const avgTicket = delivered.length ? revenue / delivered.length : 0;
   const conversion = total ? (delivered.length / total) * 100 : 0;

@@ -11,7 +11,7 @@ export function MotoboysSidebar() {
   const navigate = useNavigate();
   const { data: drivers, isLoading } = useDrivers();
 
-  const allDrivers = drivers ?? [];
+  const allDrivers = Array.isArray(drivers) ? drivers : [];
   const online = allDrivers.filter((d) => d.is_online);
   const offline = allDrivers.filter((d) => !d.is_online);
   const list = (tab === "online" ? online : offline).filter((d) =>
