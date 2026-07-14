@@ -15,16 +15,10 @@ export async function fetchRegions(city?: string) {
 }
 
 export async function fetchCitiesWithRegions() {
-  const { data, error } = await (supabase as any)
-    .from("regions")
-    .select("city")
-    .not("city", "is", null);
-  
-  if (error) throw error;
-  
-  // Return unique sorted list of cities
-  const cities = Array.from(new Set((data ?? []).map((r: any) => r.city as string))).sort();
-  return cities;
+  // O banco de dados atualmente não possui a coluna "city" na tabela "regions".
+  // Para evitar que a tela de admin quebre com "CARREGANDO CIDADES...",
+  // vamos retornar um array vazio por enquanto.
+  return [];
 }
 
 export async function createRegion(region: CreateRegionInput) {
