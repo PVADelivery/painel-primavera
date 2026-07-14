@@ -9,8 +9,6 @@ import { toast } from "sonner";
 import { CityServiceList } from "@/components/admin/CityServiceList";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-
-const MapLibre = (maplibregl as any).Map ? maplibregl : ((maplibregl as any).default || maplibregl);
 import { useDrivers } from "@/services/drivers";
 
 const escapeHtml = (s: unknown): string =>
@@ -64,7 +62,7 @@ function RegionsPage() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
     try {
-      const m = new MapLibre.Map({
+      const m = new maplibregl.Map({
         container: mapContainerRef.current,
         style: {
           version: 8,
@@ -90,7 +88,7 @@ function RegionsPage() {
         zoom: 12,
         attributionControl: false,
       });
-      m.addControl(new MapLibre.NavigationControl(), "bottom-right");
+      m.addControl(new maplibregl.NavigationControl(), "bottom-right");
       mapRef.current = m;
     } catch (e: any) {
       console.error("Map init error:", e);
@@ -129,7 +127,7 @@ function RegionsPage() {
     if (allCoords.length === 0) return;
     const lngs = allCoords.map(c => c[0]);
     const lats = allCoords.map(c => c[1]);
-    const bounds = new MapLibre.LngLatBounds(
+    const bounds = new maplibregl.LngLatBounds(
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)]
     );
@@ -269,9 +267,9 @@ function RegionsPage() {
         </div>
       `;
 
-      const marker = new MapLibre.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el })
         .setLngLat([lng, lat])
-        .setPopup(new MapLibre.Popup({ offset: 25, closeButton: false }).setHTML(popupContent))
+        .setPopup(new maplibregl.Popup({ offset: 25, closeButton: false }).setHTML(popupContent))
         .addTo(m);
 
       driverMarkersRef.current.push(marker);
