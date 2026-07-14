@@ -40,8 +40,7 @@ function RegionsPage() {
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("#3B82F6");
   const [editPrice, setEditPrice] = useState("0");
-  const [editTaxiPrice, setEditTaxiPrice] = useState("3.50");
-  const [editMototaxiPrice, setEditMototaxiPrice] = useState("2.00");
+  const [editCoupon, setEditCoupon] = useState("");
   const [editCity, setEditCity] = useState("");
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
@@ -185,6 +184,7 @@ function RegionsPage() {
           setEditName(region.name);
           setEditColor(region.color);
           setEditPrice(String(region.price));
+          setEditCoupon((region as any).coupon || "");
           setDrawMode("none");
           setDrawnPoints([]);
         });
@@ -424,8 +424,7 @@ function RegionsPage() {
     setEditName("");
     setEditColor("#3B82F6");
     setEditPrice("0");
-    setEditTaxiPrice("3.50");
-    setEditMototaxiPrice("2.00");
+    setEditCoupon("");
     setEditCity("");
   };
 
@@ -459,8 +458,7 @@ function RegionsPage() {
         name: editName,
         color: editColor,
         price: parseFloat(editPrice) || 0,
-        taxi_rate_per_km: parseFloat(editTaxiPrice) || 3.50,
-        mototaxi_rate_per_km: parseFloat(editMototaxiPrice) || 2.00,
+        coupon: editCoupon || null,
         geometry: pendingGeometry as any,
       } as any);
       toast.success("Região criada!");
@@ -482,8 +480,7 @@ function RegionsPage() {
           name: editName,
           color: editColor,
           price: parseFloat(editPrice) || 0,
-          taxi_rate_per_km: parseFloat(editTaxiPrice) || 3.50,
-          mototaxi_rate_per_km: parseFloat(editMototaxiPrice) || 2.00,
+          coupon: editCoupon || null,
         } as any,
       });
       toast.success("Região atualizada!");
@@ -622,36 +619,23 @@ function RegionsPage() {
                     <input value={editColor} onChange={(e) => setEditColor(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none font-mono" />
                   </div>
                 </div>
-                <div className="w-28">
+                <div>
                   <label className="text-sm font-medium mb-1.5 block text-foreground">Entrega (R$)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Taxa Táxi/KM</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editTaxiPrice}
-                    onChange={(e) => setEditTaxiPrice(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary"
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Taxa Moto/KM</label>
+                  <label className="text-sm font-medium mb-1.5 block text-foreground">Cupom de Pagamento</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={editMototaxiPrice}
-                    onChange={(e) => setEditMototaxiPrice(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary"
+                    value={editCoupon}
+                    onChange={(e) => setEditCoupon(e.target.value)}
+                    placeholder="Ex: DESCONTO10"
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
                   />
                 </div>
               </div>
@@ -708,12 +692,8 @@ function RegionsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Táxi / KM (R$)</label>
-                  <input type="number" step="0.01" value={editTaxiPrice} onChange={(e) => setEditTaxiPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Moto / KM (R$)</label>
-                  <input type="number" step="0.01" value={editMototaxiPrice} onChange={(e) => setEditMototaxiPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
+                  <label className="text-xs text-muted-foreground mb-1 block">Cupom de Pagamento</label>
+                  <input value={editCoupon} onChange={(e) => setEditCoupon(e.target.value)} placeholder="Ex: DESCONTO10" className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -762,8 +742,7 @@ function RegionsPage() {
                       setEditName(region.name);
                       setEditColor(region.color);
                       setEditPrice(String(region.price));
-                      setEditTaxiPrice(String(region.taxi_rate_per_km ?? "3.50"));
-                      setEditMototaxiPrice(String(region.mototaxi_rate_per_km ?? "2.00"));
+                      setEditCoupon((region as any).coupon || "");
                       setDrawMode("none");
                       setDrawnPoints([]);
                       const geo = region.geometry as any;
