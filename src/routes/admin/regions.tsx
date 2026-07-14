@@ -644,7 +644,7 @@ function RegionsPage() {
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
                   />
                 </div>
-
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block text-foreground">Cidade</label>
                 <input
@@ -695,7 +695,7 @@ function RegionsPage() {
                   <label className="text-xs text-muted-foreground mb-1 block">Custo (Cupons)</label>
                   <input type="number" step="1" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
                 </div>
-
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={saveEditRegion}
