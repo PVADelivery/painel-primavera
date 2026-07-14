@@ -67,7 +67,26 @@ function TrackingPage() {
           <Map
             {...viewState}
             onMove={evt => setViewState(evt.viewState)}
-            mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+            mapStyle={{
+              version: 8,
+              sources: {
+                osm: {
+                  type: "raster",
+                  tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                  tileSize: 256,
+                  attribution: "&copy; OpenStreetMap Contributors",
+                },
+              },
+              layers: [
+                {
+                  id: "osm",
+                  type: "raster",
+                  source: "osm",
+                  minzoom: 0,
+                  maxzoom: 19,
+                },
+              ],
+            }}
             mapLib={maplibregl}
             style={{ width: "100%", height: "100%" }}
             attributionControl={false}
