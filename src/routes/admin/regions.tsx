@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useRegions, useCreateRegion, useUpdateRegion, useDeleteRegion } from "@/services/regions";
 import type { RegionRow } from "@/services/regions";
-import { MapPin, Plus, Trash2, Save, Pencil, Loader2, Ticket, Search, X, MousePointer, PenTool } from "lucide-react";
+import { MapPin, Plus, Trash2, Save, Pencil, Loader2, Ticket, Search, X, MousePointer, PenTool, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { CityServiceList } from "@/components/admin/CityServiceList";
 import maplibregl from "maplibre-gl";
@@ -633,10 +633,10 @@ function RegionsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Custo em Cupons (Qtd)</label>
+                  <label className="text-sm font-medium mb-1.5 block text-foreground">Custo (R$)</label>
                   <input
                     type="number"
-                    step="1"
+                    step="0.01"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
@@ -690,8 +690,8 @@ function RegionsPage() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Custo (Cupons)</label>
-                  <input type="number" step="1" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
+                  <label className="text-xs text-muted-foreground mb-1 block">Custo (R$)</label>
+                  <input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -765,7 +765,7 @@ function RegionsPage() {
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: region.color }} />
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Ticket className="h-3 w-3" /> {Number(region.price)} Cupons
+                            <DollarSign className="h-3 w-3" /> {Number(region.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                           </span>
                         </div>
                       </div>
