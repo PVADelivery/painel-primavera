@@ -16,8 +16,8 @@ export const Route = createFileRoute("/admin/tracking")({
 function TrackingPage() {
   const { data: drivers = [] } = useDrivers();
   const [viewState, setViewState] = useState({
-    longitude: -47.0608, // Placeholder for Primavera default longitude
-    latitude: -22.9099, // Placeholder for Primavera default latitude
+    longitude: -54.2972, // Primavera do Leste
+    latitude: -15.5597, // Primavera do Leste
     zoom: 12
   });
 

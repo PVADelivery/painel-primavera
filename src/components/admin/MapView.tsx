@@ -44,7 +44,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
 
   const defaultCenter: [number, number] = centerCity
     ? [centerCity.lng, centerCity.lat]
-    : [-56.0974, -15.5989];
+    : [-54.2972, -15.5597];
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
