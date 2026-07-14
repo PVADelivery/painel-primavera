@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import icon from "@/assets/primavera-icon-v3.png";
+import icon from "@/assets/logo-icon-v3.png";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
