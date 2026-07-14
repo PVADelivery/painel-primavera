@@ -65,15 +65,21 @@ function RegionsPage() {
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
-    const m = new MapLibre.Map({
-      container: mapContainerRef.current,
-      style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
-      center: [-54.2972, -15.5597], // Primavera do Leste
-      zoom: 12,
-      attributionControl: false,
-    });
-    m.addControl(new MapLibre.NavigationControl(), "bottom-right");
-    mapRef.current = m;
+    try {
+      const m = new MapLibre.Map({
+        container: mapContainerRef.current,
+        style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+        center: [-54.2972, -15.5597], // Primavera do Leste
+        zoom: 12,
+        attributionControl: false,
+      });
+      m.addControl(new MapLibre.NavigationControl(), "bottom-right");
+      mapRef.current = m;
+    } catch (e: any) {
+      console.error("Map init error:", e);
+      toast.error("Erro ao carregar o mapa: " + e.message);
+      return;
+    }
 
     const resizeObserver = new ResizeObserver(() => {
       m.resize();
@@ -110,7 +116,13 @@ function RegionsPage() {
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)]
     );
-    const fitMap = () => m.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1000 });
+    const fitMap = () => {
+      try {
+        m.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1000 });
+      } catch (e) {
+        console.error("fitBounds error", e);
+      }
+    };
     if (m.isStyleLoaded()) fitMap();
     else m.on("load", fitMap);
   // eslint-disable-next-line react-hooks/exhaustive-deps
