@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -286,14 +287,11 @@ function ReportsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="amount">Valor (R$)</Label>
-                        <Input
+                        <CurrencyInput
                           id="amount"
-                          type="number"
-                          step="0.01"
-                          min="0"
                           placeholder="0,00"
                           value={cfForm.amount}
-                          onChange={(e) => setCfForm({ ...cfForm, amount: e.target.value })}
+                          onChangeValue={(v) => setCfForm({ ...cfForm, amount: v })}
                           required
                         />
                       </div>
@@ -409,7 +407,7 @@ function ReportsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Valor (R$)</Label>
-                    <Input type="number" step="0.01" min="0" value={editingCf.amount} onChange={(e) => setEditingCf({ ...editingCf, amount: e.target.value })} required className="rounded-xl h-11" />
+                    <CurrencyInput value={editingCf.amount} onChangeValue={(v) => setEditingCf({ ...editingCf, amount: v })} required className="rounded-xl h-11" />
                   </div>
                   <div className="space-y-2">
                     <Label>Data</Label>

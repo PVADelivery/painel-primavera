@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -196,28 +197,33 @@ export function CouponDialog({ open, onOpenChange, coupon }: Props) {
 
           <div className="space-y-2">
             <Label>Valor do desconto *</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.discount_value}
-              onChange={(e) =>
-                setForm({ ...form, discount_value: Number(e.target.value) })
-              }
-            />
+            {form.discount_type === "percentage" ? (
+              <Input
+                type="number"
+                min={0}
+                value={form.discount_value}
+                onChange={(e) =>
+                  setForm({ ...form, discount_value: Number(e.target.value) })
+                }
+              />
+            ) : (
+              <CurrencyInput
+                value={form.discount_value}
+                onChangeValue={(v) =>
+                  setForm({ ...form, discount_value: Number(v) })
+                }
+              />
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Pedido mínimo (R$)</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
+            <CurrencyInput
               value={form.min_order_value ?? ""}
-              onChange={(e) =>
+              onChangeValue={(v) =>
                 setForm({
                   ...form,
-                  min_order_value: e.target.value === "" ? null : Number(e.target.value),
+                  min_order_value: v === "" ? null : Number(v),
                 })
               }
             />
@@ -225,20 +231,18 @@ export function CouponDialog({ open, onOpenChange, coupon }: Props) {
 
           <div className="space-y-2">
             <Label>Desconto máximo (R$)</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
+            <CurrencyInput
               value={form.max_discount_value ?? ""}
-              onChange={(e) =>
+              onChangeValue={(v) =>
                 setForm({
                   ...form,
-                  max_discount_value:
-                    e.target.value === "" ? null : Number(e.target.value),
+                  max_discount_value: v === "" ? null : Number(v),
                 })
               }
-              disabled={form.discount_type !== "percentage"}
             />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para não ter limite
+            </p>
           </div>
 
           <div className="space-y-2">

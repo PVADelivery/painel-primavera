@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -158,7 +159,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             </div>
             <div>
               <Label>Comissão por Corrida (R$)</Label>
-              <Input type="number" value={form.commission} onChange={e => set("commission", e.target.value)} />
+              <CurrencyInput value={form.commission} onChangeValue={v => set("commission", v)} />
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -150,26 +151,18 @@ export function CompanyPricingMatrixDialog({ company, open, onOpenChange }: Comp
 
             <div className="w-28">
               <Label className="text-xs mb-1 block text-muted-foreground">Valor (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={newRule.price || ""}
-                onChange={e => setNewRule({ ...newRule, price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChangeValue={v => setNewRule({ ...newRule, price: parseFloat(v) || 0 })}
                 className="h-10"
               />
             </div>
 
             <div className="w-28">
               <Label className="text-xs mb-1 block text-muted-foreground">Retorno (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={newRule.return_price || ""}
-                onChange={e => setNewRule({ ...newRule, return_price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChangeValue={v => setNewRule({ ...newRule, return_price: parseFloat(v) || 0 })}
                 className="h-10"
               />
             </div>

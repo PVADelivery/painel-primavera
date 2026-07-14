@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -182,10 +183,7 @@ export function CreateDriverDialog({ open, onOpenChange }: CreateDriverDialogPro
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Comissão por Corrida (R$)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">R$</span>
-                    <Input type="number" step="0.01" className="pl-10 h-12 rounded-xl" value={form.commissionRate} onChange={(e) => set("commissionRate", e.target.value)} />
-                  </div>
+                  <CurrencyInput className="h-12 rounded-xl" value={form.commissionRate} onChangeValue={(v) => set("commissionRate", v)} />
                 </div>
               </div>
             </div>
