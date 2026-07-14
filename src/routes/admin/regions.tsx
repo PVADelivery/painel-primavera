@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useRegions, useCreateRegion, useUpdateRegion, useDeleteRegion } from "@/services/regions";
 import type { RegionRow } from "@/services/regions";
-import { MapPin, Plus, Trash2, Save, Pencil, Loader2, DollarSign, Search, X, MousePointer, PenTool } from "lucide-react";
+import { MapPin, Plus, Trash2, Save, Pencil, Loader2, Ticket, Search, X, MousePointer, PenTool } from "lucide-react";
 import { toast } from "sonner";
 import { CityServiceList } from "@/components/admin/CityServiceList";
 import maplibregl from "maplibre-gl";
@@ -40,7 +40,6 @@ function RegionsPage() {
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("#3B82F6");
   const [editPrice, setEditPrice] = useState("0");
-  const [editCoupon, setEditCoupon] = useState("");
   const [editCity, setEditCity] = useState("");
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
@@ -443,7 +442,6 @@ function RegionsPage() {
     setEditName("");
     setEditColor("#3B82F6");
     setEditPrice("0");
-    setEditCoupon("");
     setEditCity("");
   };
 
@@ -476,8 +474,7 @@ function RegionsPage() {
       await createRegion.mutateAsync({
         name: editName,
         color: editColor,
-        price: parseFloat(editPrice) || 0,
-        coupon: editCoupon || null,
+        price: parseInt(editPrice) || 0,
         geometry: pendingGeometry as any,
       } as any);
       toast.success("Região criada!");
@@ -498,8 +495,7 @@ function RegionsPage() {
         updates: {
           name: editName,
           color: editColor,
-          price: parseFloat(editPrice) || 0,
-          coupon: editCoupon || null,
+          price: parseInt(editPrice) || 0,
         } as any,
       });
       toast.success("Região atualizada!");
@@ -639,25 +635,16 @@ function RegionsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Entrega (R$)</label>
+                  <label className="text-sm font-medium mb-1.5 block text-foreground">Custo em Cupons (Qtd)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block text-foreground">Cupom de Pagamento</label>
-                <input
-                  value={editCoupon}
-                  onChange={(e) => setEditCoupon(e.target.value)}
-                  placeholder="Ex: DESCONTO10"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/50 outline-none text-sm"
-                />
-              </div>
+
               <div>
                 <label className="text-sm font-medium mb-1.5 block text-foreground">Cidade</label>
                 <input
@@ -704,15 +691,11 @@ function RegionsPage() {
                     <input value={editColor} onChange={(e) => setEditColor(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none font-mono" />
                   </div>
                 </div>
-                <div className="w-28">
-                  <label className="text-xs text-muted-foreground mb-1 block">Entrega (R$)</label>
-                  <input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Custo (Cupons)</label>
+                  <input type="number" step="1" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
                 </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Cupom de Pagamento</label>
-                <input value={editCoupon} onChange={(e) => setEditCoupon(e.target.value)} placeholder="Ex: DESCONTO10" className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-primary" />
-              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={saveEditRegion}
@@ -759,7 +742,6 @@ function RegionsPage() {
                       setEditName(region.name);
                       setEditColor(region.color);
                       setEditPrice(String(region.price));
-                      setEditCoupon((region as any).coupon || "");
                       setDrawMode("none");
                       setDrawnPoints([]);
                       const geo = region.geometry as any;
@@ -785,7 +767,7 @@ function RegionsPage() {
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: region.color }} />
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" /> R$ {Number(region.price).toFixed(2)}
+                            <Ticket className="h-3 w-3" /> {Number(region.price)} Cupons
                           </span>
                         </div>
                       </div>
