@@ -64,26 +64,7 @@ function RegionsPage() {
     
     const m = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution: "&copy; OpenStreetMap Contributors",
-          },
-        },
-        layers: [
-          {
-            id: "osm",
-            type: "raster",
-            source: "osm",
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
-      },
+      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
       center: [-54.2972, -15.5597], // Primavera do Leste
       zoom: 12,
       attributionControl: false,
@@ -208,8 +189,16 @@ function RegionsPage() {
       ["draw-fill", "draw-line", "draw-points"].forEach((l) => { if (m.getLayer(l)) m.removeLayer(l); });
       if (m.getSource("draw")) m.removeSource("draw");
     };
-    if (m.isStyleLoaded()) handleLoad();
-    else m.on("load", handleLoad);
+
+    if (m.isStyleLoaded()) {
+      handleLoad();
+    } else {
+      m.once("load", handleLoad);
+    }
+    
+    return () => {
+      m.off("load", handleLoad);
+    };
   }, [regions, drawMode]);
 
   // Render driver markers
