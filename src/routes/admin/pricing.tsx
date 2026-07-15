@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 
 const brl = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -81,7 +82,8 @@ function PricingPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tabelas de Preço</h1>
         <p className="text-muted-foreground mt-2">
@@ -201,7 +203,8 @@ function PricingPage() {
            onClose={() => setSelectedTable(null)} 
          />
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
 
