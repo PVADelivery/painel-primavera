@@ -61,8 +61,10 @@ function RegionsPage() {
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+    
+    let m: maplibregl.Map;
     try {
-      const m = new maplibregl.Map({
+      m = new maplibregl.Map({
         container: mapContainerRef.current,
         style: {
           version: 8,
@@ -97,11 +99,9 @@ function RegionsPage() {
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      m.resize();
+      if (mapRef.current) mapRef.current.resize();
     });
-    if (mapContainerRef.current) {
-      resizeObserver.observe(mapContainerRef.current);
-    }
+    resizeObserver.observe(mapContainerRef.current);
 
     return () => {
       resizeObserver.disconnect();
