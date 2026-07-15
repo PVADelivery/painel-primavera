@@ -62,41 +62,35 @@ function RegionsPage() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
     
-    let m: maplibregl.Map;
-    try {
-      m = new maplibregl.Map({
-        container: mapContainerRef.current,
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: "raster",
-              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-              tileSize: 256,
-              attribution: "&copy; OpenStreetMap Contributors",
-            },
+    const m = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            attribution: "&copy; OpenStreetMap Contributors",
           },
-          layers: [
-            {
-              id: "osm",
-              type: "raster",
-              source: "osm",
-              minzoom: 0,
-              maxzoom: 19,
-            },
-          ],
         },
-        center: [-54.2972, -15.5597], // Primavera do Leste
-        zoom: 12,
-        attributionControl: false,
-      });
-      m.addControl(new maplibregl.NavigationControl(), "bottom-right");
-      mapRef.current = m;
-    } catch (e: any) {
-      console.error("Map init error:", e);
-      toast.error("Erro ao carregar o mapa: " + e.message);
-      return;
-    }
+        layers: [
+          {
+            id: "osm",
+            type: "raster",
+            source: "osm",
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+      },
+      center: [-54.2972, -15.5597], // Primavera do Leste
+      zoom: 12,
+      attributionControl: false,
+    });
+    
+    m.addControl(new maplibregl.NavigationControl(), "bottom-right");
+    mapRef.current = m;
 
     const resizeObserver = new ResizeObserver(() => {
       if (mapRef.current) mapRef.current.resize();
@@ -105,8 +99,10 @@ function RegionsPage() {
 
     return () => {
       resizeObserver.disconnect();
-      m.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
