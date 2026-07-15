@@ -80,10 +80,9 @@ function RegionsPage() {
 
     return () => {
       resizeObserver.disconnect();
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      // In React 18 Strict Mode, unmounting and remounting immediately can cause Maplibre to 
+      // crash or fail to re-render if the DOM node is reused. 
+      // We skip destroying the map instance here so it persists across the strict mode cycle.
     };
   }, []);
 
