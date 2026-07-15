@@ -47,7 +47,8 @@ function ReportsPage() {
     category: "",
     amount: "",
     type: "expense",
-    date: new Date().toISOString().split("T")[0]
+    date: new Date().toISOString().split("T")[0],
+    origin: ""
   });
   const [editingCf, setEditingCf] = useState(null);
 
@@ -122,7 +123,8 @@ function ReportsPage() {
       category: cfForm.category,
       amount: Number(cfForm.amount),
       type: cfForm.type,
-      date: cfForm.date
+      date: cfForm.date,
+      origin: cfForm.origin || null
     });
 
     if (error) {
@@ -154,7 +156,8 @@ function ReportsPage() {
       category: editingCf.category,
       amount: Number(editingCf.amount),
       type: editingCf.type,
-      date: editingCf.date
+      date: editingCf.date,
+      origin: editingCf.origin || null
     }).eq('id', editingCf.id);
 
     if (error) {
@@ -284,6 +287,22 @@ function ReportsPage() {
                       </Select>
                     </div>
 
+                    <div className="space-y-2">
+                      <Label htmlFor="origin">Origem</Label>
+                      <Select value={cfForm.origin} onValueChange={(val) => setCfForm({ ...cfForm, origin: val })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a origem" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                          <SelectItem value="Pix">Pix</SelectItem>
+                          <SelectItem value="Cartão crédito">Cartão crédito</SelectItem>
+                          <SelectItem value="Débito">Débito</SelectItem>
+                          <SelectItem value="A prazo">A prazo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="amount">Valor (R$)</Label>
@@ -345,6 +364,11 @@ function ReportsPage() {
                                 <span className="flex items-center gap-1 bg-secondary/80 text-secondary-foreground px-2.5 py-1 rounded-md">
                                   <Tag className="h-3 w-3" /> {item.category}
                                 </span>
+                                {item.origin && (
+                                  <span className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1 rounded-md">
+                                    <DollarSign className="h-3 w-3" /> {item.origin}
+                                  </span>
+                                )}
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" /> {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                                 </span>
@@ -435,6 +459,22 @@ function ReportsPage() {
                       <SelectItem value="MANAGE_CATEGORIES" className="text-primary font-bold">
                         ⚙️ Gerenciar Categorias...
                       </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Origem</Label>
+                  <Select value={editingCf.origin || ""} onValueChange={(val) => setEditingCf({ ...editingCf, origin: val })}>
+                    <SelectTrigger className="rounded-xl h-11">
+                      <SelectValue placeholder="Selecione a origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Cartão crédito">Cartão crédito</SelectItem>
+                      <SelectItem value="Débito">Débito</SelectItem>
+                      <SelectItem value="A prazo">A prazo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
