@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
   MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon,
-  Globe, ShoppingBag, Car, BookUser
+  Globe, ShoppingBag, Car, BookUser, Table as TableIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -25,6 +25,7 @@ const items: NavItem[] = [
   { to: "/admin/directory", label: "Agenda", icon: BookUser },
   { to: "/admin/bases", label: "Bases", icon: Globe },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
+  { to: "/admin/pricing", label: "Tabelas de Preços", icon: TableIcon },
   { to: "/admin/reports", label: "Financeiro", icon: DollarSign },
 ];
 

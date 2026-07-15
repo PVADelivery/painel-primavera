@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRegions } from "@/services/regions";
@@ -13,11 +13,21 @@ export function EditCompanyDialog({ company }: { company: any }) {
   const [loading, setLoading] = useState(false);
   const { data: regions } = useRegions();
   
+  const { data: pricingTables } = useQuery({
+    queryKey: ["pricing-tables-select"],
+    queryFn: async () => {
+      const { data } = await supabase.from("pricing_tables").select("id, name, is_default").order("is_default", { ascending: false });
+      return data || [];
+    },
+    enabled: open
+  });
+  
   const [form, setForm] = useState({
     name: company.name || "",
     phone: company.phone || "",
     address: company.address || "",
     region_id: company.region_id || "",
+    pricing_table_id: company.pricing_table_id || "",
   });
 
   useEffect(() => {
@@ -27,6 +37,7 @@ export function EditCompanyDialog({ company }: { company: any }) {
         phone: company.phone || "",
         address: company.address || "",
         region_id: company.region_id || "",
+        pricing_table_id: company.pricing_table_id || "",
       });
     }
   }, [open, company]);
@@ -41,6 +52,7 @@ export function EditCompanyDialog({ company }: { company: any }) {
         phone: form.phone,
         address: form.address,
         region_id: form.region_id || null,
+        pricing_table_id: form.pricing_table_id || null,
       }).eq("id", company.id);
 
       if (error) throw error;
@@ -92,6 +104,20 @@ export function EditCompanyDialog({ company }: { company: any }) {
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Tabela de Preços (Matriz de Entrega)</label>
+            <select 
+              value={form.pricing_table_id || ""} 
+              onChange={(e) => set("pricing_table_id", e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">Padrão do Sistema</option>
+              {pricingTables?.map((t: any) => (
+                <option key={t.id} value={t.id}>{t.name} {t.is_default ? "(Padrão)" : ""}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Selecione a tabela de regras de preço para esta loja.</p>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
