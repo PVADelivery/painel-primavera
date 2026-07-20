@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff } from "lucide-react";
@@ -74,10 +74,10 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-10 flex items-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black">
-            <img src={icon} alt="Primavera Delivery" className="h-12 w-12 object-contain" />
+            <img src={icon} alt="MT Express" className="h-12 w-12 object-contain" />
           </div>
           <span className="text-2xl font-bold tracking-tight text-foreground">
-            Primavera Delivery
+            MT Express
           </span>
         </div>
 

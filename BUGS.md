@@ -1,6 +1,6 @@
-# Biblioteca de Bugs Conhecidos (Primavera Delivery)
+﻿# Biblioteca de Bugs Conhecidos (MT Express)
 
-Este documento serve como um repositório central para documentar os erros, problemas de arquitetura e bugs que já foram resolvidos durante o desenvolvimento do painel administrativo e do ecossistema do Primavera Delivery. 
+Este documento serve como um repositório central para documentar os erros, problemas de arquitetura e bugs que já foram resolvidos durante o desenvolvimento do painel administrativo e do ecossistema do MT Express. 
 
 Antes de tentar solucionar um novo problema, consulte este arquivo para verificar se a correção já não foi implementada anteriormente.
 

@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -16,12 +16,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Primavera Delivery — Gestão de Entregas" },
-      { name: "description", content: "Plataforma Primavera Delivery — gestão de entregas last-mile em tempo real" },
-      { property: "og:title", content: "Primavera Delivery — Gestão de Entregas" },
-      { name: "twitter:title", content: "Primavera Delivery — Gestão de Entregas" },
-      { property: "og:description", content: "Plataforma Primavera Delivery — gestão de entregas last-mile em tempo real" },
-      { name: "twitter:description", content: "Plataforma Primavera Delivery — gestão de entregas last-mile em tempo real" },
+      { title: "MT Express — Gestão de Entregas" },
+      { name: "description", content: "Plataforma MT Express — gestão de entregas last-mile em tempo real" },
+      { property: "og:title", content: "MT Express — Gestão de Entregas" },
+      { name: "twitter:title", content: "MT Express — Gestão de Entregas" },
+      { property: "og:description", content: "Plataforma MT Express — gestão de entregas last-mile em tempo real" },
+      { name: "twitter:description", content: "Plataforma MT Express — gestão de entregas last-mile em tempo real" },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1e111048-0d3c-42c9-a918-270c66b6d501/id-preview-44cbaf7a--34cadc81-c363-4feb-9b86-d1ff7a665d16.lovable.app-1780187521392.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1e111048-0d3c-42c9-a918-270c66b6d501/id-preview-44cbaf7a--34cadc81-c363-4feb-9b86-d1ff7a665d16.lovable.app-1780187521392.png" },
       { name: "twitter:card", content: "summary_large_image" },
