@@ -33,7 +33,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
       const { error } = await (supabase as any).from("invitations").insert({
         token,
         role: fixedRole || role,
-        email: `convite_${token.slice(0, 8)}@primaveradelivery.com`,
+        email: `convite_${token.slice(0, 8)}@mt24horasexpress.com`,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
         status: 'pending',
@@ -48,8 +48,8 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
 
       const currentRole = fixedRole || role;
       const baseUrl = currentRole === "driver" 
-        ? "https://entregador.primaveradelivery.com/invite"
-        : "https://lojista.primaveradelivery.com/invite";
+        ? "https://entregador.mt24horasexpress.com/invite"
+        : "https://lojista.mt24horasexpress.com/invite";
         
       const link = `${baseUrl}/${token}`;
       setInviteLink(link);

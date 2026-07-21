@@ -32,7 +32,7 @@ Get-ChildItem -Path "src" -Recurse -File -Include *.ts,*.tsx | ForEach-Object {
 ## 🐛 3. Links de Convite Direcionando para localhost ou URLs Antigas
 **Sintoma:** A função de "Gerar Convite" estava cuspindo o link base como `localhost:5173` ou com os domínios do sistema anterior (É Pra Já).
 **Causa:** As constantes do `baseUrl` no arquivo `GenerateInviteDialog.tsx` estavam estáticas apontando para URLs obsoletas ou de desenvolvimento.
-**Solução:** Corrigido o arquivo `GenerateInviteDialog.tsx` para injetar os links corretos de produção: `https://entregador.primaveradelivery.com/invite` e `https://lojista.primaveradelivery.com/invite`.
+**Solução:** Corrigido o arquivo `GenerateInviteDialog.tsx` para injetar os links corretos de produção: `https://entregador.mt24horasexpress.com/invite` e `https://lojista.mt24horasexpress.com/invite`.
 
 ## 🐛 4. Ausência de Menus Administrativos na Lovable
 **Sintoma:** Alterações nos botões laterais (AdminSidebar) e novas páginas (Vendas Lojas, Bases) foram concluídas, mas não refletiam na Lovable.
