@@ -1,6 +1,6 @@
-﻿# Biblioteca de Bugs Conhecidos (MT Express)
+﻿# Biblioteca de Bugs Conhecidos (MT 24horas express)
 
-Este documento serve como um repositório central para documentar os erros, problemas de arquitetura e bugs que já foram resolvidos durante o desenvolvimento do painel administrativo e do ecossistema do MT Express. 
+Este documento serve como um repositório central para documentar os erros, problemas de arquitetura e bugs que já foram resolvidos durante o desenvolvimento do painel administrativo e do ecossistema do MT 24horas express. 
 
 Antes de tentar solucionar um novo problema, consulte este arquivo para verificar se a correção já não foi implementada anteriormente.
 

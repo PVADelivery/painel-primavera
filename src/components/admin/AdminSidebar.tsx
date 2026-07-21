@@ -44,10 +44,10 @@ export function AdminSidebar() {
     <>
       <div className="flex h-20 items-center gap-3 border-b border-sidebar-border/60 px-5">
         <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-900 shadow-elevated ring-1 ring-border/70 overflow-hidden">
-          <img src={icon} alt="MT Express" className="h-full w-full object-contain p-1" />
+          <img src={icon} alt="MT 24horas express" className="h-full w-full object-contain p-1" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">MT Express</p>
+          <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">MT 24horas express</p>
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground leading-tight">Painel Admin</p>
         </div>
       </div>
