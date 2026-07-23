@@ -24,40 +24,43 @@ export type DriverWithProfile = {
 
 export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   // 1. Fetch delivery_drivers
-  const { data: driversData, error: drvError } = await supabase
+  const { data: driversData } = await supabase
     .from("delivery_drivers")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (drvError) throw drvError;
-
-  // 2. Also fetch user_roles to capture any driver users that might not have a delivery_drivers record yet
+  // 2. Fetch user_roles for drivers/motoboys
   const { data: driverRoles } = await supabase
     .from("user_roles")
-    .select("user_id, role")
-    .or("role.eq.driver,role.eq.motoboy");
+    .select("user_id, role");
 
-  const driverUserIds = Array.from(new Set([
+  const roleDriverUserIds = (driverRoles || [])
+    .filter(r => String(r.role).toLowerCase().includes("driver") || String(r.role).toLowerCase().includes("motoboy"))
+    .map(r => r.user_id);
+
+  // 3. Fetch all profiles
+  const { data: allProfiles } = await supabase
+    .from("profiles")
+    .select("*");
+
+  const profileDriverUserIds = (allProfiles || [])
+    .filter(p => p.role === "driver" || p.role === "motoboy" || roleDriverUserIds.includes(p.user_id))
+    .map(p => p.user_id);
+
+  const allDriverUserIds = Array.from(new Set([
     ...(driversData || []).map(d => d.user_id),
-    ...(driverRoles || []).map(r => r.user_id)
+    ...roleDriverUserIds,
+    ...profileDriverUserIds
   ])).filter(Boolean);
-
-  // 3. Fetch profiles for all driver user IDs
-  const { data: profiles } = driverUserIds.length > 0
-    ? await supabase
-        .from("profiles")
-        .select("user_id, full_name, phone, avatar_url, document")
-        .in("user_id", driverUserIds)
-    : { data: [] };
 
   // Combine results
   const resultDrivers: DriverWithProfile[] = [];
   const processedUserIds = new Set<string>();
 
   for (const driver of (driversData || [])) {
-    processedUserIds.add(driver.user_id);
+    if (driver.user_id) processedUserIds.add(driver.user_id);
     const raw = driver as any;
-    const profile = profiles?.find(p => p.user_id === driver.user_id);
+    const profile = allProfiles?.find(p => p.user_id === driver.user_id);
     resultDrivers.push({
       id: driver.id,
       user_id: driver.user_id,
@@ -78,14 +81,14 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     });
   }
 
-  // Add any driver users missing from delivery_drivers
-  for (const userId of driverUserIds) {
+  // Add any driver user present in profiles or user_roles but not yet in delivery_drivers
+  for (const userId of allDriverUserIds) {
     if (!processedUserIds.has(userId)) {
-      const profile = profiles?.find(p => p.user_id === userId);
+      const profile = allProfiles?.find(p => p.user_id === userId);
       resultDrivers.push({
         id: userId,
         user_id: userId,
-        full_name: profile?.full_name || "Novo Entregador",
+        full_name: profile?.full_name || "Entregador Cadastrado",
         phone: profile?.phone || null,
         document: profile?.document || null,
         avatar_url: profile?.avatar_url || null,
@@ -105,7 +108,6 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
 
   return resultDrivers;
 }
-
 
 export function useDrivers() {
   return useQuery({
