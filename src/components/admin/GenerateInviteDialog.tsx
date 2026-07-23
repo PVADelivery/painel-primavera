@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus, Copy, Check, Link as LinkIcon } from "lucide-react";
+import { buildInviteLink } from "@/lib/invites";
 
 interface GenerateInviteDialogProps {
   fixedRole?: "driver" | "company";
@@ -47,11 +48,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
       }
 
       const currentRole = fixedRole || role;
-      const baseUrl = currentRole === "driver" 
-        ? "https://entregador.mt24horasexpress.com/invite"
-        : "https://lojista.mt24horasexpress.com/invite";
-        
-      const link = `${baseUrl}/${token}`;
+      const link = buildInviteLink(token, currentRole);
       setInviteLink(link);
       toast.success("Link de convite gerado! Válido por 30 dias.");
     } catch (err: any) {
