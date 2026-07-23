@@ -23,38 +23,49 @@ export type DriverWithProfile = {
 };
 
 export async function fetchDrivers(): Promise<DriverWithProfile[]> {
-  // delivery_drivers already has: full_name, phone, document, avatar_url,
-  // vehicle_type, vehicle_plate, status, is_online, rating, etc.
-  
-  const { data: drivers, error } = await supabase
+  // 1. Fetch delivery_drivers
+  const { data: driversData, error: drvError } = await supabase
     .from("delivery_drivers")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
-  if (!drivers) return [];
+  if (drvError) throw drvError;
 
-  // Also fetch profiles as fallback for name/phone (in case delivery_drivers is empty)
-  const userIds = drivers.map(d => d.user_id);
-  const { data: profiles } = userIds.length > 0
+  // 2. Also fetch user_roles to capture any driver users that might not have a delivery_drivers record yet
+  const { data: driverRoles } = await supabase
+    .from("user_roles")
+    .select("user_id, role")
+    .or("role.eq.driver,role.eq.motoboy");
+
+  const driverUserIds = Array.from(new Set([
+    ...(driversData || []).map(d => d.user_id),
+    ...(driverRoles || []).map(r => r.user_id)
+  ])).filter(Boolean);
+
+  // 3. Fetch profiles for all driver user IDs
+  const { data: profiles } = driverUserIds.length > 0
     ? await supabase
         .from("profiles")
         .select("user_id, full_name, phone, avatar_url, document")
-        .in("user_id", userIds)
+        .in("user_id", driverUserIds)
     : { data: [] };
 
-  return drivers.map(driver => {
+  // Combine results
+  const resultDrivers: DriverWithProfile[] = [];
+  const processedUserIds = new Set<string>();
+
+  for (const driver of (driversData || [])) {
+    processedUserIds.add(driver.user_id);
     const raw = driver as any;
     const profile = profiles?.find(p => p.user_id === driver.user_id);
-    return {
+    resultDrivers.push({
       id: driver.id,
       user_id: driver.user_id,
-      // Use delivery_drivers columns directly, fallback to profiles
       full_name: raw.full_name || profile?.full_name || "Entregador",
       phone: raw.phone || profile?.phone || null,
       document: raw.document || profile?.document || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
-      vehicle_type: raw.vehicle_type || raw.vehicle || "motorcycle",
+      vehicle_type: raw.vehicle_type || raw.vehicle || "moto",
       vehicle_plate: raw.vehicle_plate || raw.license_plate || null,
       is_online: raw.is_online ?? raw.online ?? false,
       rating: Number(driver.rating) || 5.0,
@@ -64,8 +75,35 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 0.40,
       service_types: raw.service_types || [],
       created_at: driver.created_at,
-    } as DriverWithProfile;
-  });
+    });
+  }
+
+  // Add any driver users missing from delivery_drivers
+  for (const userId of driverUserIds) {
+    if (!processedUserIds.has(userId)) {
+      const profile = profiles?.find(p => p.user_id === userId);
+      resultDrivers.push({
+        id: userId,
+        user_id: userId,
+        full_name: profile?.full_name || "Novo Entregador",
+        phone: profile?.phone || null,
+        document: profile?.document || null,
+        avatar_url: profile?.avatar_url || null,
+        vehicle_type: "moto",
+        vehicle_plate: null,
+        is_online: false,
+        rating: 5.0,
+        latitude: null,
+        longitude: null,
+        status: "active",
+        commission_rate: 0.40,
+        service_types: [],
+        created_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  return resultDrivers;
 }
 
 
