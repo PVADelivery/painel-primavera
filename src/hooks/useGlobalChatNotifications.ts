@@ -33,7 +33,7 @@ export function useGlobalChatNotifications() {
           const isChatPage = window.location.pathname.includes("/chat");
           
           try {
-             const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+             const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3");
              audio.volume = 0.5;
              audio.play().catch(e => console.warn("[Audio] Bloqueio de auto-play pelo navegador:", e)); 
           } catch (err) {

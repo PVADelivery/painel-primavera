@@ -22,7 +22,7 @@ import { useDeliveries } from "@/services/deliveries";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3";
 
 export function NotificationsPopover() {
   const { data: deliveriesData } = useDeliveries({ pageSize: 10 });
