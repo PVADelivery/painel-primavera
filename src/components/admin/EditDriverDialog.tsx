@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,14 +30,33 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
-    fullName: driver?.full_name || "",
-    phone: driver?.phone || "",
-    document: driver?.document || "",
-    vehicleType: driver?.vehicle_type || "motorcycle",
-    vehiclePlate: driver?.vehicle_plate || "",
-    commission: driver?.commission_rate?.toString() || "10",
-    serviceTypes: Array.isArray(driver?.service_types) ? driver.service_types : [],
+    fullName: "",
+    phone: "",
+    document: "",
+    vehicleType: "motorcycle",
+    vehiclePlate: "",
+    commission: "10",
+    serviceTypes: [] as string[],
   });
+
+  useEffect(() => {
+    if (driver) {
+      const defaultServices = ["delivery_moto", "delivery_car", "delivery_carro_aberto", "taxi", "mototaxi"];
+      const currentServices = Array.isArray(driver.service_types) && driver.service_types.length > 0 
+        ? driver.service_types 
+        : defaultServices;
+
+      setForm({
+        fullName: driver.full_name || "",
+        phone: driver.phone || "",
+        document: driver.document || "",
+        vehicleType: driver.vehicle_type || "motorcycle",
+        vehiclePlate: driver.vehicle_plate || driver.license_plate || "",
+        commission: (driver.commission_rate ?? driver.commission ?? 10).toString(),
+        serviceTypes: currentServices,
+      });
+    }
+  }, [driver, open]);
 
   const set = (key: string, val: any) => setForm(p => ({ ...p, [key]: val }));
 
