@@ -29,14 +29,20 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch user_roles for drivers/motoboys
+  // 2. Fetch user_roles for drivers/motoboys/entregadores/taxi
   const { data: driverRoles } = await supabase
     .from("user_roles")
     .select("user_id, role");
 
+  const driverRoleKeywords = ["driver", "motoboy", "entregador", "taxi", "mototaxi"];
+
   const roleDriverUserIds = (driverRoles || [])
-    .filter(r => String(r.role).toLowerCase().includes("driver") || String(r.role).toLowerCase().includes("motoboy"))
-    .map(r => r.user_id);
+    .filter(r => {
+      const rRole = String(r.role || "").toLowerCase();
+      return driverRoleKeywords.some(k => rRole.includes(k));
+    })
+    .map(r => r.user_id)
+    .filter(Boolean);
 
   // 3. Fetch all profiles
   const { data: allProfiles } = await supabase
@@ -44,11 +50,19 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .select("*");
 
   const profileDriverUserIds = (allProfiles || [])
-    .filter(p => p.role === "driver" || p.role === "motoboy" || roleDriverUserIds.includes(p.user_id))
-    .map(p => p.user_id);
+    .filter(p => {
+      const pRole = String(p.role || "").toLowerCase();
+      const pUserId = p.user_id || p.id;
+      return (
+        driverRoleKeywords.some(k => pRole.includes(k)) ||
+        roleDriverUserIds.includes(pUserId)
+      );
+    })
+    .map(p => p.user_id || p.id)
+    .filter(Boolean);
 
   const allDriverUserIds = Array.from(new Set([
-    ...(driversData || []).map(d => d.user_id),
+    ...(driversData || []).map(d => d.user_id || d.id),
     ...roleDriverUserIds,
     ...profileDriverUserIds
   ])).filter(Boolean);
@@ -56,35 +70,44 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   // Combine results
   const resultDrivers: DriverWithProfile[] = [];
   const processedUserIds = new Set<string>();
+  const processedDriverIds = new Set<string>();
 
   for (const driver of (driversData || [])) {
+    const dUserId = driver.user_id || driver.id;
     if (driver.user_id) processedUserIds.add(driver.user_id);
+    if (driver.id) processedDriverIds.add(driver.id);
+    if (dUserId) {
+      processedUserIds.add(dUserId);
+      processedDriverIds.add(dUserId);
+    }
+
     const raw = driver as any;
-    const profile = allProfiles?.find(p => p.user_id === driver.user_id);
+    const profile = allProfiles?.find(p => (p.user_id || p.id) === driver.user_id || (p.user_id || p.id) === driver.id);
+
     resultDrivers.push({
-      id: driver.id,
-      user_id: driver.user_id,
-      full_name: raw.full_name || profile?.full_name || "Entregador",
+      id: driver.id || driver.user_id,
+      user_id: driver.user_id || driver.id,
+      full_name: raw.full_name || profile?.full_name || raw.name || "Entregador",
       phone: raw.phone || profile?.phone || null,
-      document: raw.document || profile?.document || null,
+      document: raw.document || profile?.document || raw.cpf || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
       vehicle_type: raw.vehicle_type || raw.vehicle || "moto",
-      vehicle_plate: raw.vehicle_plate || raw.license_plate || null,
+      vehicle_plate: raw.vehicle_plate || raw.license_plate || raw.plate || null,
       is_online: raw.is_online ?? raw.online ?? false,
       rating: Number(driver.rating) || 5.0,
       latitude: raw.latitude || raw.current_latitude || null,
       longitude: raw.longitude || raw.current_longitude || null,
-      status: raw.status || "active",
+      status: raw.status || (raw.is_active === false ? "suspended" : "active"),
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 0.40,
       service_types: raw.service_types || [],
-      created_at: driver.created_at,
+      created_at: driver.created_at || profile?.created_at,
     });
   }
 
   // Add any driver user present in profiles or user_roles but not yet in delivery_drivers
   for (const userId of allDriverUserIds) {
-    if (!processedUserIds.has(userId)) {
-      const profile = allProfiles?.find(p => p.user_id === userId);
+    if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
+      const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
       resultDrivers.push({
         id: userId,
         user_id: userId,
@@ -101,8 +124,10 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
         status: "active",
         commission_rate: 0.40,
         service_types: [],
-        created_at: new Date().toISOString(),
+        created_at: profile?.created_at || new Date().toISOString(),
       });
+      processedUserIds.add(userId);
+      processedDriverIds.add(userId);
     }
   }
 
