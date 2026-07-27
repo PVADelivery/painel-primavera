@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useDrivers } from "@/services/drivers";
 import { useRegions, useUpdateRegion } from "@/services/regions";
@@ -23,9 +22,9 @@ interface MapViewProps {
 
 export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
-  const labelsRef = useRef<maplibregl.Marker[]>([]);
+  const map = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const labelsRef = useRef<any[]>([]);
   const regionsRenderedRef = useRef<string[]>([]);
   const { toast } = useToast();
   const updateRegion = useUpdateRegion();
@@ -38,7 +37,10 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
 
   const getCentroid = (coords: [number, number][]) => {
     let x = 0, y = 0;
-    coords.forEach(([lng, lat]) => { x += lng; y += lat; });
+    coords.forEach(([lng, lat]) => {
+      x += lng;
+      y += lat;
+    });
     return [x / coords.length, y / coords.length] as [number, number];
   };
 
@@ -47,10 +49,15 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
     : [-54.2972, -15.5597];
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current || map.current || typeof window === "undefined") return;
 
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
+    let isMounted = true;
+    import("maplibre-gl").then((maplibreglModule) => {
+      if (!isMounted || !mapContainer.current) return;
+      const maplibregl = maplibreglModule.default || maplibreglModule;
+
+      map.current = new maplibregl.Map({
+        container: mapContainer.current,
         style: {
           version: 8,
           sources: {
@@ -71,13 +78,15 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
             },
           ],
         },
-      center: defaultCenter,
-      zoom: 12,
+        center: defaultCenter,
+        zoom: 12,
+      });
+
+      map.current.addControl(new maplibregl.NavigationControl(), "bottom-right");
     });
 
-    map.current.addControl(new maplibregl.NavigationControl(), "bottom-right");
-
     return () => {
+      isMounted = false;
       try {
         if (markersRef.current) markersRef.current.forEach((m) => m.remove());
         if (labelsRef.current) labelsRef.current.forEach((m) => m.remove());
@@ -89,7 +98,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
       }
       map.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [centerCity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!map.current || !centerCity) return;

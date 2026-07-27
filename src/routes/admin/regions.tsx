@@ -7,7 +7,6 @@ import type { RegionRow } from "@/services/regions";
 import { MapPin, Plus, Trash2, Save, Pencil, Loader2, Ticket, Search, X, MousePointer, PenTool, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { CityServiceList } from "@/components/admin/CityServiceList";
-import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useDrivers } from "@/services/drivers";
 

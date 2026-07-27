@@ -5,7 +5,6 @@ import { useDrivers } from "@/services/drivers";
 import { useEffect, useState, useMemo } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import maplibregl from "maplibre-gl";
 import { Bike, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
@@ -14,6 +13,9 @@ export const Route = createFileRoute("/admin/tracking")({
 });
 
 function TrackingPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const { data: drivers = [] } = useDrivers();
   const [viewState, setViewState] = useState({
     longitude: -54.2972, // Primavera do Leste
@@ -64,9 +66,10 @@ function TrackingPage() {
 
         {/* Mapa */}
         <Card className="lg:col-span-3 rounded-2xl overflow-hidden shadow-card border border-border/60 relative h-full">
-          <Map
-            {...viewState}
-            onMove={evt => setViewState(evt.viewState)}
+          {mounted ? (
+            <Map
+              {...viewState}
+              onMove={evt => setViewState(evt.viewState)}
             mapStyle={{
               version: 8,
               sources: {
@@ -113,6 +116,11 @@ function TrackingPage() {
               </Marker>
             ))}
           </Map>
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-muted-foreground font-bold">
+              Carregando mapa...
+            </div>
+          )}
         </Card>
       </div>
     </AdminLayout>
