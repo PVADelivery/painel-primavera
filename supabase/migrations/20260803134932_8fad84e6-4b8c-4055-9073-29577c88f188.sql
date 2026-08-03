@@ -1,0 +1,2 @@
+ALTER TABLE public.delivery_drivers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ride_requests ENABLE ROW LEVEL SECURITY;
