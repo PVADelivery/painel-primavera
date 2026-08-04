@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Table as TableIcon, Search, Trash2, Settings, ArrowRight } from "lucide-react";
+import { Loader2, Plus, Table as TableIcon, Search, Trash2, Settings, ArrowRight, Store, Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
