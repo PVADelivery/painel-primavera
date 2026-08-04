@@ -2,12 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Table as TableIcon, Search, Trash2, Settings, ArrowRight, Store, Check, Pencil, X } from "lucide-react";
+import { Loader2, Plus, Table as TableIcon, Search, Trash2, Settings, Store, Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 
 const brl = (value: number) => {
@@ -100,7 +99,7 @@ function PricingPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tabelas de Preço</h1>
         <p className="text-muted-foreground mt-2">
-          Matriz de precificação de Origem x Destino
+          Valores de entrega por região — cada loja pode ter sua própria tabela
         </p>
       </div>
 
@@ -142,13 +141,13 @@ function PricingPage() {
                 <div>
                   <h3 className="font-bold text-lg text-foreground uppercase tracking-tight">{t.name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {t.pricing_rules?.[0]?.count || 0} regras ativas
+                    {t.pricing_rules?.[0]?.count || 0} regiões personalizadas
                   </p>
                 </div>
               </div>
 
               <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-10">
-                Configure a matriz de preços entre bairros e regiões para as empresas que usam esta tabela.
+                Defina o valor de entrega de cada região para as lojas que usam esta tabela.
               </p>
 
               <div className="mb-6 flex flex-wrap gap-1.5">
@@ -172,7 +171,7 @@ function PricingPage() {
                   className="flex-1 rounded-xl"
                   onClick={() => setSelectedTable(t)}
                 >
-                  <Settings className="mr-2 h-4 w-4" /> Gerenciar Regras
+                  <Settings className="mr-2 h-4 w-4" /> Editar Valores
                 </Button>
                 
                 {!t.is_default && (
