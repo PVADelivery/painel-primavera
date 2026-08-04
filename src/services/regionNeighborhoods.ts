@@ -46,9 +46,10 @@ export function useUpdateNeighborhood() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async ({ id, name, region_id }: { id: string; name?: string; region_id?: string }) => {
-      const updates: Record<string, unknown> = {};
+      const updates: { name?: string; region_id?: string } = {};
       if (name !== undefined) updates.name = name.trim();
       if (region_id !== undefined) updates.region_id = region_id;
+
       const { data, error } = await supabase
         .from("region_neighborhoods")
         .update(updates)
