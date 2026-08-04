@@ -105,8 +105,15 @@ function RegionsPage() {
   };
 
   return (
-    <AdminLayout title="Regiões" subtitle="Planilha de regiões, bairros e valores de entrega">
+    <AdminLayout>
       <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto w-full">
+        <div>
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+            <MapPin className="h-6 w-6 text-primary" /> Regiões
+          </h1>
+          <p className="text-sm text-muted-foreground">Planilha de regiões, bairros e valores de entrega</p>
+        </div>
+
         {/* toolbar */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div className="relative flex-1 max-w-md">
