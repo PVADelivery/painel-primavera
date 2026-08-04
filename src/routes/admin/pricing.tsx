@@ -146,10 +146,25 @@ function PricingPage() {
                   </p>
                 </div>
               </div>
-              
-              <p className="text-sm text-muted-foreground mb-6 line-clamp-2 min-h-10">
+
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-10">
                 Configure a matriz de preços entre bairros e regiões para as empresas que usam esta tabela.
               </p>
+
+              <div className="mb-6 flex flex-wrap gap-1.5">
+                {companies.filter((c: any) => c.pricing_table_id === t.id).length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">Nenhuma loja vinculada</span>
+                ) : (
+                  companies
+                    .filter((c: any) => c.pricing_table_id === t.id)
+                    .map((c: any) => (
+                      <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                        <Store className="h-3 w-3" /> {c.name}
+                      </span>
+                    ))
+                )}
+              </div>
+
               
               <div className="flex gap-2">
                 <Button 
