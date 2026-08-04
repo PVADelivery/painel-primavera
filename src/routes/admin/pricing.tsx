@@ -43,9 +43,22 @@ function PricingPage() {
     },
   });
 
+  const { data: companies = [] } = useQuery({
+    queryKey: ["companies-pricing"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name, logo_url, pricing_table_id")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const filteredTables = tables.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
   const handleCreateTable = async () => {
     if (!newTableName.trim()) return;
