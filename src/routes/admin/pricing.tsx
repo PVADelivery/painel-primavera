@@ -236,17 +236,15 @@ function PricingPage() {
   );
 }
 
-// Sub-component for managing rules
+// Sub-component: edita apenas o valor de cada região nesta tabela
 function PricingRulesManager({ table, onClose }: { table: any, onClose: () => void }) {
   const qc = useQueryClient();
-  const [originId, setOriginId] = useState("");
-  const [destId, setDestId] = useState("");
-  const [baseValue, setBaseValue] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingRegion, setEditingRegion] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
   const [savingCompany, setSavingCompany] = useState<string | null>(null);
 
-  const { data: regions = [] } = useQuery({
+  const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
     queryKey: ["regions"],
     queryFn: async () => {
       const { data } = await supabase.from("regions").select("*").order("name");
@@ -265,16 +263,19 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     }
   });
 
-  const { data: rules = [], isLoading: isLoadingRules } = useQuery({
+  const { data: rules = [] } = useQuery({
     queryKey: ["pricing-rules", table.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("pricing_rules")
-        .select("*, origin:regions!pricing_rules_origin_region_id_fkey(name), dest:regions!pricing_rules_destination_region_id_fkey(name)")
+        .select("*")
         .eq("pricing_table_id", table.id);
       return data || [];
     }
   });
+
+  const ruleForRegion = (regionId: string) =>
+    rules.find((r: any) => r.origin_region_id === regionId && r.destination_region_id === regionId);
 
   const toggleCompany = async (company: any) => {
     const linked = company.pricing_table_id === table.id;
@@ -295,86 +296,65 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     }
   };
 
-  const handleAddRule = async () => {
-    if (!originId || !destId || !baseValue) {
-      toast.error("Preencha origem, destino e valor base.");
-      return;
-    }
-
-    const baseNum = parseFloat(baseValue.replace(",", "."));
-
-    if (isNaN(baseNum)) {
-      toast.error("Valor base inválido.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("pricing_rules").insert({
-        pricing_table_id: table.id,
-        origin_region_id: originId,
-        destination_region_id: destId,
-        base_value: baseNum,
-        return_value: 0,
-      });
-
-      if (error) throw error;
-
-      toast.success("Regra adicionada!");
-      setOriginId("");
-      setDestId("");
-      setBaseValue("");
-      qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
-      qc.invalidateQueries({ queryKey: ["pricing-tables"] });
-    } catch (err: any) {
-      if (err.message?.includes("duplicate")) {
-         toast.error("Já existe uma regra para esta origem e destino!");
-      } else {
-         toast.error(err.message || "Erro ao adicionar regra.");
-      }
-    }
-  };
-
-  const handleSaveValue = async (ruleId: string) => {
+  const handleSaveRegionValue = async (regionId: string) => {
     const num = parseFloat(editValue.replace(",", "."));
     if (isNaN(num) || num < 0) {
       toast.error("Valor inválido.");
       return;
     }
+    setSaving(true);
     try {
-      const { error } = await supabase
-        .from("pricing_rules")
-        .update({ base_value: num })
-        .eq("id", ruleId);
-      if (error) throw error;
+      const existing = ruleForRegion(regionId);
+      if (existing) {
+        const { error } = await supabase
+          .from("pricing_rules")
+          .update({ base_value: num })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("pricing_rules").insert({
+          pricing_table_id: table.id,
+          origin_region_id: regionId,
+          destination_region_id: regionId,
+          base_value: num,
+          return_value: 0,
+        });
+        if (error) throw error;
+      }
       toast.success("Valor atualizado!");
-      setEditingId(null);
+      setEditingRegion(null);
       qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
+      qc.invalidateQueries({ queryKey: ["pricing-tables"] });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao atualizar valor.");
+      toast.error(err.message || "Erro ao salvar valor.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
+  const handleResetRegion = async (regionId: string) => {
+    const existing = ruleForRegion(regionId);
+    if (!existing) return;
     try {
-      await supabase.from("pricing_rules").delete().eq("id", ruleId);
+      await supabase.from("pricing_rules").delete().eq("id", existing.id);
       qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
       qc.invalidateQueries({ queryKey: ["pricing-tables"] });
-      toast.success("Regra removida.");
-    } catch (err) {
-      toast.error("Erro ao remover regra.");
+      toast.success("Valor voltou ao padrão da região.");
+    } catch {
+      toast.error("Erro ao restaurar valor padrão.");
     }
   };
 
   return (
     <Dialog open={!!table} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col rounded-2xl p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border bg-muted/20 shrink-0">
-          <DialogTitle className="text-xl">Regras: {table.name}</DialogTitle>
+          <DialogTitle className="text-xl">Valores: {table.name}</DialogTitle>
           <DialogDescription>
-            Defina o preço da corrida entre as regiões e escolha quais lojas usam esta tabela.
+            Edite o valor de entrega de cada região nesta tabela e escolha quais lojas a usam.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-background">
           {/* Lojas vinculadas */}
           <div className="bg-card border border-border p-5 rounded-2xl shadow-sm">
@@ -420,141 +400,110 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
             </div>
           </div>
 
-          <div className="bg-card border border-border p-5 rounded-2xl shadow-sm">
-            <h3 className="font-bold text-sm uppercase tracking-wider mb-4">Adicionar Nova Regra</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
-              <div className="space-y-2 sm:col-span-1">
-                <label className="text-xs font-semibold text-muted-foreground">Origem</label>
-                <Select value={originId} onValueChange={setOriginId}>
-                  <SelectTrigger className="rounded-xl h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-center pb-2 shrink-0 sm:col-span-1">
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-
-              <div className="space-y-2 sm:col-span-1">
-                <label className="text-xs font-semibold text-muted-foreground">Destino</label>
-                <Select value={destId} onValueChange={setDestId}>
-                  <SelectTrigger className="rounded-xl h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 sm:col-span-1">
-                <label className="text-xs font-semibold text-muted-foreground">Custo (R$)</label>
-                <Input 
-                  value={baseValue}
-                  onChange={(e) => setBaseValue(e.target.value.replace(/[^0-9,.]/g, ""))}
-                  placeholder="Ex: 8,50" 
-                  className="rounded-xl h-10"
-                />
-              </div>
-
-              <div className="sm:col-span-1">
-                <Button onClick={handleAddRule} className="w-full rounded-xl h-10 font-bold">
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          </div>
-
+          {/* Valores por região */}
           <div>
-            <h3 className="font-bold text-sm uppercase tracking-wider mb-4">Matriz de Preços Configuradas</h3>
-            {isLoadingRules ? (
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-4">Valores por Região</h3>
+            {isLoadingRegions ? (
               <div className="h-32 flex items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : rules.length === 0 ? (
+            ) : regions.length === 0 ? (
               <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">
                 <TableIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p>Nenhuma regra definida para esta tabela.</p>
+                <p>Nenhuma região cadastrada.</p>
               </div>
             ) : (
               <div className="rounded-xl border border-border overflow-hidden">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-3 font-semibold">Origem</th>
-                      <th className="px-4 py-3 font-semibold">Destino</th>
-                      <th className="px-4 py-3 font-semibold text-right">Valor</th>
+                      <th className="px-4 py-3 font-semibold">Região</th>
+                      <th className="px-4 py-3 font-semibold text-right">Valor nesta tabela</th>
                       <th className="px-4 py-3 font-semibold w-28"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {rules.map((rule: any) => (
-                      <tr key={rule.id} className="bg-card hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 font-medium">{rule.origin?.name}</td>
-                        <td className="px-4 py-3 font-medium">{rule.dest?.name}</td>
-                        <td className="px-4 py-3 text-right">
-                          {editingId === rule.id ? (
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value.replace(/[^0-9,.]/g, ""))}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveValue(rule.id);
-                                if (e.key === "Escape") setEditingId(null);
-                              }}
-                              autoFocus
-                              className="h-9 w-28 ml-auto rounded-lg text-right"
-                            />
-                          ) : (
-                            <span className="font-bold text-primary">{brl(rule.base_value)}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            {editingId === rule.id ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-primary rounded-lg"
-                                  onClick={() => handleSaveValue(rule.id)}
-                                  title="Salvar"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 rounded-lg"
-                                  onClick={() => setEditingId(null)}
-                                  title="Cancelar"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 rounded-lg"
-                                onClick={() => { setEditingId(rule.id); setEditValue(String(rule.base_value).replace(".", ",")); }}
-                                title="Editar valor"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                    {regions.map((region: any) => {
+                      const rule = ruleForRegion(region.id);
+                      const value = rule ? Number(rule.base_value) : Number(region.price || 0);
+                      const isEditing = editingRegion === region.id;
+                      return (
+                        <tr key={region.id} className="bg-card hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <span className="font-medium">{region.name}</span>
+                            {!rule && (
+                              <span className="ml-2 text-[11px] text-muted-foreground">(padrão da região)</span>
                             )}
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive rounded-lg"
-                              onClick={() => handleDeleteRule(rule.id)}
-                              title="Remover regra"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {isEditing ? (
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value.replace(/[^0-9,.]/g, ""))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveRegionValue(region.id);
+                                  if (e.key === "Escape") setEditingRegion(null);
+                                }}
+                                autoFocus
+                                className="h-9 w-28 ml-auto rounded-lg text-right"
+                              />
+                            ) : (
+                              <span className="font-bold text-primary">{brl(value)}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={saving}
+                                    className="h-8 w-8 p-0 text-primary rounded-lg"
+                                    onClick={() => handleSaveRegionValue(region.id)}
+                                    title="Salvar"
+                                  >
+                                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg"
+                                    onClick={() => setEditingRegion(null)}
+                                    title="Cancelar"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg"
+                                    onClick={() => { setEditingRegion(region.id); setEditValue(String(value).replace(".", ",")); }}
+                                    title="Editar valor"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  {rule && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive rounded-lg"
+                                      onClick={() => handleResetRegion(region.id)}
+                                      title="Voltar ao valor padrão da região"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -565,4 +514,5 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     </Dialog>
   );
 }
+
 
