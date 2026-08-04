@@ -105,8 +105,18 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
   // Render driver + company markers
   useEffect(() => {
     const currentMap = map.current;
-    if (!currentMap) return;
+    if (!currentMap || typeof window === "undefined") return;
 
+    let cancelled = false;
+    import("maplibre-gl").then((mod) => {
+      if (cancelled) return;
+      const maplibregl: any = (mod as any).default || mod;
+      renderMarkers(maplibregl, currentMap);
+    });
+    return () => { cancelled = true; };
+  }, [drivers, companies]);
+
+  function renderMarkers(maplibregl: any, currentMap: any) {
     markersRef.current.forEach((mk) => mk.remove());
     markersRef.current = [];
 
@@ -284,7 +294,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
 
       markersRef.current.push(marker);
     });
-  }, [drivers, companies]);
+  }
 
   return (
     <div ref={mapContainer} className="w-full h-full rounded-xl overflow-hidden" />
