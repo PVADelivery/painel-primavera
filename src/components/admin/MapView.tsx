@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useDrivers } from "@/services/drivers";
-import { useRegions, useUpdateRegion } from "@/services/regions";
 import { useDeliveries } from "@/services/deliveries";
 import { useCompanies } from "@/services/companies";
 import { useToast } from "@/hooks/use-toast";
@@ -27,11 +26,9 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
   const labelsRef = useRef<any[]>([]);
   const regionsRenderedRef = useRef<string[]>([]);
   const { toast } = useToast();
-  const updateRegion = useUpdateRegion();
 
   const { data: allDrivers } = useDrivers();
   const drivers = Array.isArray(allDrivers) ? allDrivers.filter(d => d.status === "active" || d.status === "approved") : [];
-  const { data: regions } = useRegions();
   const { data: deliveriesData } = useDeliveries({ status: "in_transit" });
   const { data: companies } = useCompanies();
 
@@ -105,144 +102,21 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
     map.current.flyTo({ center: [centerCity.lng, centerCity.lat], zoom: 13, duration: 1500 });
   }, [centerCity?.lat, centerCity?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Render region polygons
-  useEffect(() => {
-    const currentMap = map.current;
-    if (!currentMap || !regions) return;
-
-    const render = () => {
-      const m = map.current;
-      if (!m) return;
-
-      labelsRef.current.forEach(mk => mk.remove());
-      labelsRef.current = [];
-
-      regionsRenderedRef.current.forEach((id) => {
-        if (m.getLayer(`region-fill-${id}`)) m.removeLayer(`region-fill-${id}`);
-        if (m.getLayer(`region-line-${id}`)) m.removeLayer(`region-line-${id}`);
-        if (m.getSource(`region-src-${id}`)) m.removeSource(`region-src-${id}`);
-      });
-      regionsRenderedRef.current = [];
-
-      regions.forEach((region) => {
-        if (!region.geometry) return;
-        const geojson = region.geometry as any;
-        if (geojson.type !== "Polygon") return;
-
-        const srcId = `region-src-${region.id}`;
-        const fillId = `region-fill-${region.id}`;
-        const lineId = `region-line-${region.id}`;
-
-        if (m.getSource(srcId)) {
-          (m.getSource(srcId) as maplibregl.GeoJSONSource).setData({
-            type: "Feature",
-            properties: { name: region.name, price: region.price },
-            geometry: geojson,
-          });
-        } else {
-          m.addSource(srcId, {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: { name: region.name, price: region.price },
-              geometry: geojson,
-            },
-          });
-        }
-
-        if (!m.getLayer(fillId)) {
-          m.addLayer({
-            id: fillId,
-            type: "fill",
-            source: srcId,
-            paint: { "fill-color": region.color, "fill-opacity": 0.18 },
-          });
-        } else {
-          m.setPaintProperty(fillId, "fill-color", region.color);
-        }
-
-        if (!m.getLayer(lineId)) {
-          m.addLayer({
-            id: lineId,
-            type: "line",
-            source: srcId,
-            paint: { "line-color": region.color, "line-width": 2.5, "line-opacity": 0.8 },
-          });
-        } else {
-          m.setPaintProperty(lineId, "line-color", region.color);
-        }
-
-        const geoJSON = region.geometry as any;
-        if (geoJSON.coordinates?.[0]) {
-          const centroid = getCentroid(geoJSON.coordinates[0]);
-          const el = document.createElement("div");
-          el.className = "region-label";
-          el.innerHTML = `
-            <div style="
-              background: rgba(255,255,255,0.92);
-              padding: 4px 10px;
-              border-radius: 8px;
-              border: 1.5px solid ${region.color};
-              box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-              text-align: center;
-              min-width: 60px;
-              pointer-events: none;
-            ">
-              <p style="margin:0; font-size: 10px; font-weight: 800; color: #444; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">${escapeHtml(region.name)}</p>
-              <p style="margin:0; font-size: 11px; font-weight: 900; color: ${region.color};">R$ ${Number(region.price).toFixed(2)}</p>
-            </div>
-          `;
-          const labelMarker = new maplibregl.Marker({ element: el }).setLngLat(centroid).addTo(m);
-          labelsRef.current.push(labelMarker);
-        }
-
-        m.on("click", fillId, (e) => {
-          const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false })
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="padding: 12px; min-width: 160px; font-family: sans-serif;">
-                <h4 style="margin: 0 0 8px 0; font-size: 13px;">Preço: ${escapeHtml(region.name)}</h4>
-                <input id="edit-price-${region.id}" type="number" step="0.50" value="${region.price}" 
-                  style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box;"
-                />
-                <button id="save-price-${region.id}" style="
-                  width: 100%; padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;
-                ">Salvar</button>
-              </div>
-            `)
-            .addTo(m);
-
-          setTimeout(() => {
-            const btn = document.getElementById(`save-price-${region.id}`);
-            const input = document.getElementById(`edit-price-${region.id}`) as HTMLInputElement;
-            if (btn && input) {
-              btn.addEventListener("click", async () => {
-                const newPrice = parseFloat(input.value);
-                try {
-                  await updateRegion.mutateAsync({ id: region.id, updates: { price: newPrice } });
-                  toast({ title: "Sucesso", description: `Preço de ${region.name} atualizado!` });
-                  popup.remove();
-                } catch (err) {
-                  toast({ title: "Erro ao atualizar", variant: "destructive" });
-                }
-              });
-            }
-          }, 100);
-        });
-
-        regionsRenderedRef.current.push(region.id);
-      });
-    };
-
-    if (currentMap.isStyleLoaded()) render();
-    else currentMap.once("load", render);
-  }, [regions]);
-
   // Render driver + company markers
   useEffect(() => {
     const currentMap = map.current;
-    if (!currentMap) return;
+    if (!currentMap || typeof window === "undefined") return;
 
+    let cancelled = false;
+    import("maplibre-gl").then((mod) => {
+      if (cancelled) return;
+      const maplibregl: any = (mod as any).default || mod;
+      renderMarkers(maplibregl, currentMap);
+    });
+    return () => { cancelled = true; };
+  }, [drivers, companies]);
+
+  function renderMarkers(maplibregl: any, currentMap: any) {
     markersRef.current.forEach((mk) => mk.remove());
     markersRef.current = [];
 
@@ -420,7 +294,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
 
       markersRef.current.push(marker);
     });
-  }, [drivers, companies]);
+  }
 
   return (
     <div ref={mapContainer} className="w-full h-full rounded-xl overflow-hidden" />
