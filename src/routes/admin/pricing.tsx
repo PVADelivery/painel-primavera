@@ -242,11 +242,25 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
   const [originId, setOriginId] = useState("");
   const [destId, setDestId] = useState("");
   const [baseValue, setBaseValue] = useState("");
-  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [savingCompany, setSavingCompany] = useState<string | null>(null);
+
   const { data: regions = [] } = useQuery({
     queryKey: ["regions"],
     queryFn: async () => {
       const { data } = await supabase.from("regions").select("*").order("name");
+      return data || [];
+    }
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["companies-pricing"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, logo_url, pricing_table_id")
+        .order("name");
       return data || [];
     }
   });
@@ -262,14 +276,33 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     }
   });
 
+  const toggleCompany = async (company: any) => {
+    const linked = company.pricing_table_id === table.id;
+    setSavingCompany(company.id);
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .update({ pricing_table_id: linked ? null : table.id })
+        .eq("id", company.id);
+      if (error) throw error;
+      toast.success(linked ? `${company.name} desvinculada.` : `${company.name} usará esta tabela.`);
+      qc.invalidateQueries({ queryKey: ["companies-pricing"] });
+      qc.invalidateQueries({ queryKey: ["companies"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao vincular loja.");
+    } finally {
+      setSavingCompany(null);
+    }
+  };
+
   const handleAddRule = async () => {
     if (!originId || !destId || !baseValue) {
       toast.error("Preencha origem, destino e valor base.");
       return;
     }
-    
+
     const baseNum = parseFloat(baseValue.replace(",", "."));
-    
+
     if (isNaN(baseNum)) {
       toast.error("Valor base inválido.");
       return;
@@ -285,7 +318,7 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
       });
 
       if (error) throw error;
-      
+
       toast.success("Regra adicionada!");
       setOriginId("");
       setDestId("");
@@ -298,6 +331,26 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
       } else {
          toast.error(err.message || "Erro ao adicionar regra.");
       }
+    }
+  };
+
+  const handleSaveValue = async (ruleId: string) => {
+    const num = parseFloat(editValue.replace(",", "."));
+    if (isNaN(num) || num < 0) {
+      toast.error("Valor inválido.");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("pricing_rules")
+        .update({ base_value: num })
+        .eq("id", ruleId);
+      if (error) throw error;
+      toast.success("Valor atualizado!");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar valor.");
     }
   };
 
@@ -318,11 +371,55 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
         <DialogHeader className="px-6 py-4 border-b border-border bg-muted/20 shrink-0">
           <DialogTitle className="text-xl">Regras: {table.name}</DialogTitle>
           <DialogDescription>
-            Defina o preço da corrida entre as regiões.
+            Defina o preço da corrida entre as regiões e escolha quais lojas usam esta tabela.
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-background">
+          {/* Lojas vinculadas */}
+          <div className="bg-card border border-border p-5 rounded-2xl shadow-sm">
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
+              <Store className="h-4 w-4 text-primary" /> Lojas que usam esta tabela
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Clique para vincular ou desvincular. Cada loja usa apenas uma tabela — assim a Região 1 pode custar R$ 8,00 na Loja A e R$ 12,00 na Loja B.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {companies.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma empresa cadastrada.</p>
+              )}
+              {companies.map((c: any) => {
+                const linked = c.pricing_table_id === table.id;
+                const otherTable = !linked && !!c.pricing_table_id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleCompany(c)}
+                    disabled={savingCompany === c.id}
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                      linked
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-background hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className={`h-5 w-5 shrink-0 rounded-md border flex items-center justify-center ${linked ? "bg-primary border-primary" : "border-border"}`}>
+                      {savingCompany === c.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : linked && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{c.name}</p>
+                      {otherTable && (
+                        <p className="text-[11px] text-muted-foreground">Usando outra tabela</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="bg-card border border-border p-5 rounded-2xl shadow-sm">
             <h3 className="font-bold text-sm uppercase tracking-wider mb-4">Adicionar Nova Regra</h3>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
@@ -387,7 +484,7 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                       <th className="px-4 py-3 font-semibold">Origem</th>
                       <th className="px-4 py-3 font-semibold">Destino</th>
                       <th className="px-4 py-3 font-semibold text-right">Valor</th>
-                      <th className="px-4 py-3 font-semibold w-16"></th>
+                      <th className="px-4 py-3 font-semibold w-28"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -395,17 +492,66 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                       <tr key={rule.id} className="bg-card hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 font-medium">{rule.origin?.name}</td>
                         <td className="px-4 py-3 font-medium">{rule.dest?.name}</td>
-                        <td className="px-4 py-3 font-bold text-right text-primary">{brl(rule.base_value)}</td>
                         <td className="px-4 py-3 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive rounded-lg"
-                            onClick={() => handleDeleteRule(rule.id)}
-                            title="Remover regra"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {editingId === rule.id ? (
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value.replace(/[^0-9,.]/g, ""))}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveValue(rule.id);
+                                if (e.key === "Escape") setEditingId(null);
+                              }}
+                              autoFocus
+                              className="h-9 w-28 ml-auto rounded-lg text-right"
+                            />
+                          ) : (
+                            <span className="font-bold text-primary">{brl(rule.base_value)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-1">
+                            {editingId === rule.id ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-primary rounded-lg"
+                                  onClick={() => handleSaveValue(rule.id)}
+                                  title="Salvar"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 rounded-lg"
+                                  onClick={() => setEditingId(null)}
+                                  title="Cancelar"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-lg"
+                                onClick={() => { setEditingId(rule.id); setEditValue(String(rule.base_value).replace(".", ",")); }}
+                                title="Editar valor"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive rounded-lg"
+                              onClick={() => handleDeleteRule(rule.id)}
+                              title="Remover regra"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -419,3 +565,4 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     </Dialog>
   );
 }
+
