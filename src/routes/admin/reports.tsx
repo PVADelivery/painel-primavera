@@ -176,11 +176,16 @@ function ReportsPage() {
         <p className="text-sm text-muted-foreground">Gestão financeira e relatórios da plataforma</p>
       </div>
 
-      <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="mb-4">
+      <Tabs defaultValue="creditos" className="w-full">
+        <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsTrigger value="creditos">Créditos das Lojas</TabsTrigger>
           <TabsTrigger value="geral">Visão Geral (Entregas)</TabsTrigger>
           <TabsTrigger value="cashflow">Fluxo de Caixa Operacional</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="creditos">
+          <StoreCreditsPanel />
+        </TabsContent>
 
         <TabsContent value="geral">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
