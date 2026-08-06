@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -117,6 +117,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Entregador: {driver?.full_name}</DialogTitle>
+          <DialogDescription>Atualize os serviços autorizados, placa e comissão do profissional.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
