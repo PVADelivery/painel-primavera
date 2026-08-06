@@ -1,4 +1,4 @@
-﻿import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
@@ -20,7 +20,7 @@ const items: NavItem[] = [
   { to: "/admin/store-sales", label: "Vendas Lojas", icon: ShoppingBag },
   { to: "/admin/chat", label: "Chat", icon: MessageSquare },
   { to: "/admin/companies", label: "Empresas", icon: Building2 },
-  { to: "/admin/drivers", label: "Entregadores", icon: Bike },
+  { to: "/admin/drivers", label: "Entregadores e Motoristas", icon: Bike },
   { to: "/admin/rides", label: "Táxi & Moto", icon: Car },
   { to: "/admin/directory", label: "Agenda", icon: BookUser },
   { to: "/admin/bases", label: "Bases", icon: Globe },
