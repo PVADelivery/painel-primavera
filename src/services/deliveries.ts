@@ -134,15 +134,33 @@ export function useDeliveries(params?: UseDeliveriesParams) {
         }
       }
 
+      // Buscar profiles dos entregadores para obter nome e telefone reais
+      const driverUserIds = Array.from(
+        new Set((data ?? []).map((delivery: any) => delivery.delivery_drivers?.user_id).filter(Boolean))
+      ) as string[];
+
+      const driverProfilesMap = new Map<string, any>();
+      if (driverUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, phone")
+          .in("user_id", driverUserIds);
+
+        (profilesData ?? []).forEach((p: any) => {
+          driverProfilesMap.set(p.user_id, p);
+        });
+      }
+
       const normalizedData = (data ?? []).map((delivery: any) => {
         const rawDriver = delivery.delivery_drivers;
         let normalizedDriver = null;
         if (rawDriver) {
+          const profile = driverProfilesMap.get(rawDriver.user_id);
           normalizedDriver = {
             id: rawDriver.id,
             user_id: rawDriver.user_id,
-            full_name: rawDriver.full_name || "Entregador Atribuído",
-            phone: rawDriver.phone || null,
+            full_name: profile?.full_name || rawDriver.full_name || "Entregador Atribuído",
+            phone: profile?.phone || rawDriver.phone || null,
             vehicle_type: rawDriver.vehicle || null,
             vehicle_plate: rawDriver.license_plate || null,
           };
