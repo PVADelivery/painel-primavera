@@ -189,14 +189,125 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="geral">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
             <StatsCard title="Faturamento total" value={stats.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} icon={DollarSign} color="success" />
             <StatsCard title="Ticket médio" value={stats.ticket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} icon={TrendingUp} color="primary" />
             <StatsCard title="Entregas concluídas" value={stats.count} icon={Package} color="info" />
           </div>
-          <Card className="mt-6 p-12 text-center shadow-card text-sm text-muted-foreground">
-            Relatórios detalhados por empresa e entregador em breve.
-          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Relatório Detalhado por Empresa */}
+            <Card className="shadow-card overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b pb-4">
+                <CardTitle className="text-base font-bold flex items-center justify-between">
+                  <span>🏢 Desempenho por Empresa</span>
+                  <span className="text-xs font-normal text-muted-foreground">Últimos 30 dias</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/20 text-xs uppercase font-bold text-muted-foreground border-b">
+                      <tr>
+                        <th className="p-3">Empresa</th>
+                        <th className="p-3 text-center">Qtd. Entregas</th>
+                        <th className="p-3 text-right">Faturamento</th>
+                        <th className="p-3 text-right">Comissão Plataforma (25%)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(() => {
+                        const delivered = Array.isArray(data) ? data.filter((d) => d.status === "completed" || d.status === "delivered") : [];
+                        const byCompany: Record<string, { name: string; count: number; total: number }> = {};
+
+                        delivered.forEach((d) => {
+                          const compName = d.companies?.name || "Lojas / Diretas";
+                          if (!byCompany[compName]) byCompany[compName] = { name: compName, count: 0, total: 0 };
+                          byCompany[compName].count += 1;
+                          byCompany[compName].total += Number(d.value || 0);
+                        });
+
+                        const list = Object.values(byCompany).sort((a, b) => b.total - a.total);
+
+                        if (list.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={4} className="p-6 text-center text-muted-foreground">Nenhuma entrega concluída no período.</td>
+                            </tr>
+                          );
+                        }
+
+                        return list.map((c, i) => (
+                          <tr key={i} className="hover:bg-muted/10">
+                            <td className="p-3 font-semibold text-foreground">{c.name}</td>
+                            <td className="p-3 text-center font-bold">{c.count}</td>
+                            <td className="p-3 text-right font-medium">{c.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td className="p-3 text-right font-bold text-green-600">{(c.total * 0.25).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Relatório Detalhado por Entregador */}
+            <Card className="shadow-card overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b pb-4">
+                <CardTitle className="text-base font-bold flex items-center justify-between">
+                  <span>🛵 Repasse e Produção por Entregador</span>
+                  <span className="text-xs font-normal text-muted-foreground">Últimos 30 dias</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/20 text-xs uppercase font-bold text-muted-foreground border-b">
+                      <tr>
+                        <th className="p-3">Entregador</th>
+                        <th className="p-3 text-center">Corridas</th>
+                        <th className="p-3 text-right">Repasse (75%)</th>
+                        <th className="p-3 text-right">Retido App (25%)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(() => {
+                        const delivered = Array.isArray(data) ? data.filter((d) => d.status === "completed" || d.status === "delivered") : [];
+                        const byDriver: Record<string, { name: string; count: number; total: number }> = {};
+
+                        delivered.forEach((d) => {
+                          const driverName = d.delivery_drivers?.full_name || "Motoboy Base";
+                          if (!byDriver[driverName]) byDriver[driverName] = { name: driverName, count: 0, total: 0 };
+                          byDriver[driverName].count += 1;
+                          byDriver[driverName].total += Number(d.value || 0);
+                        });
+
+                        const list = Object.values(byDriver).sort((a, b) => b.total - a.total);
+
+                        if (list.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={4} className="p-6 text-center text-muted-foreground">Nenhum repasse registrado no período.</td>
+                            </tr>
+                          );
+                        }
+
+                        return list.map((drv, i) => (
+                          <tr key={i} className="hover:bg-muted/10">
+                            <td className="p-3 font-semibold text-foreground">{drv.name}</td>
+                            <td className="p-3 text-center font-bold">{drv.count}</td>
+                            <td className="p-3 text-right font-bold text-blue-600">{(drv.total * 0.75).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td className="p-3 text-right font-medium text-amber-600">{(drv.total * 0.25).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="cashflow">
