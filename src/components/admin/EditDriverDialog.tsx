@@ -94,7 +94,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         .from("delivery_drivers")
         .update({
           vehicle_type: form.vehicleType,
-          vehicle_plate: form.vehiclePlate,
+          license_plate: form.vehiclePlate,
           commission_rate: parseFloat(form.commission),
           service_types: form.serviceTypes,
         })
