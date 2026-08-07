@@ -1,4 +1,4 @@
-﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -63,8 +63,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { initializeGlobalErrorHandlers } from "@/services/logger";
+import { useEffect } from "react";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    initializeGlobalErrorHandlers("Painel Administrador");
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
