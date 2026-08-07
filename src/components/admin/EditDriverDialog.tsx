@@ -89,16 +89,30 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
 
       if (pError) throw pError;
 
-      // Update driver data
-      const { error: dError } = await supabase
+      // Update driver data with column fallbacks
+      let dError = (await supabase
         .from("delivery_drivers")
         .update({
           vehicle_type: form.vehicleType,
           license_plate: form.vehiclePlate,
+          vehicle_plate: form.vehiclePlate,
           commission_rate: parseFloat(form.commission),
           service_types: form.serviceTypes,
         })
-        .eq("id", driver.id);
+        .eq("id", driver.id)).error;
+
+      if (dError && dError.message?.includes("vehicle_plate")) {
+        // Fallback if vehicle_plate column does not exist on legacy database schema
+        dError = (await supabase
+          .from("delivery_drivers")
+          .update({
+            vehicle_type: form.vehicleType,
+            license_plate: form.vehiclePlate,
+            commission_rate: parseFloat(form.commission),
+            service_types: form.serviceTypes,
+          })
+          .eq("id", driver.id)).error;
+      }
 
       if (dError) throw dError;
 
