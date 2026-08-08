@@ -43,7 +43,7 @@ function ReportsPage() {
   const { toast } = useToast();
 
   // Filtros Avançados
-  const [period, setPeriod] = useState("30d");
+  const [period, setPeriod] = useState("month");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedDriver, setSelectedDriver] = useState("all");
@@ -197,33 +197,43 @@ function ReportsPage() {
   useEffect(() => {
     if (period === "custom") return;
     const now = new Date();
-    let start = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
 
     if (period === "today") {
-      start.setHours(0, 0, 0, 0);
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else if (period === "yesterday") {
-      start.setDate(now.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setDate(now.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
-      setDateFrom(start.toISOString().split("T")[0]);
-      setDateTo(end.toISOString().split("T")[0]);
-      return;
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+      end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
     } else if (period === "7d") {
+      start = new Date(now);
       start.setDate(now.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else if (period === "month") {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else if (period === "last_month") {
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end = new Date(now.getFullYear(), now.getMonth(), 0);
-      setDateFrom(start.toISOString().split("T")[0]);
-      setDateTo(end.toISOString().split("T")[0]);
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else {
+      // Período desconhecido — remove filtros de data
+      setDateFrom("");
+      setDateTo("");
       return;
     }
 
-    setDateFrom(start.toISOString().split("T")[0]);
-    setDateTo(now.toISOString().split("T")[0]);
+    // Converter para YYYY-MM-DD no fuso horário local
+    const toLocalDate = (d: Date) => {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    setDateFrom(toLocalDate(start));
+    setDateTo(toLocalDate(end));
   }, [period]);
 
   // Aplicar Filtros nos dados locais carregados
@@ -250,14 +260,18 @@ function ReportsPage() {
       // 5. Filtro de Forma de Pagamento
       if (selectedPayment !== "all" && d.payment_method !== selectedPayment) return false;
 
-      // 6. Datas
+      // 6. Datas — comparar no fuso horário local
       if (dateFrom) {
-        const fromDate = new Date(dateFrom + "T00:00:00");
-        if (new Date(d.created_at) < fromDate) return false;
+        const [fy, fm, fd] = dateFrom.split("-").map(Number);
+        const fromDate = new Date(fy, fm - 1, fd, 0, 0, 0, 0);
+        const created = new Date(d.created_at);
+        if (created < fromDate) return false;
       }
       if (dateTo) {
-        const toDate = new Date(dateTo + "T23:59:59");
-        if (new Date(d.created_at) > toDate) return false;
+        const [ty, tm, td] = dateTo.split("-").map(Number);
+        const toDate = new Date(ty, tm - 1, td, 23, 59, 59, 999);
+        const created = new Date(d.created_at);
+        if (created > toDate) return false;
       }
 
       // 7. Faixa de Valores
