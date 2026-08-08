@@ -34,7 +34,7 @@ export function GenerateInviteDialog({ fixedRole, triggerLabel }: GenerateInvite
       const { error } = await (supabase as any).from("invitations").insert({
         token,
         role: fixedRole || role,
-        email: `convite_${token.slice(0, 8)}@mt24horasexpress.com`,
+        email: null,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
         status: 'pending',
