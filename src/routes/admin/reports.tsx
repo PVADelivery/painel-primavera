@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Tag, Plus, X, Settings, Filter, Download, Printer
+  Trash2, Pencil, Calendar, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -482,47 +482,72 @@ function ReportsPage() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financeiro / Relatórios</h1>
-          <p className="text-sm text-muted-foreground">Análise de dados e exportação para controle geral</p>
+          <p className="text-sm text-muted-foreground">Análise de dados e exportação</p>
         </div>
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
         <TabsList className="mb-6 flex-wrap h-auto">
           <TabsTrigger value="geral">Painel Operacional (Corridas)</TabsTrigger>
-          <TabsTrigger value="cobrancas">Cobranças & Saldos</TabsTrigger>
           <TabsTrigger value="creditos">Créditos de Lojas</TabsTrigger>
           <TabsTrigger value="cashflow">Fluxo de Caixa Operacional</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
-          {/* Sessão de Filtros Avançados */}
+          {/* Filtros Avançados */}
           <Card className="mb-6 border-border/80 shadow-sm">
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                Filtros Avançados
-              </CardTitle>
-              <CardDescription>Refine as entregas e faturamentos listados no relatório</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-primary" />
+                  Filtros Avançados
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={handleClearFilters} className="font-bold rounded-xl text-xs h-8">
+                  Limpar Filtros
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="pt-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Período Rápido</Label>
-                  <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Período" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="today">Hoje</SelectItem>
-                      <SelectItem value="yesterday">Ontem</SelectItem>
-                      <SelectItem value="7d">Últimos 7 Dias</SelectItem>
-                      <SelectItem value="month">Este Mês</SelectItem>
-                      <SelectItem value="last_month">Mês Passado</SelectItem>
-                      <SelectItem value="custom">Personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <CardContent className="pt-5 space-y-5">
+              {/* Período Rápido — botões em linha */}
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">Período Rápido:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "today", label: "Hoje" },
+                    { value: "yesterday", label: "Ontem" },
+                    { value: "7d", label: "Últimos 7 Dias" },
+                    { value: "month", label: "Este Mês" },
+                    { value: "last_month", label: "Mês Passado" },
+                    { value: "custom", label: "Personalizado" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setPeriod(p.value)}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        period === p.value
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
+              </div>
 
+              {/* Busca Geral */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por cliente, ID ou endereço..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 font-medium"
+                />
+              </div>
+
+              {/* Filtros em grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <Label>Empresa</Label>
                   <Select value={selectedCompany} onValueChange={setSelectedCompany}>
@@ -554,7 +579,17 @@ function ReportsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Status da Corrida</Label>
+                  <Label>Data Início</Label>
+                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} disabled={period !== "custom"} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Data Fim</Label>
+                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} disabled={period !== "custom"} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os Status" />
@@ -568,24 +603,12 @@ function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Data Início</Label>
-                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} disabled={period !== "custom"} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Data Fim</Label>
-                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} disabled={period !== "custom"} />
-                </div>
 
                 <div className="space-y-1.5">
                   <Label>Forma de Pagamento</Label>
                   <Select value={selectedPayment} onValueChange={setSelectedPayment}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Formas de Pagamento" />
+                      <SelectValue placeholder="Todas as Formas" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as Formas</SelectItem>
@@ -598,25 +621,15 @@ function ReportsPage() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5">
-                    <Label>Valor Mín (R$)</Label>
-                    <Input type="number" placeholder="0" value={valMin} onChange={(e) => setValMin(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Valor Máx (R$)</Label>
-                    <Input type="number" placeholder="999" value={valMax} onChange={(e) => setValMax(e.target.value)} />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>Valor Mínimo (R$)</Label>
+                  <Input type="number" placeholder="0.00" value={valMin} onChange={(e) => setValMin(e.target.value)} />
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={handleClearFilters} className="font-bold rounded-xl">
-                  Limpar Filtros
-                </Button>
-                <Button onClick={fetchData} className="font-bold rounded-xl">
-                  Buscar Geral
-                </Button>
+                <div className="space-y-1.5">
+                  <Label>Valor Máximo (R$)</Label>
+                  <Input type="number" placeholder="999.00" value={valMax} onChange={(e) => setValMax(e.target.value)} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -656,7 +669,14 @@ function ReportsPage() {
                 <div className="text-2xl font-black text-foreground">
                   {kpis.estimatedCommissions.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">25% sobre o total finalizado do motoboy</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Comissões pagas aos entregadores
+                </p>
+                {kpis.grossRevenue > 0 && (
+                  <p className="text-xs font-bold text-blue-500 mt-0.5">
+                    {((kpis.estimatedCommissions / kpis.grossRevenue) * 100).toFixed(1)}% do faturamento
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -669,7 +689,7 @@ function ReportsPage() {
                 <div className="text-2xl font-black text-foreground">
                   {kpis.averageTicket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Valor médio da taxa por entrega</p>
+                <p className="text-xs text-muted-foreground mt-1">Valor médio por entrega</p>
               </CardContent>
             </Card>
           </div>
@@ -826,6 +846,76 @@ function ReportsPage() {
             </Card>
           </div>
 
+          {/* Cobranças Plataforma & Saldos Devidos — integrado na aba principal */}
+          <Card className="mb-6 rounded-3xl border-border/80 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/10 border-b pb-4">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                🪙 Cobranças Plataforma & Saldos Devidos
+              </CardTitle>
+              <CardDescription>Saldos devidos pelos lojistas (% sobre vendas) e entregadores (taxa fixa por entrega)</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x">
+                {/* Lojistas */}
+                <div>
+                  <div className="px-5 py-3 border-b bg-muted/5">
+                    <p className="text-sm font-bold">🏢 Cobrança de Lojistas (% sobre Vendas)</p>
+                  </div>
+                  <div className="divide-y max-h-[400px] overflow-y-auto">
+                    {companyBreakdown.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground text-sm">Sem saldos devidos.</div>
+                    ) : (
+                      companyBreakdown.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-colors">
+                          <div>
+                            <p className="font-bold text-sm text-foreground leading-tight">{c.name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Vendas: {c.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} • {c.deliveries} entregas
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Devido</p>
+                            <p className="font-black text-base text-primary mt-1.5">
+                              {c.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+                {/* Entregadores */}
+                <div>
+                  <div className="px-5 py-3 border-b bg-muted/5">
+                    <p className="text-sm font-bold">🏍️ Cobrança de Entregadores (Taxa por Entrega)</p>
+                  </div>
+                  <div className="divide-y max-h-[400px] overflow-y-auto">
+                    {driverBreakdown.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground text-sm">Sem saldos devidos.</div>
+                    ) : (
+                      driverBreakdown.map((drv, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-colors">
+                          <div>
+                            <p className="font-bold text-sm text-foreground leading-tight">{drv.name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Corridas: {drv.deliveries} • Taxa por entrega: {drv.deliveries > 0 ? (drv.taxTotal / drv.deliveries).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,40"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Devido</p>
+                            <p className="font-black text-base text-blue-600 mt-1.5">
+                              {drv.taxTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Tabela de Detalhamento Geral */}
           <Card className="shadow-sm border-border/80 rounded-3xl overflow-hidden">
             <CardHeader className="border-b bg-muted/20 pb-4">
@@ -834,9 +924,12 @@ function ReportsPage() {
                   <CardTitle className="text-base font-bold">Detalhamento Financeiro</CardTitle>
                   <CardDescription>{filteredDeliveries.length} registros válidos</CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={handlePrint} className="font-bold rounded-xl gap-1.5 h-10">
                     <Printer className="h-4 w-4" /> Imprimir Relatório
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold rounded-xl gap-1.5 h-10">
+                    <FileText className="h-4 w-4" /> Exportar PDF
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleExportCSV} className="font-bold rounded-xl gap-1.5 h-10">
                     <Download className="h-4 w-4" /> Exportar CSV
@@ -905,70 +998,6 @@ function ReportsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="cobrancas">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Lojistas */}
-            <Card className="rounded-3xl border-border/80 shadow-sm overflow-hidden">
-              <CardHeader className="bg-muted/10 border-b pb-4">
-                <CardTitle className="text-base font-bold">🏢 Cobrança de Lojistas (% sobre Vendas)</CardTitle>
-                <CardDescription>Comissão contratada sobre as vendas online do marketplace</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 divide-y max-h-[500px] overflow-y-auto">
-                {companyBreakdown.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Sem saldos devidos.</div>
-                ) : (
-                  companyBreakdown.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-colors">
-                      <div>
-                        <p className="font-bold text-sm text-foreground leading-tight">{c.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1.5">
-                          Vendas: {c.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} • {c.deliveries} entregas
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">Devido</p>
-                        <p className="font-black text-base text-primary mt-2">
-                          {c.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Motoristas */}
-            <Card className="rounded-3xl border-border/80 shadow-sm overflow-hidden">
-              <CardHeader className="bg-muted/10 border-b pb-4">
-                <CardTitle className="text-base font-bold">🏍️ Cobrança de Entregadores (Taxa por Entrega)</CardTitle>
-                <CardDescription>Taxa operacional fixa cobrada por corrida finalizada</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 divide-y max-h-[500px] overflow-y-auto">
-                {driverBreakdown.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Sem saldos devidos.</div>
-                ) : (
-                  driverBreakdown.map((drv, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-colors">
-                      <div>
-                        <p className="font-bold text-sm text-foreground leading-tight">{drv.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1.5">
-                          Corridas: {drv.deliveries}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">Devido</p>
-                        <p className="font-black text-base text-blue-600 mt-2">
-                          {drv.taxTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="creditos">
