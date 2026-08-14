@@ -54,18 +54,19 @@ function InvitePage() {
         const { data, error: fetchError } = await (supabase as any).rpc("get_invitation_by_token", { _token: token });
         if (fetchError) throw fetchError;
 
-        const inv = data as any;
+        const inv = (Array.isArray(data) ? data[0] : data) as any;
 
         if (!inv || inv.status !== "pending") {
-          setError("Este link de convite é inválido ou já foi utilizado.");
+          setError("Este link de convite é inválido, já foi utilizado ou expirou.");
         } else {
           const expiresAt = new Date(inv.expires_at);
           if (expiresAt < new Date()) {
             setError("Este link de convite expirou.");
           } else {
             setInvitation(inv);
-            // Pre-fill email
-            setFormData(prev => ({ ...prev, email: inv.email || "" }));
+            if (inv.email && !String(inv.email).startsWith("convite_")) {
+              setFormData(prev => ({ ...prev, email: inv.email }));
+            }
           }
         }
       } catch (err: any) {
