@@ -44,11 +44,10 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .map(r => r.user_id)
     .filter(Boolean);
 
-  // 3. Fetch all profiles, customers and invitations for maximum data recovery
-  const [{ data: allProfiles }, { data: allCustomers }, { data: allInvitations }] = await Promise.all([
+  // 3. Fetch all profiles and customers for maximum data recovery
+  const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
     supabase.from("profiles").select("*"),
     supabase.from("customers").select("*"),
-    supabase.from("invitations").select("*"),
   ]);
 
   const profileDriverUserIds = (allProfiles || [])
@@ -96,20 +95,15 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       (c.id && (c.id === driver.user_id || c.id === driver.id)) ||
       (dName && (c.name || "").trim().toLowerCase() === dName)
     );
-    const invitation = (allInvitations || []).find((i: any) => 
-      (i.invited_user_id && (i.invited_user_id === driver.user_id || i.invited_user_id === driver.id)) ||
-      (dName && (i.full_name || i.name || "").trim().toLowerCase() === dName)
-    );
-
     resultDrivers.push({
       id: driver.id || driver.user_id,
       user_id: driver.user_id || driver.id,
-      full_name: raw.full_name || profile?.full_name || customer?.name || invitation?.full_name || raw.name || "Entregador",
-      phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || invitation?.phone || null,
-      document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || invitation?.document || null,
+      full_name: raw.full_name || profile?.full_name || customer?.name || raw.name || "Entregador",
+      phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
+      document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
-      vehicle_type: raw.vehicle || raw.vehicle_type || profile?.vehicle || profile?.vehicle_type || invitation?.vehicle || "moto",
-      vehicle_plate: raw.license_plate || raw.vehicle_plate || raw.plate || profile?.license_plate || profile?.vehicle_plate || profile?.plate || invitation?.license_plate || null,
+      vehicle_type: raw.vehicle || raw.vehicle_type || profile?.vehicle || profile?.vehicle_type || "moto",
+      vehicle_plate: raw.license_plate || raw.vehicle_plate || raw.plate || profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,
       is_online: raw.is_online ?? raw.online ?? false,
       rating: Number(driver.rating) || 5.0,
       latitude: raw.latitude || raw.current_latitude || null,

@@ -62,19 +62,17 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         const uid = driver.user_id || driver.id;
         if (!uid) return;
         try {
-          const [profRes, drvRes, custRes, invRes] = await Promise.all([
+          const [profRes, drvRes, custRes] = await Promise.all([
             supabase.from("profiles").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
             supabase.from("delivery_drivers").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
             supabase.from("customers").select("*").or(`user_id.eq.${uid},id.eq.${uid}`).maybeSingle(),
-            supabase.from("invitations").select("*").eq("invited_user_id", uid).maybeSingle(),
           ]);
 
           const prof = profRes.data as any;
           const drv = drvRes.data as any;
           const cust = custRes.data as any;
-          const inv = invRes.data as any;
 
-          const finalPhone = driver.phone || drv?.phone || drv?.whatsapp || prof?.phone || prof?.whatsapp || prof?.celular || cust?.phone || inv?.phone || "";
+          const finalPhone = driver.phone || drv?.phone || drv?.whatsapp || prof?.phone || prof?.whatsapp || prof?.celular || cust?.phone || "";
           const finalDoc = driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || prof?.cnpj || cust?.cpf || cust?.document || "";
           const finalPlate = driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || drv?.plate || prof?.license_plate || prof?.vehicle_plate || prof?.plate || "";
           const finalVehicle = driver.vehicle_type || driver.vehicle || drv?.vehicle || drv?.vehicle_type || prof?.vehicle || "moto";
