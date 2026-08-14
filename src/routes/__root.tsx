@@ -10,6 +10,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import appCss from "../styles.css?url";
+import { initializeGlobalErrorHandlers, reportErrorToTelegram } from "@/services/logger";
+import { useEffect } from "react";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -47,6 +49,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       </div>
     </div>
   ),
+  errorComponent: ({ error }) => {
+    reportErrorToTelegram({
+      error_message: error?.message || "Erro na rota admin",
+      stack_trace: error?.stack || "",
+      url: typeof window !== "undefined" ? window.location.href : "",
+    }, "Painel Administrador");
+    return (
+      <div className="p-8 text-sm text-destructive">
+        <h2 className="font-bold text-base mb-2">Erro de Carregamento</h2>
+        <p>{error?.message || "Ocorreu um erro ao carregar a página."}</p>
+      </div>
+    );
+  },
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
@@ -62,9 +77,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
     </html>
   );
 }
-
-import { initializeGlobalErrorHandlers } from "@/services/logger";
-import { useEffect } from "react";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
