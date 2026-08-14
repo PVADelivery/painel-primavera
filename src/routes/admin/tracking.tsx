@@ -4,6 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDrivers } from "@/services/drivers";
 import { useEffect, useState, useMemo } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Bike, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
