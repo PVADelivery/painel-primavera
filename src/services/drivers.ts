@@ -44,10 +44,11 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .map(r => r.user_id)
     .filter(Boolean);
 
-  // 3. Fetch all profiles
-  const { data: allProfiles } = await supabase
-    .from("profiles")
-    .select("*");
+  // 3. Fetch all profiles and customers for maximum data recovery
+  const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
+    supabase.from("profiles").select("*"),
+    supabase.from("customers").select("*"),
+  ]);
 
   const profileDriverUserIds = (allProfiles || [])
     .filter(p => {
@@ -82,14 +83,21 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     }
 
     const raw = driver as any;
-    const profile = allProfiles?.find(p => (p.user_id || p.id) === driver.user_id || (p.user_id || p.id) === driver.id);
+    const profile = allProfiles?.find(p => 
+      (p.user_id && (p.user_id === driver.user_id || p.user_id === driver.id)) ||
+      (p.id && (p.id === driver.user_id || p.id === driver.id))
+    );
+    const customer = allCustomers?.find(c =>
+      (c.user_id && (c.user_id === driver.user_id || c.user_id === driver.id)) ||
+      (c.id && (c.id === driver.user_id || c.id === driver.id))
+    );
 
     resultDrivers.push({
       id: driver.id || driver.user_id,
       user_id: driver.user_id || driver.id,
-      full_name: raw.full_name || profile?.full_name || raw.name || "Entregador",
-      phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || null,
-      document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || null,
+      full_name: raw.full_name || profile?.full_name || customer?.name || raw.name || "Entregador",
+      phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
+      document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
       vehicle_type: raw.vehicle || raw.vehicle_type || profile?.vehicle || profile?.vehicle_type || "moto",
       vehicle_plate: raw.license_plate || raw.vehicle_plate || raw.plate || profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,
@@ -109,7 +117,8 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   for (const userId of allDriverUserIds) {
     if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
       const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
-      const name = profile?.full_name || "";
+      const customer = allCustomers?.find(c => c.user_id === userId || c.id === userId);
+      const name = profile?.full_name || customer?.name || "";
       
       const isDummySeed = /^driver\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i.test(name.trim());
       if (isDummySeed) continue;
@@ -118,8 +127,8 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
         id: userId,
         user_id: userId,
         full_name: name || "Entregador Cadastrado",
-        phone: profile?.phone || profile?.whatsapp || profile?.celular || null,
-        document: profile?.document || profile?.cpf || profile?.cnpj || null,
+        phone: profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
+        document: profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
         avatar_url: profile?.avatar_url || null,
         vehicle_type: profile?.vehicle || profile?.vehicle_type || "moto",
         vehicle_plate: profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,

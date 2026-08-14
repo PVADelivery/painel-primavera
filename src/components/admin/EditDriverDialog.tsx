@@ -53,9 +53,47 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         document: driver.document || "",
         vehicleType: driver.vehicle_type || driver.vehicle || "moto",
         vehiclePlate: driver.vehicle_plate || driver.license_plate || "",
-        commission: (driver.commission_rate ?? driver.commission ?? 10).toString(),
+        commission: (driver.commission_rate ?? driver.commission ?? 15).toString(),
         serviceTypes: currentServices,
       });
+
+      // Busca dados complementares em todas as tabelas possíveis caso algum campo esteja vazio
+      const fetchExtra = async () => {
+        const uid = driver.user_id || driver.id;
+        if (!uid) return;
+        try {
+          const [profRes, drvRes, custRes, invRes] = await Promise.all([
+            supabase.from("profiles").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
+            supabase.from("delivery_drivers").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
+            supabase.from("customers").select("*").or(`user_id.eq.${uid},id.eq.${uid}`).maybeSingle(),
+            supabase.from("invitations").select("*").eq("invited_user_id", uid).maybeSingle(),
+          ]);
+
+          const prof = profRes.data as any;
+          const drv = drvRes.data as any;
+          const cust = custRes.data as any;
+          const inv = invRes.data as any;
+
+          const finalPhone = driver.phone || drv?.phone || drv?.whatsapp || prof?.phone || prof?.whatsapp || prof?.celular || cust?.phone || inv?.phone || "";
+          const finalDoc = driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || prof?.cnpj || cust?.cpf || cust?.document || "";
+          const finalPlate = driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || drv?.plate || prof?.license_plate || prof?.vehicle_plate || prof?.plate || "";
+          const finalVehicle = driver.vehicle_type || driver.vehicle || drv?.vehicle || drv?.vehicle_type || prof?.vehicle || "moto";
+          const finalName = driver.full_name || drv?.full_name || prof?.full_name || cust?.name || "";
+
+          setForm(prev => ({
+            ...prev,
+            fullName: prev.fullName || finalName,
+            phone: prev.phone || finalPhone,
+            document: prev.document || finalDoc,
+            vehiclePlate: prev.vehiclePlate || finalPlate,
+            vehicleType: prev.vehicleType || finalVehicle,
+          }));
+        } catch (e) {
+          console.warn("[EditDriverDialog] fetchExtra aviso:", e);
+        }
+      };
+
+      fetchExtra();
     }
   }, [driver, open]);
 
@@ -71,8 +109,8 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
   };
 
   const handleSubmit = async () => {
-    if (!form.fullName || !form.phone) {
-      toast.error("Nome e telefone são obrigatórios");
+    if (!form.fullName || !form.fullName.trim()) {
+      toast.error("O nome do entregador é obrigatório");
       return;
     }
 
