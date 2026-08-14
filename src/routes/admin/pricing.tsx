@@ -119,6 +119,33 @@ function PricingPage() {
     }
   };
 
+  const [isRenameTableOpen, setIsRenameTableOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState<any>(null);
+  const [editTableName, setEditTableName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  const handleRenameTable = async () => {
+    if (!editTableName.trim() || !editingTable) return;
+    setIsRenaming(true);
+    try {
+      const { error } = await supabase
+        .from("pricing_tables")
+        .update({ name: editTableName.trim() })
+        .eq("id", editingTable.id);
+      if (error) throw error;
+
+      toast.success("Nome da tabela atualizado!");
+      setIsRenameTableOpen(false);
+      setEditingTable(null);
+      setEditTableName("");
+      qc.invalidateQueries({ queryKey: ["pricing-tables"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao renomear tabela");
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -168,8 +195,24 @@ function PricingPage() {
                     ? <MapPin className="h-6 w-6 text-primary" />
                     : <TableIcon className="h-6 w-6 text-primary" />}
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-foreground uppercase tracking-tight">{t.name}</h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg text-foreground uppercase tracking-tight truncate">{t.name}</h3>
+                    {!t.isRegionsDefault && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingTable(t);
+                          setEditTableName(t.name);
+                          setIsRenameTableOpen(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-primary transition-all text-muted-foreground rounded-md"
+                        title="Renomear tabela"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {t.isRegionsDefault
                       ? `${t.regionsCount} regiões (valores oficiais)`
@@ -213,14 +256,28 @@ function PricingPage() {
                 </Button>
 
                 {!t.isRegionsDefault && (
-                  <Button
-                    variant="ghost"
-                    className="w-10 px-0 rounded-xl text-destructive hover:bg-destructive hover:text-white shrink-0"
-                    onClick={() => handleDeleteTable(t.id)}
-                    title="Excluir tabela"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="w-10 px-0 rounded-xl hover:bg-muted shrink-0"
+                      onClick={() => {
+                        setEditingTable(t);
+                        setEditTableName(t.name);
+                        setIsRenameTableOpen(true);
+                      }}
+                      title="Renomear tabela"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-10 px-0 rounded-xl text-destructive hover:bg-destructive hover:text-white shrink-0"
+                      onClick={() => handleDeleteTable(t.id)}
+                      title="Excluir tabela"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -262,6 +319,35 @@ function PricingPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isRenameTableOpen} onOpenChange={setIsRenameTableOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Nome da Tabela</DialogTitle>
+            <DialogDescription>
+              Altere o nome de identificação desta tabela de preços.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={editTableName}
+              onChange={(e) => setEditTableName(e.target.value)}
+              placeholder="Nome da tabela"
+              autoFocus
+              className="rounded-xl h-12"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameTable();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsRenameTableOpen(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={handleRenameTable} disabled={isRenaming || !editTableName.trim()} className="rounded-xl">
+              {isRenaming ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Salvar Nome"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {selectedTable && (
          <PricingRulesManager
            table={selectedTable}
@@ -279,10 +365,29 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
   const isDefault = !!table.isRegionsDefault;
   const [editingRegion, setEditingRegion] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editingRegionNameId, setEditingRegionNameId] = useState<string | null>(null);
+  const [editRegionNameValue, setEditRegionNameValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingCompany, setSavingCompany] = useState<string | null>(null);
   const [storesOpen, setStoresOpen] = useState(false);
   const [storeSearch, setStoreSearch] = useState("");
+
+  const handleSaveRegionName = async (regionId: string) => {
+    if (!editRegionNameValue.trim()) return;
+    try {
+      const { error } = await supabase
+        .from("regions")
+        .update({ name: editRegionNameValue.trim() })
+        .eq("id", regionId);
+      if (error) throw error;
+
+      toast.success("Nome da região atualizado!");
+      setEditingRegionNameId(null);
+      qc.invalidateQueries({ queryKey: ["regions"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar nome da região");
+    }
+  };
 
   const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
     queryKey: ["regions"],
@@ -520,13 +625,60 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                       const rule = isDefault ? null : ruleForRegion(region.id);
                       const value = rule ? Number(rule.base_value) : Number(region.price || 0);
                       const isEditing = editingRegion === region.id;
+                      const isEditingName = editingRegionNameId === region.id;
                       return (
                         <tr key={region.id} className="bg-card hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3">
-                            <span className="font-medium">{region.name}</span>
-                            {!isDefault && !rule && (
-                              <span className="ml-2 text-[11px] text-muted-foreground">(padrão da região)</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {isEditingName ? (
+                                <div className="flex items-center gap-1.5 flex-1 max-w-sm">
+                                  <Input
+                                    value={editRegionNameValue}
+                                    onChange={(e) => setEditRegionNameValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSaveRegionName(region.id);
+                                      if (e.key === "Escape") setEditingRegionNameId(null);
+                                    }}
+                                    autoFocus
+                                    className="h-8 text-sm rounded-lg"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-primary rounded-lg"
+                                    onClick={() => handleSaveRegionName(region.id)}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 rounded-lg"
+                                    onClick={() => setEditingRegionNameId(null)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="font-medium text-foreground">{region.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingRegionNameId(region.id);
+                                      setEditRegionNameValue(region.name);
+                                    }}
+                                    className="text-muted-foreground hover:text-primary p-1 rounded-md transition-colors"
+                                    title="Editar nome da região"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                  {!isDefault && !rule && (
+                                    <span className="text-[11px] text-muted-foreground">(padrão da região)</span>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right">
                             {isEditing ? (
