@@ -101,13 +101,18 @@ Deno.serve(async (req) => {
     }
 
     const userId = authData.user.id;
+    const rawVehicle = body.vehicle || body.vehicle_type || "moto";
+    const rawPlate = body.license_plate || body.licensePlate || body.vehicle_plate || null;
+    const rawDoc = document || body.document || body.cpf || null;
 
     // 3. Update profile
     await supabase.from("profiles").upsert({
+      id: userId,
       user_id: userId,
       full_name: fullName,
       phone: phone || null,
-      document: document || null,
+      document: rawDoc,
+      cpf: rawDoc,
       status: "active",
       role: invitation.role,
     });
@@ -121,10 +126,20 @@ Deno.serve(async (req) => {
     // 5. Create role-specific records
     if (invitation.role === "driver") {
       const { data: existingDriver } = await supabase.from("delivery_drivers").select("id").eq("user_id", userId).maybeSingle();
+      const driverData = {
+        user_id: userId,
+        full_name: fullName,
+        phone: phone || null,
+        cpf: rawDoc,
+        vehicle: rawVehicle,
+        license_plate: rawPlate ? String(rawPlate).toUpperCase() : null,
+        is_active: true,
+      };
+
       if (!existingDriver) {
-         await supabase.from("delivery_drivers").insert({ user_id: userId, full_name: fullName, phone: phone || null });
+         await supabase.from("delivery_drivers").insert(driverData);
       } else {
-         await supabase.from("delivery_drivers").update({ full_name: fullName, phone: phone || null }).eq("user_id", userId);
+         await supabase.from("delivery_drivers").update(driverData).eq("user_id", userId);
       }
     }
 
@@ -132,9 +147,9 @@ Deno.serve(async (req) => {
       const correctName = companyName || fullName;
       const { data: existingCompany } = await supabase.from("companies").select("id").eq("user_id", userId).maybeSingle();
       if (!existingCompany) {
-        await supabase.from("companies").insert({ user_id: userId, name: correctName, email: email, phone: phone || null });
+        await supabase.from("companies").insert({ user_id: userId, name: correctName, email: email, phone: phone || null, is_active: true, is_open: true });
       } else {
-        await supabase.from("companies").update({ name: correctName, email: email, phone: phone || null }).eq("user_id", userId);
+        await supabase.from("companies").update({ name: correctName, email: email, phone: phone || null, is_active: true, is_open: true }).eq("user_id", userId);
       }
     }
 

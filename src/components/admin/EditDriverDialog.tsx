@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { reportErrorToTelegram } from "@/services/logger";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface EditDriverDialogProps {
@@ -35,22 +36,22 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
     document: "",
     vehicleType: "motorcycle",
     vehiclePlate: "",
-    commission: "10",
+    commission: "10.00",
     serviceTypes: [] as string[],
   });
 
   useEffect(() => {
-    if (driver) {
-      const defaultServices = ["delivery_moto", "delivery_car", "delivery_carro_aberto", "taxi", "mototaxi"];
-      const currentServices = Array.isArray(driver.service_types) && driver.service_types.length > 0 
-        ? driver.service_types 
-        : defaultServices;
+    if (driver && open) {
+      let currentServices: string[] = [];
+      if (Array.isArray(driver.service_types)) {
+        currentServices = driver.service_types;
+      }
 
       setForm({
         fullName: driver.full_name || "",
         phone: driver.phone || "",
         document: driver.document || "",
-        vehicleType: driver.vehicle_type || "motorcycle",
+        vehicleType: driver.vehicle_type || driver.vehicle || "moto",
         vehiclePlate: driver.vehicle_plate || driver.license_plate || "",
         commission: (driver.commission_rate ?? driver.commission ?? 10).toString(),
         serviceTypes: currentServices,
@@ -77,49 +78,69 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
 
     setLoading(true);
     try {
-      // Update profile
-      const { error: pError } = await supabase
+      const targetUserId = driver.user_id || driver.id;
+
+      // 1. Atualiza Profiles
+      await supabase
         .from("profiles")
         .update({
           full_name: form.fullName,
           phone: form.phone,
           document: form.document,
+          cpf: form.document,
         })
-        .eq("id", driver.user_id);
+        .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
 
-      if (pError) throw pError;
-
-      // Update driver data with column fallbacks
-      let dError = (await supabase
+      // 2. Localiza ou cria registro na tabela delivery_drivers
+      const { data: existingDrivers } = await supabase
         .from("delivery_drivers")
-        .update({
-          vehicle_type: form.vehicleType,
-          license_plate: form.vehiclePlate,
-          vehicle_plate: form.vehiclePlate,
-          commission_rate: parseFloat(form.commission),
-          service_types: form.serviceTypes,
-        })
-        .eq("id", driver.id)).error;
+        .select("id")
+        .or(`id.eq.${driver.id},user_id.eq.${targetUserId}`);
 
-      if (dError && dError.message?.includes("vehicle_plate")) {
-        // Fallback if vehicle_plate column does not exist on legacy database schema
-        dError = (await supabase
+      const targetDriverRow = existingDrivers?.[0];
+
+      if (targetDriverRow) {
+        const { error: dError } = await supabase
           .from("delivery_drivers")
           .update({
-            vehicle_type: form.vehicleType,
-            license_plate: form.vehiclePlate,
-            commission_rate: parseFloat(form.commission),
+            full_name: form.fullName,
+            phone: form.phone,
+            cpf: form.document,
+            vehicle: form.vehicleType,
+            license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+            commission_rate: parseFloat(form.commission) || 0,
             service_types: form.serviceTypes,
           })
-          .eq("id", driver.id)).error;
+          .eq("id", targetDriverRow.id);
+
+        if (dError) throw dError;
+      } else {
+        const { error: dInsertError } = await supabase
+          .from("delivery_drivers")
+          .insert({
+            user_id: targetUserId,
+            full_name: form.fullName,
+            phone: form.phone,
+            cpf: form.document,
+            vehicle: form.vehicleType,
+            license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+            commission_rate: parseFloat(form.commission) || 0,
+            service_types: form.serviceTypes,
+            is_active: true,
+          });
+
+        if (dInsertError) throw dInsertError;
       }
 
-      if (dError) throw dError;
-
-      toast.success("Dados do entregador atualizados!");
+      toast.success("Dados do entregador atualizados com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       onOpenChange(false);
     } catch (err: any) {
+      reportErrorToTelegram({
+        error_message: `[Admin EditDriverDialog] ${err.message || "Erro ao atualizar entregador"}`,
+        stack_trace: err.stack || "",
+        url: typeof window !== "undefined" ? window.location.href : "",
+      }, "Painel Administrador");
       toast.error(err.message || "Erro ao atualizar entregador");
     } finally {
       setLoading(false);

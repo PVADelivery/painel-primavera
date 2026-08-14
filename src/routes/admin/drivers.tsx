@@ -91,7 +91,16 @@ function DriversPage() {
   };
 
   const vehicleLabel: Record<string, string> = {
-    motorcycle: "🏍️ Moto", bicycle: "🚲 Bicicleta", car: "🚗 Carro", van: "🚐 Van", truck: "🚛 Caminhão", taxi: "🚕 Táxi", mototaxi: "🏍️ Moto Táxi"
+    motorcycle: "🏍️ Moto",
+    moto: "🏍️ Moto",
+    bicycle: "🚲 Bicicleta",
+    car: "🚗 Carro",
+    carro: "🚗 Carro",
+    carro_aberto: "🚚 Frete (Carro Aberto)",
+    van: "🚐 Van",
+    truck: "🚛 Caminhão",
+    taxi: "🚕 Táxi",
+    mototaxi: "🏍️ Moto Táxi",
   };
 
   return (
