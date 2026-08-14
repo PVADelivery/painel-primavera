@@ -461,6 +461,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "company_credit_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       company_credits: {
@@ -501,6 +508,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_credits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -677,6 +691,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_purchase_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       credit_transactions: {
@@ -722,10 +743,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "credit_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "credit_transactions_delivery_id_fkey"
             columns: ["delivery_id"]
             isOneToOne: false
             referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
             referencedColumns: ["id"]
           },
         ]
@@ -780,6 +815,7 @@ export type Database = {
           customer_address_complement: string | null
           customer_address_number: string | null
           customer_cpf: string | null
+          customer_id: string | null
           customer_name: string
           customer_neighborhood: string | null
           customer_phone: string | null
@@ -827,6 +863,7 @@ export type Database = {
           customer_address_complement?: string | null
           customer_address_number?: string | null
           customer_cpf?: string | null
+          customer_id?: string | null
           customer_name: string
           customer_neighborhood?: string | null
           customer_phone?: string | null
@@ -874,6 +911,7 @@ export type Database = {
           customer_address_complement?: string | null
           customer_address_number?: string | null
           customer_cpf?: string | null
+          customer_id?: string | null
           customer_name?: string
           customer_neighborhood?: string | null
           customer_phone?: string | null
@@ -921,11 +959,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "deliveries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "deliveries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deliveries_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "delivery_drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["driver_id"]
           },
           {
             foreignKeyName: "deliveries_region_id_fkey"
@@ -953,6 +1012,7 @@ export type Database = {
           updated_at: string
           user_id: string
           vehicle: string
+          vehicle_plate: string | null
         }
         Insert: {
           city_id?: string | null
@@ -970,6 +1030,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           vehicle?: string
+          vehicle_plate?: string | null
         }
         Update: {
           city_id?: string | null
@@ -987,6 +1048,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vehicle?: string
+          vehicle_plate?: string | null
         }
         Relationships: [
           {
@@ -1268,6 +1330,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "merchant_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       messages: {
@@ -1375,11 +1444,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "occurrences_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "occurrences_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "delivery_drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occurrences_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["driver_id"]
           },
         ]
       }
@@ -1486,6 +1569,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -1497,6 +1587,13 @@ export type Database = {
             columns: ["delivery_id"]
             isOneToOne: false
             referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
             referencedColumns: ["id"]
           },
         ]
@@ -1778,6 +1875,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       profiles: {
@@ -1927,10 +2031,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "reviews_delivery_id_fkey"
             columns: ["delivery_id"]
             isOneToOne: false
             referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1939,6 +2057,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "delivery_drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["driver_id"]
           },
         ]
       }
@@ -1995,6 +2120,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "delivery_drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_requests_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "view_financial_summary"
+            referencedColumns: ["driver_id"]
           },
         ]
       }
@@ -2165,7 +2297,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      view_financial_summary: {
+        Row: {
+          company_id: string | null
+          company_name: string | null
+          created_at: string | null
+          delivery_value: number | null
+          driver_id: string | null
+          driver_name: string | null
+          id: string | null
+          payment_method: string | null
+          platform_commission: number | null
+          status: Database["public"]["Enums"]["delivery_status"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_company_credits: {
@@ -2244,6 +2390,15 @@ export type Database = {
           p_payment_method: string
         }
         Returns: Json
+      }
+      get_business_directory_contacts: {
+        Args: never
+        Returns: {
+          address: string
+          id: string
+          phone: string
+          whatsapp: string
+        }[]
       }
       get_driver_id: { Args: { _user_id: string }; Returns: string }
       get_invitation_by_token: { Args: { _token: string }; Returns: Json }
