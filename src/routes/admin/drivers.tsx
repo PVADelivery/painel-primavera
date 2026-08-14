@@ -105,17 +105,17 @@ function DriversPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 bg-card shadow-card p-6 rounded-2xl border border-border/50">
-        <div className="space-y-1">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-8 bg-card shadow-card p-6 rounded-2xl border border-border/50">
+        <div className="space-y-1 min-w-0">
           <h2 className="text-xl font-black text-foreground tracking-tight">Entregadores e Motoristas</h2>
           <p className="text-sm text-muted-foreground font-medium">Gerencie sua frota de entregadores de lojas, fretes e motoristas de táxi/moto-táxi</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto shrink-0">
           <GenerateInviteDialog fixedRole="driver" triggerLabel="Convidar Entregador / Motorista" />
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                <Plus className="h-5 w-5" /> Cadastrar Entregador / Motorista
+              <button className="whitespace-nowrap flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+                <Plus className="h-4 w-4" /> Cadastrar Entregador / Motorista
               </button>
             </DialogTrigger>
             <DialogContent 
