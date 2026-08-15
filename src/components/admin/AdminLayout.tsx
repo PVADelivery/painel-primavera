@@ -2,8 +2,12 @@ import { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { AdminSidebar } from "./AdminSidebar";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { useRealtimeDeliveries } from "@/hooks/useRealtimeDeliveries";
+import { useGlobalChatNotifications } from "@/hooks/useGlobalChatNotifications";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  useRealtimeDeliveries();
+  useGlobalChatNotifications();
   return (
     <ProtectedRoute requiredRole="admin">
       <div className="relative min-h-screen bg-background">
