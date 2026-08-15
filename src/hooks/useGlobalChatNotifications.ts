@@ -71,7 +71,7 @@ export function useGlobalChatNotifications() {
             duration: 8000,
             action: isChatPage ? undefined : {
               label: "Abrir Chat",
-              onClick: () => navigate("/chat")
+              onClick: () => navigate({ to: "/admin/chat" })
             }
           });
 
