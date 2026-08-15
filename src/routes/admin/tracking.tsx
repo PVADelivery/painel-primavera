@@ -5,9 +5,10 @@ import { useEffect, useState, useMemo } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Bike, Navigation } from "lucide-react";
+import { Bike, Car, Navigation, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/tracking")({
   component: TrackingPage,
@@ -40,23 +41,11 @@ function TrackingPage() {
     };
   }, [refetch]);
 
-  // Lista de entregadores online: se não tiver latitude/longitude do GPS do celular ainda, posiciona no centro operacional
+  // Lista de entregadores online que possuem coordenadas de GPS reais enviadas pelos celulares
   const onlineDrivers = useMemo(() => {
     if (!Array.isArray(drivers)) return [];
     return drivers
-      .filter(d => (d.is_online === true || d.online === true))
-      .map((d, index) => {
-        // Se o GPS ainda não enviou coordenadas precisas, espalha levemente no centro da cidade
-        const defaultLat = -15.5597 + ((index % 5) * 0.003 - 0.006);
-        const defaultLng = -54.2972 + ((Math.floor(index / 5)) * 0.003 - 0.006);
-
-        return {
-          ...d,
-          latitude: typeof d.latitude === "number" && !isNaN(d.latitude) ? d.latitude : defaultLat,
-          longitude: typeof d.longitude === "number" && !isNaN(d.longitude) ? d.longitude : defaultLng,
-          hasRealGPS: typeof d.latitude === "number" && !isNaN(d.latitude),
-        };
-      });
+      .filter(d => (d.is_online === true || d.online === true) && typeof d.latitude === "number" && typeof d.longitude === "number" && !isNaN(d.latitude) && !isNaN(d.longitude) && d.latitude !== 0 && d.longitude !== 0);
   }, [drivers]);
 
   return (
@@ -130,25 +119,34 @@ function TrackingPage() {
           >
             <NavigationControl position="bottom-right" />
             
-            {onlineDrivers.map(driver => (
-              <Marker 
-                key={driver.id} 
-                longitude={driver.longitude!} 
-                latitude={driver.latitude!}
-                anchor="bottom"
-              >
-                <div className="relative group cursor-pointer">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-md">
-                    {driver.full_name}
+            {onlineDrivers.map(driver => {
+              const isCar = ["car", "carro", "taxi", "carro_aberto", "van", "truck"].includes(String(driver.vehicle_type).toLowerCase());
+              return (
+                <Marker 
+                  key={driver.id} 
+                  longitude={driver.longitude!} 
+                  latitude={driver.latitude!}
+                  anchor="bottom"
+                >
+                  <div className="relative group cursor-pointer">
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] font-bold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-md border border-border/50">
+                      {driver.full_name} • {driver.vehicle_plate || (isCar ? "Carro/Táxi" : "Moto")}
+                    </div>
+                    <div className={cn(
+                      "w-9 h-9 rounded-full flex items-center justify-center shadow-lg border-2 border-background z-10 relative",
+                      isCar ? "bg-blue-600 text-white" : "bg-primary text-primary-foreground"
+                    )}>
+                      {isCar ? <Car className="w-4 h-4" /> : <Bike className="w-4 h-4" />}
+                    </div>
+                    {/* Ping animation */}
+                    <div className={cn(
+                      "absolute inset-0 rounded-full animate-ping opacity-75",
+                      isCar ? "bg-blue-500/40" : "bg-primary/40"
+                    )} style={{ animationDuration: '2s' }} />
                   </div>
-                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-background z-10 relative">
-                    <Bike className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  {/* Ping animation */}
-                  <div className="absolute inset-0 bg-primary/40 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-                </div>
-              </Marker>
-            ))}
+                </Marker>
+              );
+            })}
           </Map>
           ) : (
             <div className="h-full flex items-center justify-center text-xs text-muted-foreground font-bold">
