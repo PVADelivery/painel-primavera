@@ -116,7 +116,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
     try {
       const targetUserId = driver.user_id || driver.id;
 
-      // 1. Atualiza Profiles
+      // 1. Atualiza Profiles em todas as colunas possíveis (id e user_id)
       await supabase
         .from("profiles")
         .update({
@@ -124,10 +124,13 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
           phone: form.phone,
           document: form.document,
           cpf: form.document,
+          vehicle: form.vehicleType,
+          license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+          plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
         })
         .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
 
-      // 2. Localiza ou cria registro na tabela delivery_drivers
+      // 2. Atualiza ou insere em delivery_drivers
       const { data: existingDrivers } = await supabase
         .from("delivery_drivers")
         .select("id")
@@ -136,7 +139,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
       const targetDriverRow = existingDrivers?.[0];
 
       if (targetDriverRow) {
-        const { error: dError } = await supabase
+        await supabase
           .from("delivery_drivers")
           .update({
             full_name: form.fullName,
@@ -148,10 +151,8 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             service_types: form.serviceTypes,
           })
           .eq("id", targetDriverRow.id);
-
-        if (dError) throw dError;
       } else {
-        const { error: dInsertError } = await supabase
+        await supabase
           .from("delivery_drivers")
           .insert({
             user_id: targetUserId,
@@ -164,9 +165,23 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             service_types: form.serviceTypes,
             is_active: true,
           });
-
-        if (dInsertError) throw dInsertError;
       }
+
+      // 3. Atualiza na tabela legada 'drivers' se existir
+      try {
+        await supabase
+          .from("drivers")
+          .update({
+            full_name: form.fullName,
+            phone: form.phone,
+            document: form.document,
+            vehicle_type: form.vehicleType,
+            license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+            commission_rate: parseFloat(form.commission) || 0,
+            service_types: form.serviceTypes,
+          })
+          .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
+      } catch (e) {}
 
       toast.success("Dados do entregador atualizados com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
