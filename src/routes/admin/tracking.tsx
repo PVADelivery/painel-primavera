@@ -35,13 +35,8 @@ function TrackingPage() {
       })
       .subscribe();
 
-    const interval = setInterval(() => {
-      refetch();
-    }, 10000);
-
     return () => {
       supabase.removeChannel(ch);
-      clearInterval(interval);
     };
   }, [refetch]);
 
