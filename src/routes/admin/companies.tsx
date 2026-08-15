@@ -32,7 +32,8 @@ function CompaniesPage() {
   const filteredCompanies = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return data;
-    return data.filter((c) => {
+    return data.filter((company) => {
+      const c = company as typeof company & { trade_name?: string | null; cnpj?: string | null };
       const matchName = (c.name || "").toLowerCase().includes(q) || (c.trade_name || "").toLowerCase().includes(q);
       const matchAddress = (c.address || "").toLowerCase().includes(q);
       const matchPhone = (c.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
