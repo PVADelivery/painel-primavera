@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Trash2, Loader2, Search, X, ChevronDown, ChevronUp,
-  Check, Pencil, MapPin, Eye, EyeOff, ArrowRightLeft,
+  Check, Pencil, MapPin, Eye, EyeOff, ArrowRightLeft, Palette,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/regions")({
@@ -258,16 +258,18 @@ interface RowProps {
 }
 
 const PRESET_COLORS = [
-  "#ef4444", // Vermelho
-  "#f97316", // Laranja
-  "#eab308", // Amarelo
-  "#22c55e", // Verde
-  "#06b6d4", // Ciano
-  "#3b82f6", // Azul
-  "#8b5cf6", // Roxo
-  "#ec4899", // Rosa
-  "#64748b", // Cinza/Slate
-  "#10b981", // Esmeralda
+  { hex: "#ef4444", name: "Vermelho" },
+  { hex: "#f97316", name: "Laranja" },
+  { hex: "#eab308", name: "Amarelo / Dourado" },
+  { hex: "#10b981", name: "Esmeralda" },
+  { hex: "#22c55e", name: "Verde" },
+  { hex: "#06b6d4", name: "Ciano" },
+  { hex: "#3b82f6", name: "Azul" },
+  { hex: "#6366f1", name: "Índigo" },
+  { hex: "#8b5cf6", name: "Roxo" },
+  { hex: "#d946ef", name: "Fúcsia" },
+  { hex: "#ec4899", name: "Rosa" },
+  { hex: "#64748b", name: "Slate" },
 ];
 
 function RegionSheetRow({
@@ -277,6 +279,7 @@ function RegionSheetRow({
   const [name, setName] = useState(region.name as string);
   const [price, setPrice] = useState(String(Number(region.price ?? 0).toFixed(2)));
   const [color, setColor] = useState(region.color || "#eab308");
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [newHood, setNewHood] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -284,45 +287,88 @@ function RegionSheetRow({
   const dirty = name !== region.name || Number(price) !== Number(region.price) || color !== (region.color || "#eab308");
 
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden transition-all shadow-sm hover:border-border/80">
       {/* header row */}
       <div className="flex flex-wrap items-center gap-3 p-4">
-        {/* Número da Região com a cor configurada */}
-        <div
-          className="h-9 w-9 shrink-0 rounded-xl grid place-items-center font-black text-sm text-white shadow-sm transition-colors"
-          style={{ backgroundColor: color }}
-        >
-          {index}
-        </div>
-
-        {/* Seletor de Cor (Paleta Rápida + Input Color) */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/50">
-          <label className="relative cursor-pointer flex items-center justify-center w-7 h-7 rounded-lg overflow-hidden border border-border hover:scale-105 transition-transform" title="Escolher cor personalizada">
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => {
-                setColor(e.target.value);
-              }}
-              className="absolute -top-4 -left-4 w-16 h-16 cursor-pointer opacity-0"
+        
+        {/* Botão de Cor + Badge com Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowColorPicker(!showColorPicker)}
+            className="group relative h-10 px-3 rounded-xl flex items-center gap-2 border border-border/80 bg-muted/40 hover:bg-muted transition-all active:scale-95 shadow-sm"
+            title="Alterar cor da região"
+          >
+            <div
+              className="w-5 h-5 rounded-lg shadow-sm border border-black/10 group-hover:scale-110 transition-transform"
+              style={{ backgroundColor: color }}
             />
-            <div className="w-full h-full rounded-md" style={{ backgroundColor: color }} />
-          </label>
+            <span className="font-black text-xs text-foreground">Região {index}</span>
+            <Palette className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors ml-0.5" />
+          </button>
 
-          <div className="hidden sm:flex items-center gap-1">
-            {PRESET_COLORS.slice(0, 5).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => {
-                  setColor(c);
-                }}
-                className={`w-4 h-4 rounded-full border transition-all ${color.toLowerCase() === c.toLowerCase() ? "scale-125 border-foreground shadow-sm ring-1 ring-primary" : "border-transparent opacity-70 hover:opacity-100"}`}
-                style={{ backgroundColor: c }}
-                title={`Cor ${c}`}
+          {/* Modal / Popover Dropdown da Paleta */}
+          {showColorPicker && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowColorPicker(false)}
               />
-            ))}
-          </div>
+              <div className="absolute left-0 top-12 z-50 w-64 p-4 rounded-2xl bg-card border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+                  <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-primary" /> Cor da Região
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowColorPicker(false)}
+                    className="w-5 h-5 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Grade de Cores Selecionáveis */}
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      onClick={() => {
+                        setColor(c.hex);
+                        setShowColorPicker(false);
+                      }}
+                      className={`group relative h-9 rounded-xl border flex items-center justify-center transition-all ${
+                        color.toLowerCase() === c.hex.toLowerCase()
+                          ? "border-primary ring-2 ring-primary/40 scale-105 shadow-md"
+                          : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                    >
+                      {color.toLowerCase() === c.hex.toLowerCase() && (
+                        <Check className="w-4 h-4 text-white drop-shadow-md" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Seletor Customizado / Código Hexadecimal */}
+                <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">Personalizar:</span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-7 h-7 rounded-lg cursor-pointer border border-border bg-transparent"
+                    />
+                    <span className="font-mono text-xs font-bold text-foreground uppercase">{color}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <input
