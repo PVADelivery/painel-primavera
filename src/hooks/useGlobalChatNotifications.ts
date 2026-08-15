@@ -1,13 +1,13 @@
 // @ts-nocheck
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContext } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function useGlobalChatNotifications() {
-  const auth = useContext(AuthContext);
+  const auth = useAuth();
   const user = auth?.user ?? null;
   const location = useLocation();
   const navigate = useNavigate();
