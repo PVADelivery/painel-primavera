@@ -64,8 +64,10 @@ function InvitePage() {
             setError("Este link de convite expirou.");
           } else {
             setInvitation(inv);
-            if (inv.email && !String(inv.email).startsWith("convite_")) {
+            if (inv.email && !String(inv.email).toLowerCase().startsWith("convite_") && !String(inv.email).includes("@mt24horasexpress.com")) {
               setFormData(prev => ({ ...prev, email: inv.email }));
+            } else {
+              setFormData(prev => ({ ...prev, email: "" }));
             }
           }
         }
