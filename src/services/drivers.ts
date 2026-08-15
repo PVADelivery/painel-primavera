@@ -105,9 +105,20 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       vehicle_type: raw.vehicle || raw.vehicle_type || profile?.vehicle || profile?.vehicle_type || "moto",
       vehicle_plate: raw.license_plate || raw.vehicle_plate || raw.plate || profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,
       is_online: raw.is_online ?? raw.online ?? false,
-      rating: Number(driver.rating) || 5.0,
-      latitude: (raw.latitude !== null && raw.latitude !== undefined && raw.latitude !== "" && !isNaN(Number(raw.latitude))) ? Number(raw.latitude) : ((raw.current_latitude !== null && raw.current_latitude !== undefined && raw.current_latitude !== "" && !isNaN(Number(raw.current_latitude))) ? Number(raw.current_latitude) : null),
-      longitude: (raw.longitude !== null && raw.longitude !== undefined && raw.longitude !== "" && !isNaN(Number(raw.longitude))) ? Number(raw.longitude) : ((raw.current_longitude !== null && raw.current_longitude !== undefined && raw.current_longitude !== "" && !isNaN(Number(raw.current_longitude))) ? Number(raw.current_longitude) : null),
+      latitude: (raw.latitude !== null && raw.latitude !== undefined && raw.latitude !== "" && !isNaN(Number(raw.latitude))) 
+        ? Number(raw.latitude) 
+        : ((raw.current_latitude !== null && raw.current_latitude !== undefined && raw.current_latitude !== "" && !isNaN(Number(raw.current_latitude))) 
+          ? Number(raw.current_latitude) 
+          : ((profile?.latitude !== null && profile?.latitude !== undefined && !isNaN(Number(profile?.latitude))) 
+            ? Number(profile.latitude) 
+            : null)),
+      longitude: (raw.longitude !== null && raw.longitude !== undefined && raw.longitude !== "" && !isNaN(Number(raw.longitude))) 
+        ? Number(raw.longitude) 
+        : ((raw.current_longitude !== null && raw.current_longitude !== undefined && raw.current_longitude !== "" && !isNaN(Number(raw.current_longitude))) 
+          ? Number(raw.current_longitude) 
+          : ((profile?.longitude !== null && profile?.longitude !== undefined && !isNaN(Number(profile?.longitude))) 
+            ? Number(profile.longitude) 
+            : null)),
       status: raw.status || (raw.is_active === false ? "suspended" : "active"),
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 15.00,
       service_types: raw.service_types || [],
