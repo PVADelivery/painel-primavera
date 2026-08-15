@@ -13,7 +13,7 @@ export function useRealtimeDeliveries() {
     audioRef.current = new Audio(NOTIFICATION_SOUND);
 
     const channel = supabase
-      .channel("realtime-deliveries-global")
+      .channel(`realtime-deliveries-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "deliveries" },
