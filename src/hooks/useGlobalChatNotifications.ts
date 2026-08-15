@@ -2,7 +2,7 @@
 import { useContext, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/contexts/AuthContext";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -71,7 +71,7 @@ export function useGlobalChatNotifications() {
             duration: 8000,
             action: isChatPage ? undefined : {
               label: "Abrir Chat",
-              onClick: () => navigate("/chat")
+              onClick: () => navigate({ to: "/admin/chat" })
             }
           });
 
