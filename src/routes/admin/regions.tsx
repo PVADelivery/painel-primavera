@@ -249,7 +249,7 @@ interface RowProps {
   hoods: NeighborhoodRow[];
   expanded: boolean;
   onToggle: () => void;
-  onSaveRegion: (updates: { name?: string; price?: number; is_active?: boolean }) => Promise<void>;
+  onSaveRegion: (updates: { name?: string; price?: number; is_active?: boolean; color?: string }) => Promise<void>;
   onDeleteRegion: () => void;
   onAddHood: (name: string) => Promise<void>;
   onRenameHood: (id: string, name: string) => Promise<void>;
@@ -257,30 +257,79 @@ interface RowProps {
   onDeleteHood: (id: string) => Promise<void>;
 }
 
+const PRESET_COLORS = [
+  "#ef4444", // Vermelho
+  "#f97316", // Laranja
+  "#eab308", // Amarelo
+  "#22c55e", // Verde
+  "#06b6d4", // Ciano
+  "#3b82f6", // Azul
+  "#8b5cf6", // Roxo
+  "#ec4899", // Rosa
+  "#64748b", // Cinza/Slate
+  "#10b981", // Esmeralda
+];
+
 function RegionSheetRow({
   index, region, regions, hoods, expanded, onToggle,
   onSaveRegion, onDeleteRegion, onAddHood, onRenameHood, onMoveHood, onDeleteHood,
 }: RowProps) {
   const [name, setName] = useState(region.name as string);
   const [price, setPrice] = useState(String(Number(region.price ?? 0).toFixed(2)));
+  const [color, setColor] = useState(region.color || "#eab308");
   const [newHood, setNewHood] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const dirty = name !== region.name || Number(price) !== Number(region.price);
+  const dirty = name !== region.name || Number(price) !== Number(region.price) || color !== (region.color || "#eab308");
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       {/* header row */}
       <div className="flex flex-wrap items-center gap-3 p-4">
-        <div className="h-9 w-9 shrink-0 rounded-xl bg-primary text-primary-foreground grid place-items-center font-black text-sm">
+        {/* Número da Região com a cor configurada */}
+        <div
+          className="h-9 w-9 shrink-0 rounded-xl grid place-items-center font-black text-sm text-white shadow-sm transition-colors"
+          style={{ backgroundColor: color }}
+        >
           {index}
+        </div>
+
+        {/* Seletor de Cor (Paleta Rápida + Input Color) */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/50">
+          <label className="relative cursor-pointer flex items-center justify-center w-7 h-7 rounded-lg overflow-hidden border border-border hover:scale-105 transition-transform" title="Escolher cor personalizada">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => {
+                setColor(e.target.value);
+              }}
+              className="absolute -top-4 -left-4 w-16 h-16 cursor-pointer opacity-0"
+            />
+            <div className="w-full h-full rounded-md" style={{ backgroundColor: color }} />
+          </label>
+
+          <div className="hidden sm:flex items-center gap-1">
+            {PRESET_COLORS.slice(0, 5).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  setColor(c);
+                }}
+                className={`w-4 h-4 rounded-full border transition-all ${color.toLowerCase() === c.toLowerCase() ? "scale-125 border-foreground shadow-sm ring-1 ring-primary" : "border-transparent opacity-70 hover:opacity-100"}`}
+                style={{ backgroundColor: c }}
+                title={`Cor ${c}`}
+              />
+            ))}
+          </div>
         </div>
 
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 min-w-[180px] bg-transparent border-b border-transparent hover:border-border focus:border-primary text-sm font-bold text-foreground outline-none py-1"
+          className="flex-1 min-w-[160px] bg-transparent border-b border-transparent hover:border-border focus:border-primary text-sm font-bold text-foreground outline-none py-1"
+          placeholder="Nome da região..."
         />
 
         <div className="flex items-center gap-1 rounded-xl bg-muted px-3 py-1.5">
@@ -297,8 +346,8 @@ function RegionSheetRow({
 
         {dirty && (
           <button
-            onClick={() => onSaveRegion({ name: name.trim(), price: Number(price) })}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold"
+            onClick={() => onSaveRegion({ name: name.trim(), price: Number(price), color })}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-sm hover:bg-primary/90"
           >
             <Check className="h-3.5 w-3.5" /> Salvar
           </button>
