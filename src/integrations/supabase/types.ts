@@ -825,6 +825,7 @@ export type Database = {
           difficulty: string | null
           distance_km: number | null
           driver_id: string | null
+          dropoff_address: string | null
           estimated_time_minutes: number | null
           estimated_value: number | null
           id: string
@@ -840,6 +841,7 @@ export type Database = {
           pickup_longitude: number | null
           proof_photo_url: string | null
           region_id: string | null
+          region_name: string | null
           short_id: string | null
           signature_url: string | null
           status: Database["public"]["Enums"]["delivery_status"]
@@ -873,6 +875,7 @@ export type Database = {
           difficulty?: string | null
           distance_km?: number | null
           driver_id?: string | null
+          dropoff_address?: string | null
           estimated_time_minutes?: number | null
           estimated_value?: number | null
           id?: string
@@ -888,6 +891,7 @@ export type Database = {
           pickup_longitude?: number | null
           proof_photo_url?: string | null
           region_id?: string | null
+          region_name?: string | null
           short_id?: string | null
           signature_url?: string | null
           status?: Database["public"]["Enums"]["delivery_status"]
@@ -921,6 +925,7 @@ export type Database = {
           difficulty?: string | null
           distance_km?: number | null
           driver_id?: string | null
+          dropoff_address?: string | null
           estimated_time_minutes?: number | null
           estimated_value?: number | null
           id?: string
@@ -936,6 +941,7 @@ export type Database = {
           pickup_longitude?: number | null
           proof_photo_url?: string | null
           region_id?: string | null
+          region_name?: string | null
           short_id?: string | null
           signature_url?: string | null
           status?: Database["public"]["Enums"]["delivery_status"]
@@ -999,13 +1005,24 @@ export type Database = {
         Row: {
           city_id: string | null
           commission_rate: number
+          cpf: string | null
           created_at: string
+          created_by_admin_id: string | null
+          current_latitude: number | null
+          current_longitude: number | null
+          delivery_fee_tax: number | null
+          document: string | null
           fcm_token: string | null
+          full_name: string | null
           id: string
+          is_active: boolean | null
           is_online: boolean
           latitude: number | null
           license_plate: string | null
           longitude: number | null
+          online: boolean | null
+          phone: string | null
+          plate: string | null
           rating: number
           service_types: string[] | null
           status: string | null
@@ -1013,17 +1030,29 @@ export type Database = {
           user_id: string
           vehicle: string
           vehicle_plate: string | null
+          vehicle_type: string | null
         }
         Insert: {
           city_id?: string | null
           commission_rate?: number
+          cpf?: string | null
           created_at?: string
+          created_by_admin_id?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          delivery_fee_tax?: number | null
+          document?: string | null
           fcm_token?: string | null
+          full_name?: string | null
           id?: string
+          is_active?: boolean | null
           is_online?: boolean
           latitude?: number | null
           license_plate?: string | null
           longitude?: number | null
+          online?: boolean | null
+          phone?: string | null
+          plate?: string | null
           rating?: number
           service_types?: string[] | null
           status?: string | null
@@ -1031,17 +1060,29 @@ export type Database = {
           user_id: string
           vehicle?: string
           vehicle_plate?: string | null
+          vehicle_type?: string | null
         }
         Update: {
           city_id?: string | null
           commission_rate?: number
+          cpf?: string | null
           created_at?: string
+          created_by_admin_id?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          delivery_fee_tax?: number | null
+          document?: string | null
           fcm_token?: string | null
+          full_name?: string | null
           id?: string
+          is_active?: boolean | null
           is_online?: boolean
           latitude?: number | null
           license_plate?: string | null
           longitude?: number | null
+          online?: boolean | null
+          phone?: string | null
+          plate?: string | null
           rating?: number
           service_types?: string[] | null
           status?: string | null
@@ -1049,6 +1090,7 @@ export type Database = {
           user_id?: string
           vehicle?: string
           vehicle_plate?: string | null
+          vehicle_type?: string | null
         }
         Relationships: [
           {
@@ -1887,6 +1929,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cpf: string | null
           created_at: string
           document: string | null
           full_name: string
@@ -1899,6 +1942,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           document?: string | null
           full_name?: string
@@ -1911,6 +1955,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           document?: string | null
           full_name?: string
@@ -1962,6 +2007,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          delivery_fee: number | null
           geometry: Json | null
           id: string
           is_active: boolean
@@ -1973,6 +2019,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          delivery_fee?: number | null
           geometry?: Json | null
           id?: string
           is_active?: boolean
@@ -1984,6 +2031,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          delivery_fee?: number | null
           geometry?: Json | null
           id?: string
           is_active?: boolean
@@ -2129,6 +2177,36 @@ export type Database = {
             referencedColumns: ["driver_id"]
           },
         ]
+      }
+      system_error_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string
+          id: string
+          origin_app: string | null
+          stack_trace: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message: string
+          id?: string
+          origin_app?: string | null
+          stack_trace?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string
+          id?: string
+          origin_app?: string | null
+          stack_trace?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       system_invitations: {
         Row: {
