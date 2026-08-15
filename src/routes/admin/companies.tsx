@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Building2, Plus, MoreHorizontal, Trash, Power } from "lucide-react";
-import { useState } from "react";
+import { Building2, Plus, MoreHorizontal, Trash, Power, Search, X } from "lucide-react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +26,20 @@ function CompaniesPage() {
   const { data = [], isLoading } = useCompanies();
   const create = useCreateCompany();
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
+
+  const filteredCompanies = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter((c) => {
+      const matchName = (c.name || "").toLowerCase().includes(q) || (c.trade_name || "").toLowerCase().includes(q);
+      const matchAddress = (c.address || "").toLowerCase().includes(q);
+      const matchPhone = (c.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      const matchDoc = (c.document || c.cnpj || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      return matchName || matchAddress || matchPhone || matchDoc;
+    });
+  }, [data, searchQuery]);
 
   const handleToggleActive = async (companyId: string, isActive: boolean) => {
     const { error } = await supabase.from("companies").update({ is_active: !isActive }).eq("id", companyId);
@@ -61,16 +74,18 @@ function CompaniesPage() {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card shadow-card p-6 rounded-2xl border border-border/50">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Empresas</h1>
-          <p className="text-sm text-muted-foreground">Lojistas conectados à sua operação</p>
+          <h1 className="text-xl font-black tracking-tight text-foreground">Empresas</h1>
+          <p className="text-sm text-muted-foreground font-medium">Lojistas conectados à sua operação ({filteredCompanies.length} empresas)</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <GenerateInviteDialog fixedRole="company" triggerLabel="Convidar Empresa" />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Nova empresa</Button>
+              <button className="whitespace-nowrap flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+                <Plus className="h-4 w-4" /> Nova empresa
+              </button>
             </DialogTrigger>
           <DialogContent 
             onOpenAutoFocus={(e) => e.preventDefault()}
@@ -80,6 +95,29 @@ function CompaniesPage() {
             <CreateCompanyForm onSuccess={() => setOpen(false)} />
           </DialogContent>
         </Dialog>
+        </div>
+      </div>
+
+      {/* ── BARRA DE BUSCA DE EMPRESAS ── */}
+      <div className="mb-6 max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome da loja, endereço, telefone..."
+            className="pl-10 pr-9 h-11 rounded-xl bg-card border-border shadow-sm text-sm"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -98,10 +136,10 @@ function CompaniesPage() {
             <tbody>
               {isLoading ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada</td></tr>
+              ) : filteredCompanies.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhuma empresa encontrada com os filtros aplicados.</td></tr>
               ) : (
-                data.map((c) => (
+                filteredCompanies.map((c) => (
                   <tr key={c.id} className="border-b border-border hover:bg-muted/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">

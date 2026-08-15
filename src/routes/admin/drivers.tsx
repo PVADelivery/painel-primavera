@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useState } from "react";
 import { BikeIcon } from "@/components/icons/BikeIcon";
 import { useDrivers, useToggleDriverOnline } from "@/services/drivers";
-import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power, Trash2, Edit2 } from "lucide-react";
+import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power, Trash2, Edit2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditDriverDialog } from "@/components/admin/EditDriverDialog";
 import { GenerateInviteDialog } from "@/components/admin/GenerateInviteDialog";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/admin/drivers")({
   component: DriversPage,
@@ -26,9 +27,19 @@ function DriversPage() {
   const { data: drivers, isLoading } = useDrivers();
   const toggleOnline = useToggleDriverOnline();
   const qc = useQueryClient();
-    const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredDrivers = (drivers ?? []).filter((d) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const matchName = (d.full_name || "").toLowerCase().includes(q);
+      const matchPhone = (d.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      const matchPlate = (d.vehicle_plate || d.license_plate || "").toLowerCase().includes(q);
+      const matchDoc = (d.document || d.cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      if (!matchName && !matchPhone && !matchPlate && !matchDoc) return false;
+    }
+
     if (activeTab === "all") return true;
     const services = Array.isArray(d.service_types) ? d.service_types : [];
     
@@ -132,26 +143,48 @@ function DriversPage() {
       </div>
 
       
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 border-b border-border hide-scrollbar">
-        {[
-          { id: "all", label: "Todos" },
-          { id: "encomendas", label: "Moto (Encomendas)" },
-          { id: "carro", label: "Carro (Encomendas)" },
-          { id: "taxi", label: "Táxi" },
-          { id: "mototaxi", label: "Moto Táxi" }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-              activeTab === tab.id 
-                ? "bg-primary text-primary-foreground shadow-md" 
-                : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+          {[
+            { id: "all", label: "Todos" },
+            { id: "encomendas", label: "Moto (Encomendas)" },
+            { id: "carro", label: "Carro (Encomendas)" },
+            { id: "taxi", label: "Táxi" },
+            { id: "mototaxi", label: "Moto Táxi" }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.id 
+                  ? "bg-primary text-primary-foreground shadow-md" 
+                  : "bg-card text-muted-foreground hover:bg-muted border border-border/50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative min-w-[260px] sm:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome, placa, fone..."
+            className="pl-10 pr-9 h-10 rounded-xl bg-card border-border shadow-sm text-sm"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-2xl bg-card shadow-card overflow-hidden">
