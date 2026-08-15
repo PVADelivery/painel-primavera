@@ -156,6 +156,8 @@ export function useDrivers() {
   return useQuery({
     queryKey: ["drivers"],
     queryFn: fetchDrivers,
+    staleTime: 0,
+    refetchInterval: 5000,
   });
 }
 
