@@ -7,6 +7,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Bike, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/tracking")({
   component: TrackingPage,
@@ -14,16 +15,54 @@ export const Route = createFileRoute("/admin/tracking")({
 
 function TrackingPage() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const { data: drivers = [], refetch } = useDrivers();
 
-  const { data: drivers = [] } = useDrivers();
+  // Primavera do Leste - MT Centro
   const [viewState, setViewState] = useState({
-    longitude: -54.2972, // Primavera do Leste
-    latitude: -15.5597, // Primavera do Leste
-    zoom: 12
+    longitude: -54.2972,
+    latitude: -15.5597,
+    zoom: 13
   });
 
-  const onlineDrivers = useMemo(() => Array.isArray(drivers) ? drivers.filter(d => d.online && d.latitude && d.longitude) : [], [drivers]);
+  useEffect(() => { 
+    setMounted(true); 
+
+    // Atualização em tempo real de posições e status dos entregadores
+    const ch = supabase
+      .channel("admin-tracking-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_drivers" }, () => {
+        refetch();
+      })
+      .subscribe();
+
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(interval);
+    };
+  }, [refetch]);
+
+  // Lista de entregadores online: se não tiver latitude/longitude do GPS do celular ainda, posiciona no centro operacional
+  const onlineDrivers = useMemo(() => {
+    if (!Array.isArray(drivers)) return [];
+    return drivers
+      .filter(d => (d.is_online === true || d.online === true))
+      .map((d, index) => {
+        // Se o GPS ainda não enviou coordenadas precisas, espalha levemente no centro da cidade
+        const defaultLat = -15.5597 + ((index % 5) * 0.003 - 0.006);
+        const defaultLng = -54.2972 + ((Math.floor(index / 5)) * 0.003 - 0.006);
+
+        return {
+          ...d,
+          latitude: typeof d.latitude === "number" && !isNaN(d.latitude) ? d.latitude : defaultLat,
+          longitude: typeof d.longitude === "number" && !isNaN(d.longitude) ? d.longitude : defaultLng,
+          hasRealGPS: typeof d.latitude === "number" && !isNaN(d.latitude),
+        };
+      });
+  }, [drivers]);
 
   return (
     <AdminLayout>
