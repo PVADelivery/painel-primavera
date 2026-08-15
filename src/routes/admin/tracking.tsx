@@ -41,48 +41,92 @@ function TrackingPage() {
     };
   }, [refetch]);
 
-  // Lista de entregadores online que possuem coordenadas de GPS reais enviadas pelos celulares
-  const onlineDrivers = useMemo(() => {
+  // Todos os entregadores com status Online ativo
+  const allOnlineDrivers = useMemo(() => {
     if (!Array.isArray(drivers)) return [];
-    return drivers
-      .filter(d => (d.is_online === true || d.online === true) && typeof d.latitude === "number" && typeof d.longitude === "number" && !isNaN(d.latitude) && !isNaN(d.longitude) && d.latitude !== 0 && d.longitude !== 0);
+    return drivers.filter(d => d.is_online === true || d.online === true);
   }, [drivers]);
+
+  // Entregadores online que possuem coordenadas de GPS transmitidas pelo dispositivo
+  const onlineDriversWithGPS = useMemo(() => {
+    return allOnlineDrivers.filter(d => 
+      typeof d.latitude === "number" && 
+      typeof d.longitude === "number" && 
+      !isNaN(d.latitude) && 
+      !isNaN(d.longitude) && 
+      d.latitude !== 0 && 
+      d.longitude !== 0
+    );
+  }, [allOnlineDrivers]);
 
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight">Rastreio em Tempo Real</h1>
-        <p className="text-sm text-muted-foreground">Monitore a localização da frota no mapa</p>
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Rastreio em Tempo Real</h1>
+          <p className="text-sm text-muted-foreground">Monitore a localização exata da frota no mapa</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-bold text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {allOnlineDrivers.length} Online ({onlineDriversWithGPS.length} com GPS ativo)
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[70vh]">
         {/* Painel lateral */}
         <Card className="lg:col-span-1 p-4 shadow-card flex flex-col h-full overflow-hidden bg-card/50 backdrop-blur">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Bike className="w-5 h-5 text-primary" />
-            Em campo ({onlineDrivers.length})
+          <h2 className="font-semibold mb-4 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Bike className="w-5 h-5 text-primary" />
+              Em campo ({allOnlineDrivers.length})
+            </span>
           </h2>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-            {onlineDrivers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">Nenhum motoboy online com localização ativa no momento.</p>
+            {allOnlineDrivers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-10">Nenhum motoboy ou motorista online no momento.</p>
             ) : (
-              onlineDrivers.map(driver => (
-                <div 
-                  key={driver.id} 
-                  className="flex items-center justify-between bg-background border border-border/50 p-3 rounded-xl hover:border-primary/50 cursor-pointer transition-colors"
-                  onClick={() => setViewState({
-                    longitude: driver.longitude!,
-                    latitude: driver.latitude!,
-                    zoom: 15
-                  })}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{driver.full_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{driver.vehicle_plate || "Sem Placa"}</p>
+              allOnlineDrivers.map(driver => {
+                const hasGPS = typeof driver.latitude === "number" && typeof driver.longitude === "number" && driver.latitude !== 0;
+                const isCar = ["car", "carro", "taxi", "carro_aberto", "van", "truck"].includes(String(driver.vehicle_type).toLowerCase());
+
+                return (
+                  <div 
+                    key={driver.id} 
+                    className={cn(
+                      "flex items-center justify-between bg-background border p-3 rounded-xl transition-all cursor-pointer",
+                      hasGPS ? "border-border/60 hover:border-primary/60 hover:bg-muted/40" : "border-border/30 opacity-70"
+                    )}
+                    onClick={() => {
+                      if (hasGPS) {
+                        setViewState({
+                          longitude: driver.longitude!,
+                          latitude: driver.latitude!,
+                          zoom: 16
+                        });
+                      }
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        {isCar ? <Car className="w-3.5 h-3.5 text-blue-400 shrink-0" /> : <Bike className="w-3.5 h-3.5 text-primary shrink-0" />}
+                        <p className="text-sm font-semibold truncate">{driver.full_name}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate ml-5">{driver.vehicle_plate || (isCar ? "Carro/Táxi" : "Moto")}</p>
+                    </div>
+                    {hasGPS ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
+                        <Navigation className="w-3 h-3" /> GPS
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+                        Aguardando GPS
+                      </span>
+                    )}
                   </div>
-                  <Navigation className="w-4 h-4 text-primary" />
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </Card>
@@ -119,7 +163,7 @@ function TrackingPage() {
           >
             <NavigationControl position="bottom-right" />
             
-            {onlineDrivers.map(driver => {
+            {onlineDriversWithGPS.map(driver => {
               const isCar = ["car", "carro", "taxi", "carro_aberto", "van", "truck"].includes(String(driver.vehicle_type).toLowerCase());
               return (
                 <Marker 
