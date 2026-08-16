@@ -5,7 +5,7 @@ import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
 import { useDeliveries, useDeliveryCounts, useUpdateDeliveryStatus, useReassignDelivery, type DeliveryWithRelations } from "@/services/deliveries";
 import { useCompanies } from "@/services/companies";
 import { useDrivers } from "@/services/drivers";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import {
   Search, Filter, Eye, MoreHorizontal, X as XIcon, ChevronLeft, ChevronRight,
   Loader2, Printer, UserCheck, Package, Radio, Send, MapPin, Plus,
@@ -345,8 +345,8 @@ function DeliveriesPage() {
                         <span className="text-sm font-semibold text-foreground">R$ {formatDeliveryValue(delivery)}</span>
                       </td>
                       <td className="p-4 hidden lg:table-cell">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(delivery.created_at), "dd/MM HH:mm")}
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {formatDateTime(delivery.created_at)}
                         </span>
                       </td>
                       <td className="p-4">
