@@ -74,15 +74,18 @@ export function AdminSidebar() {
                 <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
               )}
               <Icon className={cn("h-[18px] w-[18px] transition-colors", active && "text-primary")} />
-              <span className="flex-1 text-left">{item.label}</span>
-              {item.to === "/admin/deliveries" && (counts?.pending ?? 0) > 0 && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-black shadow-sm animate-pulse">
-                  {counts.pending}
-                </span>
-              )}
-              {item.to === "/admin/deliveries" && (counts?.pending ?? 0) === 0 && (counts?.all ?? 0) > 0 && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground">
-                  {counts.all}
+              <span className="flex-1 text-left font-semibold">{item.label}</span>
+              {item.to === "/admin/deliveries" && (
+                <span
+                  className={cn(
+                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm",
+                    (counts?.pending ?? 0) > 0
+                      ? "bg-amber-500 text-black animate-pulse"
+                      : "bg-muted text-muted-foreground border border-border/50"
+                  )}
+                  title={`${counts?.pending ?? 0} pendentes / ${counts?.all ?? 0} total`}
+                >
+                  {(counts?.pending ?? 0) > 0 ? counts?.pending : (counts?.all ?? 0)}
                 </span>
               )}
             </Link>
