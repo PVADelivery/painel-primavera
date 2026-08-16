@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff } from "lucide-react";
@@ -20,8 +20,12 @@ function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && rolesLoaded && hasRole("admin")) navigate({ to: "/admin" });
-  }, [user, rolesLoaded, hasRole, navigate]);
+    if (user && rolesLoaded && hasRole("admin")) {
+      if (typeof window !== "undefined" && window.location.pathname.includes("/login")) {
+        navigate({ to: "/admin", replace: true });
+      }
+    }
+  }, [user, rolesLoaded, hasRole]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
