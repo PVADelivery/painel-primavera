@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import icon from "@/assets/logo-icon-v3.png";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { useDeliveryCounts } from "@/services/deliveries";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const items: NavItem[] = [
@@ -32,6 +33,7 @@ const items: NavItem[] = [
 export function AdminSidebar() {
   const { profile, signOut } = useAuth();
   const { theme, toggle } = useTheme();
+  const { data: counts } = useDeliveryCounts();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -72,7 +74,17 @@ export function AdminSidebar() {
                 <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
               )}
               <Icon className={cn("h-[18px] w-[18px] transition-colors", active && "text-primary")} />
-              <span>{item.label}</span>
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.to === "/admin/deliveries" && (counts?.pending ?? 0) > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-black shadow-sm animate-pulse">
+                  {counts.pending}
+                </span>
+              )}
+              {item.to === "/admin/deliveries" && (counts?.pending ?? 0) === 0 && (counts?.all ?? 0) > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground">
+                  {counts.all}
+                </span>
+              )}
             </Link>
           );
         })}
