@@ -951,22 +951,23 @@ function ReportsPage() {
                   <CardTitle className="text-base font-bold">Detalhamento Financeiro</CardTitle>
                   <CardDescription>{filteredDeliveries.length} registros válidos</CardDescription>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={handlePrint} className="font-bold rounded-xl gap-1.5 h-10">
-                    <Printer className="h-4 w-4" /> Imprimir Relatório
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                  <Button variant="outline" size="sm" onClick={handlePrint} className="font-bold rounded-xl gap-1.5 h-10 text-xs sm:text-sm">
+                    <Printer className="h-4 w-4 shrink-0" /> Imprimir
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold rounded-xl gap-1.5 h-10">
-                    <FileText className="h-4 w-4" /> Exportar PDF
+                  <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold rounded-xl gap-1.5 h-10 text-xs sm:text-sm">
+                    <FileText className="h-4 w-4 shrink-0" /> PDF
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportCSV} className="font-bold rounded-xl gap-1.5 h-10">
-                    <Download className="h-4 w-4" /> Exportar CSV
+                  <Button variant="outline" size="sm" onClick={handleExportCSV} className="col-span-2 font-bold rounded-xl gap-1.5 h-10 text-xs sm:col-span-1 sm:text-sm">
+                    <Download className="h-4 w-4 shrink-0" /> Exportar CSV
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+              <div className="-mx-px overflow-x-auto">
+                <table className="w-full min-w-[720px] text-sm text-left border-collapse">
+
                   <thead className="bg-muted/30 text-xs uppercase font-bold text-muted-foreground border-b">
                     <tr>
                       <th className="p-4">Data / ID</th>
