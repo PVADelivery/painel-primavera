@@ -191,6 +191,7 @@ export function useDeliveryCounts() {
       if (error) throw error;
       const counts: Record<string, number> = {
         all: data?.length || 0,
+        open: 0,
         pending: 0,
         broadcasted: 0,
         accepted: 0,
@@ -204,11 +205,15 @@ export function useDeliveryCounts() {
         if (counts[s] !== undefined) {
           counts[s]++;
         }
+        // Entregas em aberto (não finalizadas e não canceladas)
+        if (["pending", "broadcasted", "accepted", "collecting", "in_route", "in_transit"].includes(s)) {
+          counts.open++;
+        }
       });
       return counts;
     },
-    staleTime: 10000,
-    refetchInterval: 10000,
+    staleTime: 5000,
+    refetchInterval: 5000,
   });
 }
 

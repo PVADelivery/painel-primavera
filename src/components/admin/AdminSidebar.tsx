@@ -78,14 +78,14 @@ export function AdminSidebar() {
               {item.to === "/admin/deliveries" && (
                 <span
                   className={cn(
-                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm",
-                    (counts?.pending ?? 0) > 0
+                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm transition-all",
+                    (counts?.open ?? 0) > 0
                       ? "bg-amber-500 text-black animate-pulse"
-                      : "bg-muted text-muted-foreground border border-border/50"
+                      : "bg-muted/60 text-muted-foreground/60 border border-border/40"
                   )}
-                  title={`${counts?.pending ?? 0} pendentes / ${counts?.all ?? 0} total`}
+                  title={`${counts?.open ?? 0} entregas em aberto`}
                 >
-                  {(counts?.pending ?? 0) > 0 ? counts?.pending : (counts?.all ?? 0)}
+                  {counts?.open ?? 0}
                 </span>
               )}
             </Link>
