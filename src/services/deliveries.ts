@@ -183,6 +183,35 @@ export function useDeliveries(params?: UseDeliveriesParams) {
   });
 }
 
+export function useDeliveryCounts() {
+  return useQuery({
+    queryKey: ["delivery-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deliveries").select("status");
+      if (error) throw error;
+      const counts: Record<string, number> = {
+        all: data?.length || 0,
+        pending: 0,
+        broadcasted: 0,
+        accepted: 0,
+        collecting: 0,
+        in_transit: 0,
+        delivered: 0,
+        cancelled: 0,
+      };
+      (data || []).forEach((d: any) => {
+        const s = d.status;
+        if (counts[s] !== undefined) {
+          counts[s]++;
+        }
+      });
+      return counts;
+    },
+    staleTime: 10000,
+    refetchInterval: 10000,
+  });
+}
+
 export function useDeliveryStats() {
   return useQuery({
     queryKey: ["delivery-stats"],

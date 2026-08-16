@@ -2,7 +2,7 @@ import { useState } from "react";
 import { formatDeliveryValue } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
-import { useDeliveries, useUpdateDeliveryStatus, useReassignDelivery, type DeliveryWithRelations } from "@/services/deliveries";
+import { useDeliveries, useDeliveryCounts, useUpdateDeliveryStatus, useReassignDelivery, type DeliveryWithRelations } from "@/services/deliveries";
 import { useCompanies } from "@/services/companies";
 import { useDrivers } from "@/services/drivers";
 import { cn } from "@/lib/utils";
@@ -84,6 +84,7 @@ function DeliveriesPage() {
 
   const { data: companies } = useCompanies();
   const { data: drivers } = useDrivers();
+  const { data: counts = {} } = useDeliveryCounts();
   const updateStatus = useUpdateDeliveryStatus();
   const reassignMut = useReassignDelivery();
 
@@ -256,19 +257,29 @@ function DeliveriesPage() {
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-          {statusFilters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => { setActiveFilter(f.value); setPage(0); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                activeFilter === f.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {statusFilters.map((f) => {
+            const countVal = (counts as any)[f.value] ?? 0;
+            return (
+              <button
+                key={f.value}
+                onClick={() => { setActiveFilter(f.value); setPage(0); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  activeFilter === f.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <span>{f.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  activeFilter === f.value
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-background text-foreground/80"
+                }`}>
+                  {countVal}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
