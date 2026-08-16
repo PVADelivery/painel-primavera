@@ -20,11 +20,10 @@ function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Redireciona para /admin apenas se for admin e estiver na rota de login
     if (user && rolesLoaded) {
       if (hasRole("admin")) {
         if (typeof window !== "undefined" && window.location.pathname.startsWith("/login")) {
-          navigate({ to: "/admin" });
+          window.location.replace("/admin");
         }
       } else {
         setErrorMsg("Sua conta não tem permissão de Administrador.");
