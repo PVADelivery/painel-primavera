@@ -143,7 +143,7 @@ export function AdminSidebar() {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex h-screen w-64 flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20">
+      <aside className="hidden md:flex h-screen w-72 flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20">
         {SidebarContent}
       </aside>
     </>
