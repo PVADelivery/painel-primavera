@@ -83,6 +83,9 @@ function RootComponent() {
 
   useEffect(() => {
     initializeGlobalErrorHandlers("Painel Administrador");
+    if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app")) {
+      window.location.replace(`https://painel.mt24horasexpress.com${window.location.pathname}${window.location.search}`);
+    }
   }, []);
 
   return (
