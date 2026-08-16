@@ -11,6 +11,7 @@ export function useRealtimeDeliveries() {
 
   useEffect(() => {
     audioRef.current = new Audio(NOTIFICATION_SOUND);
+    const channelId = `realtime-deliv-${Math.random().toString(36).substring(2, 9)}`;
 
     const channel = supabase
       .channel(`realtime-deliveries-${Math.random().toString(36).slice(2, 10)}`)
