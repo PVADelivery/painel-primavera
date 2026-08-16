@@ -229,7 +229,7 @@ export function StoreCreditsPanel() {
             <div className="p-12 text-center text-sm text-muted-foreground">Nenhuma loja encontrada</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-y border-border bg-muted/40">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Loja</th>
