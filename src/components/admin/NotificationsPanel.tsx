@@ -107,7 +107,7 @@ export function NotificationsPanel() {
 
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold text-success tabular-nums bg-success/5 px-1.5 py-0.5 rounded border border-success/10">
-                        R$ {formatDeliveryValue(d)}
+                        {formatDeliveryValue(d)}
                       </span>
                       {d.driver_id && (
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
