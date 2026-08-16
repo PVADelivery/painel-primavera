@@ -494,19 +494,31 @@ function ReportsPage() {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Financeiro / Relatórios</h1>
-          <p className="text-sm text-muted-foreground">Análise de dados e exportação</p>
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">Financeiro / Relatórios</h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">Análise de dados e exportação</p>
         </div>
       </div>
 
-      <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="mb-6 flex-wrap h-auto">
-          <TabsTrigger value="geral">Painel Operacional (Corridas)</TabsTrigger>
-          <TabsTrigger value="creditos">Créditos de Lojas</TabsTrigger>
-          <TabsTrigger value="cashflow">Fluxo de Caixa Operacional</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="geral" className="w-full min-w-0">
+        <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="inline-flex h-auto w-max min-w-full flex-nowrap gap-1">
+            <TabsTrigger value="geral" className="whitespace-nowrap text-xs sm:text-sm">
+              <span className="sm:hidden">Corridas</span>
+              <span className="hidden sm:inline">Painel Operacional (Corridas)</span>
+            </TabsTrigger>
+            <TabsTrigger value="creditos" className="whitespace-nowrap text-xs sm:text-sm">
+              <span className="sm:hidden">Créditos</span>
+              <span className="hidden sm:inline">Créditos de Lojas</span>
+            </TabsTrigger>
+            <TabsTrigger value="cashflow" className="whitespace-nowrap text-xs sm:text-sm">
+              <span className="sm:hidden">Caixa</span>
+              <span className="hidden sm:inline">Fluxo de Caixa Operacional</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
 
         <TabsContent value="geral">
           {/* Filtros Avançados */}
