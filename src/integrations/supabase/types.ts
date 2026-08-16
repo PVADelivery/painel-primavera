@@ -2619,6 +2619,10 @@ export type Database = {
         }
         Returns: Json
       }
+      driver_can_read_company: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
       get_business_directory_contacts: {
         Args: never
         Returns: {
