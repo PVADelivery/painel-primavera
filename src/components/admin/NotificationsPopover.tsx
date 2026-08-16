@@ -32,20 +32,6 @@ export function NotificationsPopover() {
   const pendingDeliveries = deliveries.filter(d => d.status === "pending");
   const unreadCount = pendingDeliveries.length;
 
-  // Sound alert logic for new pending deliveries
-  useEffect(() => {
-    if (pendingDeliveries.length > 0) {
-      const newestId = pendingDeliveries[0].id;
-      if (newestId !== lastNotificationId) {
-        if (lastNotificationId !== null) {
-          const audio = new Audio(NOTIFICATION_SOUND);
-          audio.play().catch(e => console.log("Audio play blocked by browser:", e));
-        }
-        setLastNotificationId(newestId);
-      }
-    }
-  }, [pendingDeliveries, lastNotificationId]);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending": return "text-warning";
