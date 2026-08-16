@@ -115,7 +115,7 @@ export function NotificationsPopover() {
                     </p>
                     <div className="flex items-center justify-between mt-2">
                        <span className="text-[10px] font-medium px-2 py-0.5 bg-muted rounded-full">
-                         R$ {formatDeliveryValue(d)}
+                         {formatDeliveryValue(d)}
                        </span>
                     </div>
                   </div>
