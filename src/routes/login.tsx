@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, signOut, user, rolesLoaded, hasRole } = useAuth();
+  const { signIn, signOut, user, rolesLoaded, roles, hasRole } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -20,18 +20,17 @@ function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Apenas redireciona se o usuário já estiver autenticado e for expressamente admin
+    // Redireciona para /admin apenas se for admin e estiver na rota de login
     if (user && rolesLoaded) {
       if (hasRole("admin")) {
         if (typeof window !== "undefined" && window.location.pathname.startsWith("/login")) {
-          navigate({ to: "/admin", replace: true });
+          navigate({ to: "/admin" });
         }
       } else {
-        // Se estiver autenticado mas não for admin, exibe aviso amigável sem ficar em loop
         setErrorMsg("Sua conta não tem permissão de Administrador.");
       }
     }
-  }, [user?.id, rolesLoaded, roles]);
+  }, [user?.id, rolesLoaded]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
