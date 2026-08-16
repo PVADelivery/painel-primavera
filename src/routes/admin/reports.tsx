@@ -73,26 +73,27 @@ function ReportsPage() {
   });
   const [editingCf, setEditingCf] = useState(null);
 
-  const [categories, setCategories] = useState(() => {
-    const saved = localStorage.getItem('cashFlowCategories');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return {
-      expense: ["Repasse Motoboy", "Thyelle - pessoal", "Abastecimento", "Oficina - manutenção", "Fixo Mensal - empresa", "Aluguel", "Luz", "Internet - telefone", "Água", "Papelaria - limpeza", "Veículo", "Outras Despesas"],
-      income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"]
-    };
-  });
+  const DEFAULT_CATEGORIES = {
+    expense: ["Repasse Motoboy", "Thyelle - pessoal", "Abastecimento", "Oficina - manutenção", "Fixo Mensal - empresa", "Aluguel", "Luz", "Internet - telefone", "Água", "Papelaria - limpeza", "Veículo", "Outras Despesas"],
+    income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"]
+  };
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [manageCategoryType, setManageCategoryType] = useState('expense');
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cashFlowCategories');
+      if (saved) setCategories(JSON.parse(saved));
+    } catch (e) {}
+  }, []);
+
   const saveCategories = (newCats) => {
     setCategories(newCats);
-    localStorage.setItem('cashFlowCategories', JSON.stringify(newCats));
+    try { localStorage.setItem('cashFlowCategories', JSON.stringify(newCats)); } catch (e) {}
   };
+
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
