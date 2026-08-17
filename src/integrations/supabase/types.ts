@@ -2542,6 +2542,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_delivery: { Args: { p_delivery_id: string }; Returns: Json }
       add_company_credits: {
         Args: {
           _amount: number
@@ -2619,10 +2620,9 @@ export type Database = {
         }
         Returns: Json
       }
-      driver_can_read_company: {
-        Args: { _company_id: string }
-        Returns: boolean
-      }
+      driver_can_read_company:
+        | { Args: { _company_id: string }; Returns: boolean }
+        | { Args: { _company_id: string; _user_id: string }; Returns: boolean }
       get_business_directory_contacts: {
         Args: never
         Returns: {
@@ -2630,6 +2630,18 @@ export type Database = {
           id: string
           phone: string
           whatsapp: string
+        }[]
+      }
+      get_delivery_company_info: {
+        Args: { _company_id: string }
+        Returns: {
+          address: string
+          id: string
+          latitude: number
+          logo_url: string
+          longitude: number
+          name: string
+          phone: string
         }[]
       }
       get_driver_id: { Args: { _user_id: string }; Returns: string }
@@ -2681,11 +2693,14 @@ export type Database = {
       is_admin_safe: { Args: never; Returns: boolean }
       is_company_safe: { Args: never; Returns: boolean }
       is_driver: { Args: { _user_id: string }; Returns: boolean }
+      refund_delivery_credit: { Args: { p_delivery_id: string }; Returns: Json }
       update_delivery_status_safe: {
         Args: { p_delivery_id: string; p_driver_id?: string; p_status: string }
         Returns: Json
       }
-      user_owns_company: { Args: { _company_id: string }; Returns: boolean }
+      user_owns_company:
+        | { Args: { _company_id: string }; Returns: boolean }
+        | { Args: { _company_id: string; _user_id: string }; Returns: boolean }
       validate_coupon: {
         Args: { p_code: string; p_company_id: string; p_subtotal: number }
         Returns: Json
