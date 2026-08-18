@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Clock, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
+  Trash2, Pencil, Calendar, Clock, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
