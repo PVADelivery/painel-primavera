@@ -29,6 +29,27 @@ export const Route = createFileRoute("/admin/reports")({
 
 const PIE_COLORS = ["#22c55e", "#ef4444", "#3b82f6", "#eab308"];
 
+function getCfTypeDetails(type: string) {
+  const isIncome = type === "income" || type === "entrada" || type === "receita";
+  return isIncome
+    ? {
+        Icon: ArrowUpCircle,
+        label: "Entrada",
+        sign: "+",
+        textColor: "text-emerald-500",
+        barColor: "bg-emerald-500",
+        badgeBg: "bg-emerald-500/10 text-emerald-500",
+      }
+    : {
+        Icon: ArrowDownCircle,
+        label: "Saída",
+        sign: "-",
+        textColor: "text-rose-500",
+        barColor: "bg-rose-500",
+        badgeBg: "bg-rose-500/10 text-rose-500",
+      };
+}
+
 const PAYMENT_LABELS: Record<string, string> = {
   money: "Dinheiro",
   pix: "Pix",
