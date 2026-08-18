@@ -75,7 +75,9 @@ function ReportsPage() {
 
   const DEFAULT_CATEGORIES = {
     expense: ["Repasse Motoboy", "Thyelle - pessoal", "Abastecimento", "Oficina - manutenção", "Fixo Mensal - empresa", "Aluguel", "Luz", "Internet - telefone", "Água", "Papelaria - limpeza", "Veículo", "Outras Despesas"],
-    income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"]
+    income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"],
+    receivable: ["Contas a Receber", "Venda a Prazo", "Empresas Faturadas", "Cheque Pré-datado", "Outros Direitos"],
+    payable: ["Contas a Pagar", "Fornecedores", "Impostos a Pagar", "Aluguel Futuro", "Empréstimo / Financiamento", "Outras Obrigações"]
   };
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
@@ -85,7 +87,15 @@ function ReportsPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('cashFlowCategories');
-      if (saved) setCategories(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setCategories({
+          ...DEFAULT_CATEGORIES,
+          ...parsed,
+          receivable: parsed.receivable || DEFAULT_CATEGORIES.receivable,
+          payable: parsed.payable || DEFAULT_CATEGORIES.payable,
+        });
+      }
     } catch (e) {}
   }, []);
 
@@ -434,7 +444,15 @@ function ReportsPage() {
   const cfStats = useMemo(() => {
     const income = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
     const expense = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
-    return { income, expense, balance: income - expense };
+    const receivable = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'receivable' || c.type === 'direito').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
+    const payable = Array.isArray(cashFlows) ? cashFlows.filter(c => c.type === 'payable' || c.type === 'obrigacao').reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;
+    return {
+      income,
+      expense,
+      balance: income - expense,
+      receivable,
+      payable
+    };
   }, [cashFlows]);
 
   const handleAddCashFlow = async (e) => {
@@ -967,7 +985,6 @@ function ReportsPage() {
             <CardContent className="p-0">
               <div className="-mx-px overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm text-left border-collapse">
-
                   <thead className="bg-muted/30 text-xs uppercase font-bold text-muted-foreground border-b">
                     <tr>
                       <th className="p-4">Data / ID</th>
@@ -1033,38 +1050,71 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="cashflow">
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <Card>
+          {/* Top 5 Summary Cards */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6">
+            <Card className="border-green-500/30 bg-green-500/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Entradas</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-green-700 dark:text-green-400">Total de Entradas</CardTitle>
                 <ArrowUpCircle className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-500">
+                <div className="text-xl font-black text-green-600 dark:text-green-400">
                   {cfStats.income.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="border-red-500/30 bg-red-500/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Saídas</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-400">Total de Saídas</CardTitle>
                 <ArrowDownCircle className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-500">
+                <div className="text-xl font-black text-red-600 dark:text-red-400">
                   {cfStats.expense.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="border-blue-500/30 bg-blue-500/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Saldo Líquido</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">Saldo Líquido</CardTitle>
                 <DollarSign className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${cfStats.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`text-xl font-black ${cfStats.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {cfStats.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-500/30 bg-amber-500/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <span>Direitos</span> <span className="text-amber-500 font-black">+</span>
+                </CardTitle>
+                <Clock className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-black text-amber-600 dark:text-amber-400">
+                  {cfStats.receivable.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-semibold">A receber no futuro</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-rose-500/30 bg-rose-500/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1">
+                  <span>Obrigações</span> <span className="text-rose-500 font-black">-</span>
+                </CardTitle>
+                <AlertCircle className="h-4 w-4 text-rose-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-black text-rose-600 dark:text-rose-400">
+                  {cfStats.payable.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-semibold">A pagar no futuro</p>
               </CardContent>
             </Card>
           </div>
@@ -1074,19 +1124,21 @@ function ReportsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Novo Lançamento</CardTitle>
-                  <CardDescription>Adicione uma receita ou despesa operacional</CardDescription>
+                  <CardDescription>Adicione uma receita, despesa, direito ou obrigação</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleAddCashFlow} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="type">Tipo de Lançamento</Label>
-                      <Select value={cfForm.type} onValueChange={(val) => setCfForm({ ...cfForm, type: val })}>
+                      <Select value={cfForm.type} onValueChange={(val) => setCfForm({ ...cfForm, type: val, category: "" })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="income">Entrada (Receita)</SelectItem>
                           <SelectItem value="expense">Saída (Despesa)</SelectItem>
+                          <SelectItem value="receivable">Direitos + (A Receber Futuro)</SelectItem>
+                          <SelectItem value="payable">Obrigações - (A Pagar Futuro)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1095,7 +1147,7 @@ function ReportsPage() {
                       <Label htmlFor="description">Descrição</Label>
                       <Input
                         id="description"
-                        placeholder="Ex: Pagamento Motoboy"
+                        placeholder="Ex: Pagamento Motoboy ou Boleto Futuro"
                         value={cfForm.description}
                         onChange={(e) => setCfForm({ ...cfForm, description: e.target.value })}
                         required
@@ -1127,7 +1179,7 @@ function ReportsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="origin">Origem</Label>
+                      <Label htmlFor="origin">Origem / Forma</Label>
                       <Select value={cfForm.origin} onValueChange={(val) => setCfForm({ ...cfForm, origin: val })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a origem" />
@@ -1138,6 +1190,8 @@ function ReportsPage() {
                           <SelectItem value="Cartão crédito">Cartão crédito</SelectItem>
                           <SelectItem value="Débito">Débito</SelectItem>
                           <SelectItem value="A prazo">A prazo</SelectItem>
+                          <SelectItem value="Boleto">Boleto</SelectItem>
+                          <SelectItem value="Faturado">Faturado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1165,7 +1219,7 @@ function ReportsPage() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" className="w-full font-bold">
                       Salvar Lançamento
                     </Button>
                   </form>
@@ -1188,47 +1242,53 @@ function ReportsPage() {
                     </div>
                   ) : (
                     <div className="space-y-3 sm:px-0 px-2">
-                      {cashFlows.map((item) => (
-                        <div key={item.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-2xl hover:border-primary/40 bg-card hover:shadow-card transition-all relative overflow-hidden">
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.type === 'income' ? 'bg-green-500' : 'bg-red-500'}`} />
-                          
-                          <div className="flex items-center gap-4 pl-2 mb-3 sm:mb-0">
-                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'income' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                              {item.type === 'income' ? <ArrowUpCircle className="h-6 w-6" /> : <ArrowDownCircle className="h-6 w-6" />}
-                            </div>
-                            <div>
-                              <p className="font-bold text-base text-foreground leading-none">{item.description}</p>
-                              <div className="flex items-center gap-2 mt-2 text-xs font-semibold text-muted-foreground flex-wrap">
-                                <span className="flex items-center gap-1 bg-secondary/80 text-secondary-foreground px-2.5 py-1 rounded-md">
-                                  <Tag className="h-3 w-3" /> {item.category}
-                                </span>
-                                {item.origin && (
-                                  <span className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1 rounded-md">
-                                    <DollarSign className="h-3 w-3" /> {item.origin}
+                      {cashFlows.map((item: any) => {
+                        const details = getCfTypeDetails(item.type);
+                        const IconComp = details.Icon;
+                        return (
+                          <div key={item.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-2xl hover:border-primary/40 bg-card hover:shadow-card transition-all relative overflow-hidden">
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${details.barColor}`} />
+                            
+                            <div className="flex items-center gap-4 pl-2 mb-3 sm:mb-0">
+                              <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${details.badgeBg}`}>
+                                <IconComp className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-base text-foreground leading-none">{item.description}</p>
+                                <div className="flex items-center gap-2 mt-2 text-xs font-semibold text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1 bg-secondary/80 text-secondary-foreground px-2.5 py-1 rounded-md">
+                                    <Tag className="h-3 w-3" /> {item.category}
                                   </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" /> {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                                </span>
+                                  <span className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1 rounded-md font-bold">
+                                    {details.label}
+                                  </span>
+                                  {item.origin && (
+                                    <span className="flex items-center gap-1 bg-secondary/60 text-secondary-foreground px-2.5 py-1 rounded-md">
+                                      <DollarSign className="h-3 w-3" /> {item.origin}
+                                    </span>
+                                  )}
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" /> {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between sm:justify-end gap-6 pl-2 sm:pl-0 border-t sm:border-none pt-3 sm:pt-0 mt-2 sm:mt-0">
+                              <span className={`text-xl font-black tracking-tight ${details.textColor}`}>
+                                {details.sign} {Number(item.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </span>
+                              <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" onClick={() => setEditingCf(item)} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteCashFlow(item.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between sm:justify-end gap-6 pl-2 sm:pl-0 border-t sm:border-none pt-3 sm:pt-0 mt-2 sm:mt-0">
-                            <span className={`text-xl font-black tracking-tight ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                              {item.type === 'income' ? '+' : '-'} 
-                              {Number(item.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                            <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" onClick={() => setEditingCf(item)} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCashFlow(item.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -1257,6 +1317,8 @@ function ReportsPage() {
                     <SelectContent>
                       <SelectItem value="income">Entrada (Receita)</SelectItem>
                       <SelectItem value="expense">Saída (Despesa)</SelectItem>
+                      <SelectItem value="receivable">Direitos + (A Receber Futuro)</SelectItem>
+                      <SelectItem value="payable">Obrigações - (A Pagar Futuro)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
