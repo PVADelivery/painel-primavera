@@ -42,63 +42,51 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
 
   useEffect(() => {
     if (driver && open) {
-      let currentServices: string[] = [];
-      if (Array.isArray(driver.service_types) && driver.service_types.length > 0) {
-        currentServices = driver.service_types;
-      } else {
-        const v = String(driver.vehicle_type || driver.vehicle || "moto").toLowerCase();
-        if (v.includes("car")) {
-          currentServices = ["delivery_car"];
-        } else {
-          currentServices = ["delivery_moto"];
-        }
-      }
-
-      setForm({
-        fullName: driver.full_name || "",
-        phone: driver.phone || "",
-        document: driver.document || "",
-        vehicleType: driver.vehicle_type || driver.vehicle || "moto",
-        vehiclePlate: driver.vehicle_plate || driver.license_plate || "",
-        commission: (driver.commission_rate ?? driver.commission ?? 15).toString(),
-        serviceTypes: currentServices,
-      });
-
-      // Busca dados complementares em todas as tabelas possíveis caso algum campo esteja vazio
-      const fetchExtra = async () => {
+      const fetchCurrentData = async () => {
         const uid = driver.user_id || driver.id;
         if (!uid) return;
+
+        let loadedServices: string[] = [];
+        if (Array.isArray(driver.service_types) && driver.service_types.length > 0) {
+          loadedServices = driver.service_types;
+        }
+
         try {
-          const [profRes, drvRes, custRes] = await Promise.all([
+          const [profRes, drvRes] = await Promise.all([
             supabase.from("profiles").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
             supabase.from("delivery_drivers").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
-            supabase.from("customers").select("*").or(`user_id.eq.${uid},id.eq.${uid}`).maybeSingle(),
           ]);
 
           const prof = profRes.data as any;
           const drv = drvRes.data as any;
-          const cust = custRes.data as any;
 
-          const finalPhone = driver.phone || drv?.phone || drv?.whatsapp || prof?.phone || prof?.whatsapp || prof?.celular || cust?.phone || "";
-          const finalDoc = driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || prof?.cnpj || cust?.cpf || cust?.document || "";
-          const finalPlate = driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || drv?.plate || prof?.license_plate || prof?.vehicle_plate || prof?.plate || "";
-          const finalVehicle = driver.vehicle_type || driver.vehicle || drv?.vehicle || drv?.vehicle_type || prof?.vehicle || "moto";
-          const finalName = driver.full_name || drv?.full_name || prof?.full_name || cust?.name || "";
+          const dbServices = drv?.service_types || prof?.service_types;
+          if (Array.isArray(dbServices) && dbServices.length > 0) {
+            loadedServices = dbServices;
+          } else if (loadedServices.length === 0) {
+            const v = String(drv?.vehicle || drv?.vehicle_type || prof?.vehicle || driver.vehicle_type || "moto").toLowerCase();
+            if (v.includes("car")) {
+              loadedServices = ["delivery_car"];
+            } else {
+              loadedServices = ["delivery_moto"];
+            }
+          }
 
-          setForm(prev => ({
-            ...prev,
-            fullName: prev.fullName || finalName,
-            phone: prev.phone || finalPhone,
-            document: prev.document || finalDoc,
-            vehiclePlate: prev.vehiclePlate || finalPlate,
-            vehicleType: prev.vehicleType || finalVehicle,
-          }));
+          setForm({
+            fullName: driver.full_name || drv?.full_name || prof?.full_name || "",
+            phone: driver.phone || drv?.phone || prof?.phone || "",
+            document: driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || "",
+            vehicleType: drv?.vehicle || drv?.vehicle_type || prof?.vehicle || driver.vehicle_type || "moto",
+            vehiclePlate: driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || prof?.license_plate || "",
+            commission: (drv?.commission_rate ?? driver.commission_rate ?? 15).toString(),
+            serviceTypes: loadedServices,
+          });
         } catch (e) {
-          console.warn("[EditDriverDialog] fetchExtra aviso:", e);
+          console.warn("[EditDriverDialog] Erro ao carregar dados:", e);
         }
       };
 
-      fetchExtra();
+      fetchCurrentData();
     }
   }, [driver, open]);
 
@@ -122,22 +110,28 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
     setLoading(true);
     try {
       const targetUserId = driver.user_id || driver.id;
+      const vehicleVal = form.serviceTypes.includes("delivery_car") && form.serviceTypes.includes("delivery_moto")
+        ? "carro,moto"
+        : (form.serviceTypes.includes("delivery_car") ? "car" : form.vehicleType);
 
-      // 1. Atualiza Profiles em todas as colunas possíveis (id e user_id)
-      await supabase
+      // 1. Atualiza Profiles
+      const { error: profErr } = await supabase
         .from("profiles")
         .update({
           full_name: form.fullName,
           phone: form.phone,
           document: form.document,
           cpf: form.document,
-          vehicle: form.vehicleType,
+          vehicle: vehicleVal,
+          service_types: form.serviceTypes,
           license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
           plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-        })
+        } as any)
         .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
 
-      // 2. Atualiza ou insere em delivery_drivers
+      if (profErr) console.warn("[Profiles Update Warning]:", profErr.message);
+
+      // 2. Atualiza delivery_drivers
       const { data: existingDrivers } = await supabase
         .from("delivery_drivers")
         .select("id")
@@ -146,35 +140,39 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
       const targetDriverRow = existingDrivers?.[0];
 
       if (targetDriverRow) {
-        await supabase
+        const { error: drvErr } = await supabase
           .from("delivery_drivers")
           .update({
             full_name: form.fullName,
             phone: form.phone,
             cpf: form.document,
-            vehicle: form.vehicleType,
+            vehicle: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             commission_rate: parseFloat(form.commission) || 0,
             service_types: form.serviceTypes,
-          })
+          } as any)
           .eq("id", targetDriverRow.id);
+
+        if (drvErr) throw drvErr;
       } else {
-        await supabase
+        const { error: insErr } = await supabase
           .from("delivery_drivers")
           .insert({
             user_id: targetUserId,
             full_name: form.fullName,
             phone: form.phone,
             cpf: form.document,
-            vehicle: form.vehicleType,
+            vehicle: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             commission_rate: parseFloat(form.commission) || 0,
             service_types: form.serviceTypes,
             is_active: true,
-          });
+          } as any);
+
+        if (insErr) throw insErr;
       }
 
-      // 3. Atualiza na tabela legada 'drivers' se existir
+      // 3. Tabela legada drivers (se existir)
       try {
         await supabase
           .from("drivers")
@@ -182,23 +180,19 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             full_name: form.fullName,
             phone: form.phone,
             document: form.document,
-            vehicle_type: form.vehicleType,
+            vehicle_type: vehicleVal,
+            service_types: form.serviceTypes,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             commission_rate: parseFloat(form.commission) || 0,
-            service_types: form.serviceTypes,
-          })
+          } as any)
           .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
       } catch (e) {}
 
       toast.success("Dados do entregador atualizados com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
+      await queryClient.invalidateQueries({ queryKey: ["drivers"] });
       onOpenChange(false);
     } catch (err: any) {
-      reportErrorToTelegram({
-        error_message: `[Admin EditDriverDialog] ${err.message || "Erro ao atualizar entregador"}`,
-        stack_trace: err.stack || "",
-        url: typeof window !== "undefined" ? window.location.href : "",
-      }, "Painel Administrador");
+      console.error("[EditDriverDialog Submit Error]:", err);
       toast.error(err.message || "Erro ao atualizar entregador");
     } finally {
       setLoading(false);
