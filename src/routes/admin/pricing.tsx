@@ -364,7 +364,8 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
   const qc = useQueryClient();
   const isDefault = !!table.isRegionsDefault;
   const [editingRegion, setEditingRegion] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [editValueMoto, setEditValueMoto] = useState("");
+  const [editValueCar, setEditValueCar] = useState("");
   const [editingRegionNameId, setEditingRegionNameId] = useState<string | null>(null);
   const [editRegionNameValue, setEditRegionNameValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -445,7 +446,6 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
     const targetTableId = isDefault ? null : (linked ? null : table.id);
 
     try {
-      // 1. Tenta vincular via RPC set_company_pricing_table (SECURITY DEFINER - Bypassa RLS)
       const { data: rpcData, error: rpcErr } = await supabase.rpc("set_company_pricing_table" as any, {
         p_company_id: company.id,
         p_pricing_table_id: targetTableId,
@@ -453,7 +453,6 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
 
       if (rpcErr) {
         console.warn("[toggleCompany] RPC error, tentando update direto com select():", rpcErr);
-        // 2. Fallback para update direto com .select() para garantir atualização real no banco
         const { data: updatedRows, error: updateErr } = await supabase
           .from("companies")
           .update({ pricing_table_id: targetTableId })
@@ -479,15 +478,19 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
   };
 
   const handleSaveRegionValue = async (regionId: string) => {
-    const num = parseFloat(editValue.replace(",", "."));
-    if (isNaN(num) || num < 0) {
-      toast.error("Valor inválido.");
+    const numMoto = parseFloat(editValueMoto.replace(",", "."));
+    const numCar = parseFloat(editValueCar.replace(",", "."));
+    if (isNaN(numMoto) || numMoto < 0 || isNaN(numCar) || numCar < 0) {
+      toast.error("Valores inválidos.");
       return;
     }
     setSaving(true);
     try {
       if (isDefault) {
-        const { error } = await supabase.from("regions").update({ price: num }).eq("id", regionId);
+        const { error } = await supabase
+          .from("regions")
+          .update({ price: numMoto, car_price: numCar } as any)
+          .eq("id", regionId);
         if (error) throw error;
         qc.invalidateQueries({ queryKey: ["regions"] });
       } else {
@@ -495,7 +498,7 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
         if (existing) {
           const { error } = await supabase
             .from("pricing_rules")
-            .update({ base_value: num })
+            .update({ base_value: numMoto, car_base_value: numCar, return_value: numCar } as any)
             .eq("id", existing.id);
           if (error) throw error;
         } else {
@@ -503,18 +506,19 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
             pricing_table_id: table.id,
             origin_region_id: regionId,
             destination_region_id: regionId,
-            base_value: num,
-            return_value: 0,
-          });
+            base_value: numMoto,
+            car_base_value: numCar,
+            return_value: numCar,
+          } as any);
           if (error) throw error;
         }
         qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
         qc.invalidateQueries({ queryKey: ["pricing-tables"] });
       }
-      toast.success("Valor atualizado!");
+      toast.success("Valores de Moto e Carro salvos!");
       setEditingRegion(null);
     } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar valor.");
+      toast.error(err.message || "Erro ao salvar valores.");
     } finally {
       setSaving(false);
     }
@@ -634,14 +638,16 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Região</th>
-                      <th className="px-4 py-3 font-semibold text-right">Valor nesta tabela</th>
-                      <th className="px-4 py-3 font-semibold w-28"></th>
+                      <th className="px-4 py-3 font-semibold text-right">Valor Moto</th>
+                      <th className="px-4 py-3 font-semibold text-right">Valor Carro</th>
+                      <th className="px-4 py-3 font-semibold w-28 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {regions.map((region: any) => {
                       const rule = isDefault ? null : ruleForRegion(region.id);
-                      const value = rule ? Number(rule.base_value) : Number(region.price || 0);
+                      const valueMoto = rule ? Number(rule.base_value ?? 0) : Number(region.price ?? 0);
+                      const valueCar = rule ? Number((rule as any).car_base_value ?? rule.return_value ?? (valueMoto * 1.5)) : Number(region.car_price ?? (valueMoto * 1.5));
                       const isEditing = editingRegion === region.id;
                       const isEditingName = editingRegionNameId === region.id;
                       return (
@@ -700,18 +706,41 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                           </td>
                           <td className="px-4 py-3 text-right">
                             {isEditing ? (
-                              <Input
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value.replace(/[^0-9,.]/g, ""))}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveRegionValue(region.id);
-                                  if (e.key === "Escape") setEditingRegion(null);
-                                }}
-                                autoFocus
-                                className="h-9 w-28 ml-auto rounded-lg text-right"
-                              />
+                              <div className="flex items-center justify-end gap-1">
+                                <span className="text-xs font-bold text-amber-500">Moto:</span>
+                                <Input
+                                  value={editValueMoto}
+                                  onChange={(e) => setEditValueMoto(e.target.value.replace(/[^0-9,.]/g, ""))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveRegionValue(region.id);
+                                    if (e.key === "Escape") setEditingRegion(null);
+                                  }}
+                                  autoFocus
+                                  className="h-8 w-24 rounded-lg text-right font-bold text-amber-500"
+                                  placeholder="Moto"
+                                />
+                              </div>
                             ) : (
-                              <span className="font-bold text-primary">{brl(value)}</span>
+                              <span className="font-bold text-amber-500">{brl(valueMoto)}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {isEditing ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <span className="text-xs font-bold text-blue-400">Carro:</span>
+                                <Input
+                                  value={editValueCar}
+                                  onChange={(e) => setEditValueCar(e.target.value.replace(/[^0-9,.]/g, ""))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveRegionValue(region.id);
+                                    if (e.key === "Escape") setEditingRegion(null);
+                                  }}
+                                  className="h-8 w-24 rounded-lg text-right font-bold text-blue-400"
+                                  placeholder="Carro"
+                                />
+                              </div>
+                            ) : (
+                              <span className="font-bold text-blue-400">{brl(valueCar)}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
@@ -744,8 +773,12 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0 rounded-lg"
-                                    onClick={() => { setEditingRegion(region.id); setEditValue(String(value).replace(".", ",")); }}
-                                    title="Editar valor"
+                                    onClick={() => {
+                                      setEditingRegion(region.id);
+                                      setEditValueMoto(String(valueMoto).replace(".", ","));
+                                      setEditValueCar(String(valueCar).replace(".", ","));
+                                    }}
+                                    title="Editar valores Moto e Carro"
                                   >
                                     <Pencil className="h-4 w-4" />
                                   </Button>
