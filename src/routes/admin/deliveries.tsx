@@ -309,7 +309,14 @@ function DeliveriesPage() {
                   {deliveries.map((delivery) => (
                     <tr key={delivery.id} className="hover:bg-muted/30 transition-colors">
                       <td className="p-4">
-                        <p className="text-sm font-medium text-foreground">{delivery.customer_name}</p>
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-sm font-medium text-foreground">{delivery.customer_name}</p>
+                          {(delivery as any).delivery_type === "BUSCA_CONDICIONAL" && (
+                            <span className="inline-flex items-center w-max gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider border border-purple-500/30">
+                              👗 Busca de Condicional (Cliente → Loja)
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 hidden md:table-cell">
                         <p className="text-sm text-foreground">{delivery.companies?.name || "—"}</p>
