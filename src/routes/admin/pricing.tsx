@@ -489,7 +489,7 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
       if (isDefault) {
         const { error } = await supabase
           .from("regions")
-          .update({ price: numMoto, car_price: numCar } as any)
+          .update({ price: numMoto, delivery_fee: numCar })
           .eq("id", regionId);
         if (error) throw error;
         qc.invalidateQueries({ queryKey: ["regions"] });
@@ -498,7 +498,7 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
         if (existing) {
           const { error } = await supabase
             .from("pricing_rules")
-            .update({ base_value: numMoto, car_base_value: numCar, return_value: numCar } as any)
+            .update({ base_value: numMoto, return_value: numCar })
             .eq("id", existing.id);
           if (error) throw error;
         } else {
@@ -507,9 +507,8 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
             origin_region_id: regionId,
             destination_region_id: regionId,
             base_value: numMoto,
-            car_base_value: numCar,
             return_value: numCar,
-          } as any);
+          });
           if (error) throw error;
         }
         qc.invalidateQueries({ queryKey: ["pricing-rules", table.id] });
@@ -647,7 +646,9 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
                     {regions.map((region: any) => {
                       const rule = isDefault ? null : ruleForRegion(region.id);
                       const valueMoto = rule ? Number(rule.base_value ?? 0) : Number(region.price ?? 0);
-                      const valueCar = rule ? Number((rule as any).car_base_value ?? rule.return_value ?? (valueMoto * 1.5)) : Number(region.car_price ?? (valueMoto * 1.5));
+                      const valueCar = rule
+                        ? Number((rule.return_value && Number(rule.return_value) > 0) ? rule.return_value : (valueMoto * 1.5))
+                        : Number((region.delivery_fee && Number(region.delivery_fee) > 0) ? region.delivery_fee : (valueMoto * 1.5));
                       const isEditing = editingRegion === region.id;
                       const isEditingName = editingRegionNameId === region.id;
                       return (
