@@ -92,13 +92,16 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
 
   const set = (key: string, val: any) => setForm(p => ({ ...p, [key]: val }));
 
-  const toggleService = (val: string) => {
-    setForm(p => ({
-      ...p,
-      serviceTypes: p.serviceTypes.includes(val) 
-        ? p.serviceTypes.filter((t: string) => t !== val)
-        : [...p.serviceTypes, val]
-    }));
+  const setServiceChecked = (val: string, isChecked: boolean) => {
+    setForm(p => {
+      const current = Array.isArray(p.serviceTypes) ? p.serviceTypes : [];
+      if (isChecked) {
+        if (current.includes(val)) return p;
+        return { ...p, serviceTypes: [...current, val] };
+      } else {
+        return { ...p, serviceTypes: current.filter((t: string) => t !== val) };
+      }
+    });
   };
 
   const handleSubmit = async () => {
@@ -228,15 +231,15 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
               <Label className="text-base font-bold mb-3 block">Serviços Autorizados</Label>
               <div className="grid grid-cols-2 gap-3">
                 {SERVICE_OPTIONS.map(opt => (
-                  <div key={opt.value} className="flex items-center space-x-2">
+                  <div key={opt.value} className="flex items-center space-x-2.5 p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                     <Checkbox 
                       id={`srv-${opt.value}`} 
                       checked={form.serviceTypes.includes(opt.value)}
-                      onCheckedChange={() => toggleService(opt.value)}
+                      onCheckedChange={(checked) => setServiceChecked(opt.value, !!checked)}
                     />
                     <label 
                       htmlFor={`srv-${opt.value}`} 
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 py-1 select-none"
                     >
                       {opt.label}
                     </label>
