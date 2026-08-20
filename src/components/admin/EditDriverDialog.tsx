@@ -43,8 +43,15 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
   useEffect(() => {
     if (driver && open) {
       let currentServices: string[] = [];
-      if (Array.isArray(driver.service_types)) {
+      if (Array.isArray(driver.service_types) && driver.service_types.length > 0) {
         currentServices = driver.service_types;
+      } else {
+        const v = String(driver.vehicle_type || driver.vehicle || "moto").toLowerCase();
+        if (v.includes("car")) {
+          currentServices = ["delivery_car"];
+        } else {
+          currentServices = ["delivery_moto"];
+        }
       }
 
       setForm({
@@ -250,11 +257,11 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
                 <Select value={form.vehicleType} onValueChange={v => set("vehicleType", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="motorcycle">🏍️ Moto</SelectItem>
-                    <SelectItem value="bicycle">🚲 Bicicleta</SelectItem>
-                    <SelectItem value="car">🚗 Carro</SelectItem>
-                    <SelectItem value="van">🚐 Van</SelectItem>
-                    <SelectItem value="truck">🚛 Caminhão</SelectItem>
+                    <SelectItem value="motorcycle">Moto</SelectItem>
+                    <SelectItem value="bicycle">Bicicleta</SelectItem>
+                    <SelectItem value="car">Carro</SelectItem>
+                    <SelectItem value="van">Van</SelectItem>
+                    <SelectItem value="truck">Caminhão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
