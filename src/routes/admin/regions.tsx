@@ -249,7 +249,7 @@ interface RowProps {
   hoods: NeighborhoodRow[];
   expanded: boolean;
   onToggle: () => void;
-  onSaveRegion: (updates: { name?: string; price?: number; is_active?: boolean; color?: string }) => Promise<void>;
+  onSaveRegion: (updates: { name?: string; price?: number; car_price?: number; is_active?: boolean; color?: string }) => Promise<void>;
   onDeleteRegion: () => void;
   onAddHood: (name: string) => Promise<void>;
   onRenameHood: (id: string, name: string) => Promise<void>;
@@ -278,13 +278,14 @@ function RegionSheetRow({
 }: RowProps) {
   const [name, setName] = useState(region.name as string);
   const [price, setPrice] = useState(String(Number(region.price ?? 0).toFixed(2)));
+  const [carPrice, setCarPrice] = useState(String(Number(region.car_price ?? (Number(region.price ?? 0) * 1.5)).toFixed(2)));
   const [color, setColor] = useState(region.color || "#eab308");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [newHood, setNewHood] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const dirty = name !== region.name || Number(price) !== Number(region.price) || color !== (region.color || "#eab308");
+  const dirty = name !== region.name || Number(price) !== Number(region.price) || Number(carPrice) !== Number(region.car_price ?? 0) || color !== (region.color || "#eab308");
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden transition-all shadow-sm hover:border-border/80">
@@ -378,21 +379,37 @@ function RegionSheetRow({
           placeholder="Nome da região..."
         />
 
-        <div className="flex items-center gap-1 rounded-xl bg-muted px-3 py-1.5">
-          <span className="text-xs font-bold text-muted-foreground">R$</span>
+        {/* Preço Moto */}
+        <div className="flex items-center gap-1 rounded-xl bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5" title="Taxa de Entrega para Moto">
+          <span className="text-xs font-black text-amber-500 flex items-center gap-0.5">🏍️ R$</span>
           <input
             type="number"
             step="0.50"
             min="0"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-20 bg-transparent text-sm font-black text-primary outline-none"
+            className="w-16 bg-transparent text-xs font-black text-amber-400 outline-none"
+            placeholder="Moto"
+          />
+        </div>
+
+        {/* Preço Carro */}
+        <div className="flex items-center gap-1 rounded-xl bg-blue-500/10 border border-blue-500/30 px-2.5 py-1.5" title="Taxa de Entrega para Carro">
+          <span className="text-xs font-black text-blue-400 flex items-center gap-0.5">🚗 R$</span>
+          <input
+            type="number"
+            step="0.50"
+            min="0"
+            value={carPrice}
+            onChange={(e) => setCarPrice(e.target.value)}
+            className="w-16 bg-transparent text-xs font-black text-blue-400 outline-none"
+            placeholder="Carro"
           />
         </div>
 
         {dirty && (
           <button
-            onClick={() => onSaveRegion({ name: name.trim(), price: Number(price), color })}
+            onClick={() => onSaveRegion({ name: name.trim(), price: Number(price), car_price: Number(carPrice), color })}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-sm hover:bg-primary/90"
           >
             <Check className="h-3.5 w-3.5" /> Salvar
