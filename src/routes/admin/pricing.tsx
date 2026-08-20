@@ -442,17 +442,35 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
       return;
     }
     setSavingCompany(company.id);
+    const targetTableId = isDefault ? null : (linked ? null : table.id);
+
     try {
-      const { error } = await supabase
-        .from("companies")
-        .update({ pricing_table_id: isDefault ? null : (linked ? null : table.id) })
-        .eq("id", company.id);
-      if (error) throw error;
+      // 1. Tenta vincular via RPC set_company_pricing_table (SECURITY DEFINER - Bypassa RLS)
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("set_company_pricing_table" as any, {
+        p_company_id: company.id,
+        p_pricing_table_id: targetTableId,
+      });
+
+      if (rpcErr) {
+        console.warn("[toggleCompany] RPC error, tentando update direto com select():", rpcErr);
+        // 2. Fallback para update direto com .select() para garantir atualização real no banco
+        const { data: updatedRows, error: updateErr } = await supabase
+          .from("companies")
+          .update({ pricing_table_id: targetTableId })
+          .eq("id", company.id)
+          .select();
+
+        if (updateErr) throw updateErr;
+        if (!updatedRows || updatedRows.length === 0) {
+          throw new Error("Não foi possível atualizar a loja no banco de dados. Verifique as permissões.");
+        }
+      }
+
       toast.success(
         linked ? `${company.name} voltou para a Tabela de Regiões.` : `${company.name} usará esta tabela.`
       );
-      qc.invalidateQueries({ queryKey: ["companies-pricing"] });
-      qc.invalidateQueries({ queryKey: ["companies"] });
+      await qc.invalidateQueries({ queryKey: ["companies-pricing"] });
+      await qc.invalidateQueries({ queryKey: ["companies"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao vincular loja.");
     } finally {
