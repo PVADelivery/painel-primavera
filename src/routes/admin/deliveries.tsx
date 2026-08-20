@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDeliveryValue } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
+import { AdminNewDeliveryModal } from "@/components/admin/AdminNewDeliveryModal";
 import { useDeliveries, useDeliveryCounts, useUpdateDeliveryStatus, useReassignDelivery, type DeliveryWithRelations } from "@/services/deliveries";
 import { useCompanies } from "@/services/companies";
 import { useDrivers } from "@/services/drivers";
@@ -750,6 +751,13 @@ function DeliveriesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Admin New Delivery Modal */}
+      <AdminNewDeliveryModal
+        open={showNewForm}
+        onOpenChange={setShowNewForm}
+        onSuccess={handleDeliveryCreated}
+      />
     </AdminLayout>
   );
 }
