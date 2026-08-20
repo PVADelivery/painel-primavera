@@ -33,10 +33,16 @@ function DriversPage() {
   const filteredDrivers = (drivers ?? []).filter((d) => {
     const q = searchQuery.trim().toLowerCase();
     if (q) {
+      const qDigits = q.replace(/\D/g, "");
       const matchName = (d.full_name || "").toLowerCase().includes(q);
-      const matchPhone = (d.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
       const matchPlate = (d.vehicle_plate || d.license_plate || "").toLowerCase().includes(q);
-      const matchDoc = (d.document || d.cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      
+      const phoneDigits = (d.phone || "").replace(/\D/g, "");
+      const matchPhone = (d.phone || "").toLowerCase().includes(q) || (qDigits.length > 0 && phoneDigits.includes(qDigits));
+      
+      const docDigits = (d.document || d.cpf || "").replace(/\D/g, "");
+      const matchDoc = (d.document || d.cpf || "").toLowerCase().includes(q) || (qDigits.length > 0 && docDigits.includes(qDigits));
+
       if (!matchName && !matchPhone && !matchPlate && !matchDoc) return false;
     }
 

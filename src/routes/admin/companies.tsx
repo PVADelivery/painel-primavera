@@ -32,12 +32,18 @@ function CompaniesPage() {
   const filteredCompanies = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return data;
+    const qDigits = q.replace(/\D/g, "");
     return data.filter((company) => {
       const c = company as typeof company & { trade_name?: string | null; cnpj?: string | null };
       const matchName = (c.name || "").toLowerCase().includes(q) || (c.trade_name || "").toLowerCase().includes(q);
       const matchAddress = (c.address || "").toLowerCase().includes(q);
-      const matchPhone = (c.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
-      const matchDoc = (c.document || c.cnpj || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+      
+      const phoneDigits = (c.phone || "").replace(/\D/g, "");
+      const matchPhone = (c.phone || "").toLowerCase().includes(q) || (qDigits.length > 0 && phoneDigits.includes(qDigits));
+      
+      const docDigits = (c.document || c.cnpj || "").replace(/\D/g, "");
+      const matchDoc = (c.document || c.cnpj || "").toLowerCase().includes(q) || (qDigits.length > 0 && docDigits.includes(qDigits));
+
       return matchName || matchAddress || matchPhone || matchDoc;
     });
   }, [data, searchQuery]);
