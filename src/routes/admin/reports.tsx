@@ -646,12 +646,26 @@ function ReportsPage() {
 
                 <div className="space-y-1.5">
                   <Label>Data Início</Label>
-                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} disabled={period !== "custom"} />
+                  <Input 
+                    type="date" 
+                    value={dateFrom} 
+                    onChange={(e) => {
+                      setPeriod("custom");
+                      setDateFrom(e.target.value);
+                    }} 
+                  />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label>Data Fim</Label>
-                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} disabled={period !== "custom"} />
+                  <Input 
+                    type="date" 
+                    value={dateTo} 
+                    onChange={(e) => {
+                      setPeriod("custom");
+                      setDateTo(e.target.value);
+                    }} 
+                  />
                 </div>
 
                 <div className="space-y-1.5">
