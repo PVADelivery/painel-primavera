@@ -31,6 +31,8 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
   const [loading, setLoading] = useState(false);
 
   const [deliveryType, setDeliveryType] = useState<"NORMAL" | "BUSCA_CONDICIONAL">("NORMAL");
+  const [condicionalDestination, setCondicionalDestination] = useState<"STORE" | "CUSTOM">("STORE");
+  const [condicionalCustomAddress, setCondicionalCustomAddress] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -110,11 +112,15 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
       const numOrderVal = Number(orderValue.replace(",", ".")) || 0;
       const numChangeFor = Number(changeFor.replace(",", ".")) || 0;
 
+      const pickupAddr = (deliveryType === "BUSCA_CONDICIONAL" && condicionalDestination === "CUSTOM")
+        ? (condicionalCustomAddress.trim() || selectedCompany?.address || selectedCompany?.name || "Endereço Solicitado")
+        : (selectedCompany?.address || selectedCompany?.name || "Loja");
+
       const payload = {
         delivery_type: deliveryType,
         company_id: companyId,
         company_name: selectedCompany?.name || "Loja Parceira",
-        pickup_address: selectedCompany?.address || "Loja",
+        pickup_address: pickupAddr,
         short_id: shortId,
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim() || null,
@@ -151,7 +157,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
           .insert({
             company_id: companyId,
             company_name: selectedCompany?.name || "Loja Parceira",
-            pickup_address: selectedCompany?.address || "Loja",
+            pickup_address: pickupAddr,
             short_id: shortId,
             customer_name: customerName.trim(),
             customer_phone: customerPhone.trim() || null,
@@ -238,7 +244,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
           </div>
 
           {/* 2. Tipo de Solicitação */}
-          <div className="space-y-2 bg-secondary/30 p-4 rounded-2xl border border-border/60">
+          <div className="space-y-3 bg-secondary/30 p-4 rounded-2xl border border-border/60">
             <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Tipo de Solicitação
             </Label>
@@ -246,34 +252,87 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
               <button
                 type="button"
                 onClick={() => setDeliveryType("NORMAL")}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all border ${
+                className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all border ${
                   deliveryType === "NORMAL"
-                    ? "bg-primary text-primary-foreground border-primary shadow-md"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
                     : "bg-background text-muted-foreground border-border hover:border-primary/40"
                 }`}
               >
-                <Package className="h-4 w-4" /> Entrega Normal
+                <span>Entrega Normal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDeliveryType("BUSCA_CONDICIONAL")}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all border ${
+                className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all border ${
                   deliveryType === "BUSCA_CONDICIONAL"
-                    ? "bg-purple-600 text-white border-purple-600 shadow-md"
+                    ? "bg-purple-600 text-white border-purple-600 shadow-sm"
                     : "bg-background text-muted-foreground border-border hover:border-purple-500/40"
                 }`}
               >
-                <Shirt className="h-4 w-4" /> Busca de Condicional
+                <span>Busca de Condicional</span>
               </button>
             </div>
+
             {deliveryType === "BUSCA_CONDICIONAL" ? (
-              <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20 mt-2">
-                👗 <strong>Busca de Condicional:</strong> Coletar no <strong>CLIENTE</strong> → Entregar na <strong>LOJA</strong>.
-              </p>
+              <div className="mt-3 pt-3 border-t border-border/40 space-y-3">
+                <Label className="text-xs font-semibold text-foreground">
+                  Destino das Peças Recolhidas:
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                    condicionalDestination !== "CUSTOM"
+                      ? "bg-purple-500/15 border-purple-500/50 text-purple-700 dark:text-purple-300"
+                      : "bg-background border-border text-muted-foreground"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="admin_condicional_dest"
+                      checked={condicionalDestination !== "CUSTOM"}
+                      onChange={() => setCondicionalDestination("STORE")}
+                      className="accent-purple-600"
+                    />
+                    <span>Trazer na Loja ({selectedCompany?.name || "Loja"})</span>
+                  </label>
+
+                  <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                    condicionalDestination === "CUSTOM"
+                      ? "bg-purple-500/15 border-purple-500/50 text-purple-700 dark:text-purple-300"
+                      : "bg-background border-border text-muted-foreground"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="admin_condicional_dest"
+                      checked={condicionalDestination === "CUSTOM"}
+                      onChange={() => setCondicionalDestination("CUSTOM")}
+                      className="accent-purple-600"
+                    />
+                    <span>Entregar em Outro Cliente / Endereço</span>
+                  </label>
+                </div>
+
+                {condicionalDestination === "CUSTOM" ? (
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-medium text-foreground">
+                      Endereço de Destino (Novo Cliente / Local):
+                    </Label>
+                    <Input
+                      value={condicionalCustomAddress}
+                      onChange={(e) => setCondicionalCustomAddress(e.target.value)}
+                      placeholder="Informe a rua, número, bairro ou nome do novo cliente..."
+                      className="rounded-xl h-10 bg-background text-xs"
+                      required
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    O entregador buscará as peças no cliente informado e entregará no endereço da loja selecionada.
+                  </p>
+                )}
+              </div>
             ) : (
-              <p className="text-xs text-muted-foreground font-medium bg-muted/40 p-2 rounded-xl border border-border/40 mt-2">
-                📦 <strong>Entrega Normal:</strong> Coletar na <strong>LOJA</strong> → Entregar ao <strong>CLIENTE</strong>.
-              </p>
+              <div className="text-xs text-muted-foreground mt-1 font-medium">
+                Origem: {selectedCompany?.name || "Loja"} → Destino: Cliente
+              </div>
             )}
           </div>
 
