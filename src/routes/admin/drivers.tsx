@@ -102,30 +102,30 @@ function DriversPage() {
   };
 
   const vehicleLabel: Record<string, string> = {
-    motorcycle: "🏍️ Moto",
-    moto: "🏍️ Moto",
-    bicycle: "🚲 Bicicleta",
-    car: "🚗 Carro",
-    carro: "🚗 Carro",
-    carro_aberto: "🚚 Frete (Carro Aberto)",
-    van: "🚐 Van",
-    truck: "🚛 Caminhão",
-    taxi: "🚕 Táxi",
-    mototaxi: "🏍️ Moto Táxi",
+    motorcycle: "Moto",
+    moto: "Moto",
+    bicycle: "Bicicleta",
+    car: "Carro",
+    carro: "Carro",
+    carro_aberto: "Frete (Carro)",
+    van: "Van",
+    truck: "Caminhão",
+    taxi: "Táxi",
+    mototaxi: "Moto Táxi",
   };
 
   return (
     <AdminLayout>
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-8 bg-card shadow-card p-6 rounded-2xl border border-border/50">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 bg-card shadow-card p-5 rounded-2xl border border-border/50">
         <div className="space-y-1 min-w-0">
           <h2 className="text-xl font-black text-foreground tracking-tight">Entregadores e Motoristas</h2>
-          <p className="text-sm text-muted-foreground font-medium">Gerencie sua frota de entregadores de lojas, fretes e motoristas de táxi/moto-táxi</p>
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium">Gerencie sua frota de entregadores de lojas, fretes e motoristas de táxi/moto-táxi</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto shrink-0">
           <GenerateInviteDialog fixedRole="driver" triggerLabel="Convidar Entregador / Motorista" />
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <button className="whitespace-nowrap flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+              <button className="whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all shrink-0">
                 <Plus className="h-4 w-4" /> Cadastrar Entregador / Motorista
               </button>
             </DialogTrigger>
@@ -155,7 +155,7 @@ function DriversPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === tab.id 
                   ? "bg-primary text-primary-foreground shadow-md" 
                   : "bg-card text-muted-foreground hover:bg-muted border border-border/50"
@@ -166,20 +166,20 @@ function DriversPage() {
           ))}
         </div>
 
-        <div className="relative min-w-[260px] sm:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <div className="relative min-w-[240px] sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, placa, fone..."
-            className="pl-10 pr-9 h-10 rounded-xl bg-card border-border shadow-sm text-sm"
+            className="pl-9 pr-8 h-9 rounded-xl bg-card border-border shadow-sm text-xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               <X className="h-3 w-3" />
             </button>
@@ -187,59 +187,58 @@ function DriversPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card shadow-card overflow-hidden">
-
+      <div className="rounded-2xl bg-card shadow-card border border-border/60 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs sm:text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Entregador</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Veículo</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Placa</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Telefone</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Comissão</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Avaliação</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Online</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Entregador</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Veículo</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Placa</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Telefone</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Comissão</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Avaliação</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Online</th>
+                <th className="px-2.5 py-2.5 text-right font-semibold text-muted-foreground w-10"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/60">
               {isLoading ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
               ) : filteredDrivers.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum entregador encontrado</td></tr>
               ) : (
                 filteredDrivers.map((d) => (
-                  <tr key={d.id} className="border-b border-border hover:bg-muted/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                  <tr key={d.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 max-w-[180px] sm:max-w-[220px]">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                           {d.avatar_url ? <img src={d.avatar_url} className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-primary">{(d.full_name || "?")[0]}</span>}
                         </div>
-                        <span className="font-medium">{d.full_name || "—"}</span>
+                        <span className="font-semibold text-foreground truncate" title={d.full_name}>{d.full_name || "—"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{vehicleLabel[d.vehicle_type || "motorcycle"] || d.vehicle_type}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{d.vehicle_plate || "—"}</td>
-                    <td className="px-4 py-3">{d.phone || "—"}</td>
-                    <td className="px-4 py-3 font-semibold text-primary">R$ {Number(d.commission_rate ?? 0.40).toFixed(2).replace('.', ',')}</td>
-                    <td className="px-4 py-3">⭐ {Number(d.rating || 0).toFixed(1)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${d.status === "active" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap text-muted-foreground">{vehicleLabel[d.vehicle_type || "motorcycle"] || d.vehicle_type}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap font-mono text-xs text-muted-foreground">{d.vehicle_plate || "—"}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap text-xs text-muted-foreground">{d.phone || "—"}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap font-bold text-primary">R$ {Number(d.commission_rate ?? 0.40).toFixed(2).replace('.', ',')}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap text-xs">⭐ {Number(d.rating || 0).toFixed(1)}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.status === "active" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
                         {d.status === "active" ? "Ativo" : d.status === "suspended" ? "Suspenso" : d.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${d.is_online ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                        <span className={`w-2 h-2 rounded-full ${d.is_online ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                    <td className="px-2.5 py-2.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.is_online ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${d.is_online ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"}`} />
                         {d.is_online ? "Online" : "Offline"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-2.5 text-right whitespace-nowrap">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(d)}>
@@ -271,7 +270,7 @@ function DriversPage() {
         />
       )}
       {/* ── BONASOFT Watermark ── */}
-      <div className="mt-16 pb-8 text-center opacity-40 select-none pointer-events-none">
+      <div className="mt-12 pb-6 text-center opacity-40 select-none pointer-events-none">
         <p className="text-[11px] font-black uppercase tracking-[0.6em] text-muted-foreground ml-2">BONASOFT</p>
       </div>
     </AdminLayout>

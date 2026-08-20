@@ -21,12 +21,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         <AdminSidebar />
-        <main className="md:ml-72 min-h-screen">
+        <main className="md:ml-64 min-h-screen">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="mx-auto max-w-[1400px] p-4 pt-16 md:p-8 md:pt-8"
+            className="mx-auto max-w-[1500px] p-3 pt-14 md:p-6 md:pt-6"
           >
             {children}
           </motion.div>
