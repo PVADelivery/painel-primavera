@@ -52,9 +52,12 @@ function getCfTypeDetails(type: string) {
 
 const PAYMENT_LABELS: Record<string, string> = {
   money: "Dinheiro",
+  dinheiro: "Dinheiro",
   pix: "Pix",
+  cartao: "Cartão (Maquininha)",
   credit_card: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
+  convenio: "Convênio",
   voucher: "Vale Refeição",
   online: "Pagamento Online",
   "Não informado": "Não informado"
@@ -693,7 +696,9 @@ function ReportsPage() {
                     <SelectContent>
                       <SelectItem value="all">Todas as Formas</SelectItem>
                       <SelectItem value="pix">Pix</SelectItem>
-                      <SelectItem value="money">Dinheiro</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="cartao">Cartão (Maquininha)</SelectItem>
+                      <SelectItem value="convenio">Convênio</SelectItem>
                       <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
                       <SelectItem value="debit_card">Cartão de Débito</SelectItem>
                       <SelectItem value="voucher">Vale Refeição</SelectItem>
