@@ -381,7 +381,7 @@ function RegionSheetRow({
 
         {/* Preço Moto */}
         <div className="flex items-center gap-1 rounded-xl bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5" title="Taxa de Entrega para Moto">
-          <span className="text-xs font-black text-amber-500 flex items-center gap-0.5">🏍️ R$</span>
+          <span className="text-xs font-black text-amber-500 flex items-center gap-0.5">Moto R$</span>
           <input
             type="number"
             step="0.50"
@@ -395,7 +395,7 @@ function RegionSheetRow({
 
         {/* Preço Carro */}
         <div className="flex items-center gap-1 rounded-xl bg-blue-500/10 border border-blue-500/30 px-2.5 py-1.5" title="Taxa de Entrega para Carro">
-          <span className="text-xs font-black text-blue-400 flex items-center gap-0.5">🚗 R$</span>
+          <span className="text-xs font-black text-blue-400 flex items-center gap-0.5">Carro R$</span>
           <input
             type="number"
             step="0.50"
