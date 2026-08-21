@@ -120,7 +120,7 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
             ? Number(profile.longitude) 
             : null)),
       status: raw.status || (raw.is_active === false ? "suspended" : "active"),
-      commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 15.00,
+      commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 25.00,
       service_types: raw.service_types || [],
       created_at: driver.created_at || profile?.created_at,
     });
@@ -150,7 +150,7 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
         latitude: (profile?.latitude !== null && profile?.latitude !== undefined && !isNaN(Number(profile?.latitude))) ? Number(profile.latitude) : null,
         longitude: (profile?.longitude !== null && profile?.longitude !== undefined && !isNaN(Number(profile?.longitude))) ? Number(profile.longitude) : null,
         status: "active",
-        commission_rate: 15.00,
+        commission_rate: 25.00,
         service_types: [],
         created_at: profile?.created_at || new Date().toISOString(),
       });

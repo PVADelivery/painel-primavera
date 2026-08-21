@@ -202,7 +202,7 @@ function DriversPage() {
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Veículo</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Placa</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Telefone</th>
-                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Comissão</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Comissão (%)</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Avaliação</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Online</th>
@@ -228,7 +228,11 @@ function DriversPage() {
                     <td className="px-2.5 py-2.5 whitespace-nowrap text-muted-foreground">{vehicleLabel[d.vehicle_type || "motorcycle"] || d.vehicle_type}</td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap font-mono text-xs text-muted-foreground">{d.vehicle_plate || "—"}</td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap text-xs text-muted-foreground">{d.phone || "—"}</td>
-                    <td className="px-2.5 py-2.5 whitespace-nowrap font-bold text-primary">R$ {Number(d.commission_rate ?? 0.40).toFixed(2).replace('.', ',')}</td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap font-bold text-primary">
+                      {d.commission_rate !== null && d.commission_rate !== undefined && Number(d.commission_rate) > 0
+                        ? `${Number(d.commission_rate > 1 ? d.commission_rate : d.commission_rate * 100).toFixed(0)}%`
+                        : "25%"}
+                    </td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap text-xs">⭐ {Number(d.rating || 0).toFixed(1)}</td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.status === "active" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
@@ -292,7 +296,7 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
 
   const [form, setForm] = useState({
     fullName: "", email: "", password: "", phone: "", document: "",
-    vehicle: "motorcycle", licensePlate: "", commissionRate: "15",
+    vehicle: "motorcycle", licensePlate: "", commissionRate: "25",
   });
 
   const set = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
@@ -318,7 +322,7 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
           email: form.email, password: form.password, fullName: form.fullName,
           phone: form.phone, document: form.document, role: "driver",
           vehicle: form.vehicle, licensePlate: form.licensePlate,
-          commissionRate: parseFloat(form.commissionRate) || 15,
+          commissionRate: parseFloat(form.commissionRate) || 25,
         },
       });
       if (res.error) throw new Error(res.error.message);
@@ -363,7 +367,7 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
               <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border group-hover:border-primary transition-colors">
                 {avatarPreview ? <img src={avatarPreview} className="w-full h-full object-cover" /> : <Camera className="h-6 w-6 text-muted-foreground" />}
               </div>
-              <input type="file"  accept="image/*" onChange={handleAvatar} className="hidden" />
+              <input type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
             </label>
           </div>
           <FieldInput label="Nome completo *" value={form.fullName} onChange={(v) => set("fullName", v)} placeholder="João da Silva" />
@@ -393,7 +397,7 @@ function CreateDriverForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
             <div className="grid grid-cols-2 gap-4 mt-3">
               <FieldInput label="Placa" value={form.licensePlate} onChange={(v) => set("licensePlate", v.toUpperCase())} placeholder="ABC1234" />
-              <FieldInput label="Comissão por Corrida (R$)" type="number" value={form.commissionRate} onChange={(v) => set("commissionRate", v)} placeholder="15" />
+              <FieldInput label="Comissão do Sistema (%)" type="number" value={form.commissionRate} onChange={(v) => set("commissionRate", v)} placeholder="25" />
             </div>
           </div>
         </div>

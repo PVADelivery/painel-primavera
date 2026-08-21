@@ -36,7 +36,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
     document: "",
     vehicleType: "motorcycle",
     vehiclePlate: "",
-    commission: "10.00",
+    commission: "25",
     serviceTypes: [] as string[],
   });
 
@@ -78,7 +78,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             document: driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || "",
             vehicleType: drv?.vehicle || drv?.vehicle_type || prof?.vehicle || driver.vehicle_type || "moto",
             vehiclePlate: driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || prof?.license_plate || "",
-            commission: (drv?.commission_rate ?? driver.commission_rate ?? 15).toString(),
+            commission: (drv?.commission_rate ?? driver.commission_rate ?? 25).toString(),
             serviceTypes: loadedServices,
           });
         } catch (e) {
@@ -268,8 +268,8 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
               </div>
             </div>
             <div>
-              <Label>Comissão por Corrida (R$)</Label>
-              <CurrencyInput value={form.commission} onChangeValue={v => set("commission", v)} />
+              <Label>Comissão do Sistema (%)</Label>
+              <Input type="number" min="0" max="100" value={form.commission} onChange={e => set("commission", e.target.value)} placeholder="25" />
             </div>
           </div>
         </div>

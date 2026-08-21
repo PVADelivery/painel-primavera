@@ -29,7 +29,7 @@ export function CreateDriverDialog({ open, onOpenChange }: CreateDriverDialogPro
     document: "",
     vehicle: "motorcycle",
     licensePlate: "",
-    commissionRate: "0.40",
+    commissionRate: "25",
   });
 
   const set = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
@@ -57,7 +57,7 @@ export function CreateDriverDialog({ open, onOpenChange }: CreateDriverDialogPro
           role: "driver",
           vehicleType: form.vehicle,
           vehiclePlate: form.licensePlate,
-          commissionRate: !isNaN(parseFloat(form.commissionRate)) ? parseFloat(form.commissionRate) : 0.40,
+          commissionRate: !isNaN(parseFloat(form.commissionRate)) ? parseFloat(form.commissionRate) : 25,
         })
       });
 
@@ -182,8 +182,8 @@ export function CreateDriverDialog({ open, onOpenChange }: CreateDriverDialogPro
                   <Input className="h-12 rounded-xl uppercase font-mono" placeholder="ABC-1234" value={form.licensePlate} onChange={(e) => set("licensePlate", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Comissão por Corrida (R$)</Label>
-                  <CurrencyInput className="h-12 rounded-xl" value={form.commissionRate} onChangeValue={(v) => set("commissionRate", v)} />
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Comissão do Sistema (%)</Label>
+                  <Input type="number" min="0" max="100" className="h-12 rounded-xl" placeholder="25" value={form.commissionRate} onChange={(e) => set("commissionRate", e.target.value)} />
                 </div>
               </div>
             </div>
