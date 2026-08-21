@@ -589,11 +589,25 @@ function ReportsPage() {
 
   return (
     <AdminLayout>
-      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">Financeiro / Relatórios</h1>
           <p className="text-xs text-muted-foreground sm:text-sm">Análise de dados e exportação</p>
         </div>
+        <Button
+          onClick={() => {
+            if (driverBreakdown.length > 0) {
+              const firstDrv = driverBreakdown[0];
+              openPayDriverModal({ name: firstDrv.name, id: firstDrv.id || "", due: firstDrv.due, deliveries: firstDrv.deliveries });
+            } else {
+              openPayDriverModal({ name: "Selecione o Entregador", id: "", due: 0, deliveries: 0 });
+            }
+          }}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-5 py-2.5 rounded-2xl shadow-lg shadow-emerald-600/20 gap-2 shrink-0 border border-emerald-500/30"
+        >
+          <DollarSign className="h-5 w-5" />
+          Pagar Entregador (Repasse)
+        </Button>
       </div>
 
       <Tabs defaultValue="geral" className="w-full min-w-0">
@@ -1579,11 +1593,35 @@ function ReportsPage() {
 
             {payDriverDialogData && (
               <form onSubmit={handleConfirmPayDriver} className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label>Selecionar Entregador</Label>
+                  <Select
+                    value={payDriverDialogData.name}
+                    onValueChange={(selectedName) => {
+                      const found = driverBreakdown.find(d => d.name === selectedName);
+                      if (found) {
+                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="font-bold rounded-xl h-11">
+                      <SelectValue placeholder="Selecione um entregador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driverBreakdown.map((drv) => (
+                        <SelectItem key={drv.name} value={drv.name} className="font-medium">
+                          {drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Entregador Beneficiário</p>
                   <p className="text-lg font-black text-foreground">{payDriverDialogData.name}</p>
                   <p className="text-xs text-muted-foreground font-semibold">
-                    Volume acumulado: {payDriverDialogData.deliveries} entregas
+                    Volume acumulado no período: {payDriverDialogData.deliveries} entregas (Ganhos 75%: {payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
                   </p>
                 </div>
 
