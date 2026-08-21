@@ -27,6 +27,8 @@ import {
   useCompanyCredits, useCreditTransactions, useAddCompanyCredits,
 } from "@/services/companyCredits";
 
+import { supabase } from "@/integrations/supabase/client";
+
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -34,7 +36,11 @@ const LOW_BALANCE = 30;
 
 const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão crédito", "Débito", "Transferência", "A prazo"];
 
-export function StoreCreditsPanel() {
+interface StoreCreditsPanelProps {
+  onCreditPurchased?: () => void;
+}
+
+export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps = {}) {
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const { data: credits = [], isLoading: loadingCredits } = useCompanyCredits();
   const { data: txs = [], isLoading: loadingTxs } = useCreditTransactions();
@@ -131,11 +137,30 @@ export function StoreCreditsPanel() {
         description: form.description || (mode === "purchase" ? "Compra de créditos" : "Ajuste manual"),
         type: mode === "purchase" ? "purchase" : "adjustment",
       });
-      toast.success(
-        mode === "purchase"
-          ? `${brl(value)} em créditos adicionados a ${dialogCompany.name}`
-          : `${brl(value)} debitados de ${dialogCompany.name}`,
-      );
+
+      // Vincula a venda de créditos ao Fluxo de Caixa Operacional como Entrada (Receita)
+      if (mode === "purchase") {
+        const { error: cfErr } = await supabase.from('platform_cash_flow').insert({
+          description: `Venda de Créditos: ${dialogCompany.name}`,
+          category: "Venda - Créditos Lojista",
+          amount: value,
+          type: "income",
+          date: new Date().toISOString().split("T")[0],
+          origin: form.payment_method || "Pix"
+        });
+
+        if (!cfErr) {
+          toast.success(
+            `${brl(value)} em créditos adicionados e lançados nas ENTRADAS do Fluxo de Caixa!`,
+          );
+        } else {
+          toast.success(`${brl(value)} em créditos adicionados a ${dialogCompany.name}`);
+        }
+      } else {
+        toast.success(`${brl(value)} debitados de ${dialogCompany.name}`);
+      }
+
+      if (onCreditPurchased) onCreditPurchased();
       setDialogCompany(null);
     } catch (err) {
       toast.error((err as Error).message);

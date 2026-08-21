@@ -97,9 +97,62 @@ function ReportsPage() {
   });
   const [editingCf, setEditingCf] = useState(null);
 
+  // Modal de Pagamento de Repasse ao Entregador
+  const [payDriverDialogData, setPayDriverDialogData] = useState<{ name: string; id: string; due: number; deliveries: number } | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("Pix");
+  const [payNotes, setPayNotes] = useState("");
+  const [submittingPay, setSubmittingPay] = useState(false);
+
+  const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number }) => {
+    setPayDriverDialogData(drv);
+    setPayAmount(drv.due > 0 ? drv.due.toFixed(2) : "0.00");
+    setPayMethod("Pix");
+    setPayNotes("");
+  };
+
+  const handleConfirmPayDriver = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payDriverDialogData || !payAmount || Number(payAmount) <= 0) {
+      toast({ title: "Informe um valor de repasse válido", variant: "destructive" });
+      return;
+    }
+
+    setSubmittingPay(true);
+    try {
+      const amountVal = Number(payAmount);
+      const { error } = await supabase.from('platform_cash_flow').insert({
+        description: `Repasse Entregador: ${payDriverDialogData.name} (${payDriverDialogData.deliveries} entregas)${payNotes ? ` - ${payNotes}` : ''}`,
+        category: "Repasse Motoboy",
+        amount: amountVal,
+        type: "expense",
+        date: new Date().toISOString().split("T")[0],
+        origin: payMethod || "Pix"
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Repasse Efetuado com Sucesso!",
+        description: `R$ ${amountVal.toFixed(2)} repassados a ${payDriverDialogData.name} e lançados como SAÍDA no Fluxo de Caixa.`,
+      });
+
+      setPayDriverDialogData(null);
+      fetchCashFlow();
+    } catch (err: any) {
+      toast({
+        title: "Erro ao registrar repasse",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSubmittingPay(false);
+    }
+  };
+
   const DEFAULT_CATEGORIES = {
     expense: ["Repasse Motoboy", "Thyelle - pessoal", "Abastecimento", "Oficina - manutenção", "Fixo Mensal - empresa", "Aluguel", "Luz", "Internet - telefone", "Água", "Papelaria - limpeza", "Veículo", "Outras Despesas"],
-    income: ["Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"],
+    income: ["Venda - Créditos Lojista", "Venda - cupom 5,00", "Venda - cupom 6,00", "Açaí primavera", "Outras Receitas"],
     receivable: ["Contas a Receber", "Venda a Prazo", "Empresas Faturadas", "Cheque Pré-datado", "Outros Direitos"],
     payable: ["Contas a Pagar", "Fornecedores", "Impostos a Pagar", "Aluguel Futuro", "Empréstimo / Financiamento", "Outras Obrigações"]
   };
@@ -918,10 +971,20 @@ function ReportsPage() {
                             <p className="text-xs text-muted-foreground mt-1">{drv.deliveries} entregas</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-black text-sm text-foreground">
-                            {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-black text-sm text-foreground">
+                              {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries })}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                          >
+                            <DollarSign className="h-3.5 w-3.5" />
+                            Pagar
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -986,11 +1049,21 @@ function ReportsPage() {
                               Corridas: {drv.deliveries} • Taxa por entrega: {drv.deliveries > 0 ? (drv.taxTotal / drv.deliveries).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,40"}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Devido</p>
-                            <p className="font-black text-base text-blue-600 mt-1.5">
-                              {drv.taxTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Ganhos Entregador</p>
+                              <p className="font-black text-base text-emerald-600 mt-1.5">
+                                {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries })}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                            >
+                              <DollarSign className="h-3.5 w-3.5" />
+                              Pagar Repasse
+                            </Button>
                           </div>
                         </div>
                       ))
@@ -1086,7 +1159,7 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="creditos">
-          <StoreCreditsPanel />
+          <StoreCreditsPanel onCreditPurchased={fetchCashFlow} />
         </TabsContent>
 
         <TabsContent value="cashflow">
@@ -1488,6 +1561,78 @@ function ReportsPage() {
                 Concluído
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Repasse ao Entregador */}
+        <Dialog open={!!payDriverDialogData} onOpenChange={(open) => !open && setPayDriverDialogData(null)}>
+          <DialogContent className="sm:max-w-[450px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <DollarSign className="h-6 w-6 text-emerald-600" />
+                Pagar Repasse ao Entregador
+              </DialogTitle>
+              <DialogDescription>
+                Este pagamento será registrado e deduzido como <strong className="text-rose-500">Saída (Repasse Motoboy)</strong> do seu Fluxo de Caixa Operacional.
+              </DialogDescription>
+            </DialogHeader>
+
+            {payDriverDialogData && (
+              <form onSubmit={handleConfirmPayDriver} className="space-y-4 pt-2">
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Entregador Beneficiário</p>
+                  <p className="text-lg font-black text-foreground">{payDriverDialogData.name}</p>
+                  <p className="text-xs text-muted-foreground font-semibold">
+                    Volume acumulado: {payDriverDialogData.deliveries} entregas
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payAmount">Valor do Repasse (R$)</Label>
+                  <CurrencyInput
+                    id="payAmount"
+                    value={payAmount}
+                    onChangeValue={(v) => setPayAmount(v)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payMethod">Forma de Pagamento</Label>
+                  <Select value={payMethod} onValueChange={setPayMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Transferência">Transferência Bancária</SelectItem>
+                      <SelectItem value="Boleto">Boleto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payNotes">Observação (Opcional)</Label>
+                  <Input
+                    id="payNotes"
+                    placeholder="Ex: Quitação semanal de corridas"
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                  />
+                </div>
+
+                <DialogFooter className="pt-4 border-t gap-2">
+                  <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-xl">
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    {submittingPay ? "Efetuando..." : "Confirmar Repasse"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
       </Tabs>
