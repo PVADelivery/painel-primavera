@@ -478,11 +478,23 @@ function PricingRulesManager({ table, onClose }: { table: any, onClose: () => vo
   };
 
   const handleSaveRegionValue = async (regionId: string) => {
-    const numMoto = parseFloat(editValueMoto.replace(",", "."));
-    const numCar = parseFloat(editValueCar.replace(",", "."));
-    if (isNaN(numMoto) || numMoto < 0 || isNaN(numCar) || numCar < 0) {
-      toast.error("Valores inválidos.");
+    const parseVal = (str: string) => {
+      if (!str) return NaN;
+      const normalized = String(str).replace(',', '.').replace(/[^0-9.]/g, '');
+      const val = parseFloat(normalized);
+      return isNaN(val) ? NaN : val;
+    };
+
+    const numMoto = parseVal(editValueMoto);
+    let numCar = parseVal(editValueCar);
+
+    if (isNaN(numMoto) || numMoto < 0) {
+      toast.error("Por favor, informe um valor válido para a entrega de Moto.");
       return;
+    }
+
+    if (isNaN(numCar) || numCar < 0) {
+      numCar = Number((numMoto * 1.5).toFixed(2));
     }
     setSaving(true);
     try {
