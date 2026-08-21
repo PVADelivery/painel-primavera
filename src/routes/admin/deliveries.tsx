@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatDeliveryValue } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
@@ -208,8 +208,88 @@ function DeliveriesPage() {
     w.print();
   };
 
+function AdminDispatchWindowWidget({
+  deliveries,
+  onDispatchClick
+}: {
+  deliveries: DeliveryWithRelations[];
+  onDispatchClick: (delivery: DeliveryWithRelations) => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pendingDispatchList = deliveries.filter(d => {
+    if (d.driver_id) return false;
+    if (["delivered", "cancelled", "completed"].includes(d.status)) return false;
+    if (!d.created_at) return false;
+    const createdAt = new Date(d.created_at).getTime();
+    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+    return elapsedSeconds < 120; // 2 minutos (120 segundos)
+  });
+
+  if (pendingDispatchList.length === 0) return null;
+
+  return (
+    <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-4 mb-5 shadow-xl space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+          </span>
+          <h2 className="text-sm font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+            🚨 DIRECIOTE PARA O ENTREGADOR (Janela do Admin: 2 min)
+          </h2>
+        </div>
+        <span className="text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full border border-amber-500/30">
+          {pendingDispatchList.length} aguardando direcionamento
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {pendingDispatchList.map(d => {
+          const createdAt = new Date(d.created_at).getTime();
+          const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+          const remainingSeconds = Math.max(0, 120 - elapsedSeconds);
+          const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+          const secs = String(remainingSeconds % 60).padStart(2, '0');
+
+          return (
+            <div key={d.id} className="bg-card border border-amber-500/30 rounded-xl p-3 shadow-md flex flex-col justify-between space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-wider">#{d.id.slice(0, 8).toUpperCase()}</span>
+                  <p className="text-sm font-bold text-foreground truncate">{d.customer_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{d.companies?.name || "Loja"}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="text-xs font-black font-mono bg-amber-500 text-black px-2.5 py-1 rounded-lg shadow-sm">
+                    ⏱️ {mins}:{secs}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onDispatchClick(d)}
+                className="w-full h-9 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
+              >
+                <Send className="w-3.5 h-3.5" /> Direcionar para Entregador
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
   return (
     <AdminLayout>
+      <AdminDispatchWindowWidget deliveries={deliveries} onDispatchClick={(d) => setDispatchDelivery(d)} />
       <div className="flex flex-col gap-3 mb-5">
              <button
                onClick={() => setShowNewForm(true)}
