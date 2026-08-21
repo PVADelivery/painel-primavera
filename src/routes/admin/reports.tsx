@@ -104,6 +104,7 @@ function ReportsPage() {
   const [payNotes, setPayNotes] = useState("");
   const [submittingPay, setSubmittingPay] = useState(false);
   const [driverSearchTerm, setDriverSearchTerm] = useState("");
+  const isSubmittingPayRef = useRef(false);
 
   const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; isFullyPaid?: boolean }) => {
     if (drv.due <= 0.05 || drv.isFullyPaid) {
@@ -121,20 +122,43 @@ function ReportsPage() {
 
   const handleConfirmPayDriver = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingPayRef.current) return;
     if (!payDriverDialogData || !payAmount || Number(payAmount) <= 0) {
       toast({ title: "Informe um valor de repasse válido", variant: "destructive" });
       return;
     }
 
+    const amountVal = Number(payAmount);
+    const dateStr = new Date().toISOString().split("T")[0];
+    const descriptionStr = `Repasse Entregador: ${payDriverDialogData.name} (${payDriverDialogData.deliveries} entregas)${payNotes ? ` - ${payNotes}` : ''}`;
+
+    // Previne duplicidade imediata se já existir lançamento idêntico no Fluxo de Caixa
+    const isDuplicate = cashFlows.some((cf: any) =>
+      cf.type === "expense" &&
+      cf.date === dateStr &&
+      Math.abs(Number(cf.amount) - amountVal) < 0.01 &&
+      (cf.description?.toLowerCase().includes(payDriverDialogData.name.toLowerCase()) || cf.description?.toLowerCase() === descriptionStr.toLowerCase())
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: "Repasse Já Lançado!",
+        description: `Já existe um lançamento de repasse para ${payDriverDialogData.name} no valor de R$ ${amountVal.toFixed(2)} registrado hoje no Fluxo de Caixa.`,
+        variant: "destructive"
+      });
+      setPayDriverDialogData(null);
+      return;
+    }
+
+    isSubmittingPayRef.current = true;
     setSubmittingPay(true);
     try {
-      const amountVal = Number(payAmount);
       const { error } = await supabase.from('platform_cash_flow').insert({
-        description: `Repasse Entregador: ${payDriverDialogData.name} (${payDriverDialogData.deliveries} entregas)${payNotes ? ` - ${payNotes}` : ''}`,
+        description: descriptionStr,
         category: "Repasse Motoboy",
         amount: amountVal,
         type: "expense",
-        date: new Date().toISOString().split("T")[0],
+        date: dateStr,
         origin: payMethod || "Pix"
       });
 
@@ -154,6 +178,7 @@ function ReportsPage() {
         variant: "destructive"
       });
     } finally {
+      isSubmittingPayRef.current = false;
       setSubmittingPay(false);
     }
   };
@@ -1449,12 +1474,12 @@ function ReportsPage() {
                               <span className={`text-xl font-black tracking-tight ${details.textColor}`}>
                                 {details.sign} {Number(item.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </span>
-                              <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" onClick={() => setEditingCf(item)} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors">
-                                  <Pencil className="h-4 w-4" />
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingCf(item)} className="h-8 px-2.5 rounded-xl text-xs font-bold hover:bg-primary/10 hover:text-primary transition-colors gap-1">
+                                  <Pencil className="h-3.5 w-3.5" /> Editar
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteCashFlow(item.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors">
-                                  <Trash2 className="h-4 w-4" />
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteCashFlow(item.id)} className="h-8 px-2.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-colors gap-1">
+                                  <Trash2 className="h-3.5 w-3.5" /> Excluir
                                 </Button>
                               </div>
                             </div>
