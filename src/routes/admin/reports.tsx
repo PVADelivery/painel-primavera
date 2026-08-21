@@ -1580,21 +1580,23 @@ function ReportsPage() {
 
         {/* Modal de Repasse ao Entregador */}
         <Dialog open={!!payDriverDialogData} onOpenChange={(open) => !open && setPayDriverDialogData(null)}>
-          <DialogContent className="sm:max-w-[450px] rounded-3xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                <DollarSign className="h-6 w-6 text-emerald-600" />
+          <DialogContent className="w-[94vw] sm:max-w-[520px] rounded-3xl p-6 bg-background border border-border shadow-2xl overflow-hidden">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="flex items-center gap-2 text-xl font-extrabold text-foreground">
+                <div className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600">
+                  <DollarSign className="h-6 w-6" />
+                </div>
                 Pagar Repasse ao Entregador
               </DialogTitle>
-              <DialogDescription>
-                Este pagamento será registrado e deduzido como <strong className="text-rose-500">Saída (Repasse Motoboy)</strong> do seu Fluxo de Caixa Operacional.
+              <DialogDescription className="text-xs text-muted-foreground">
+                Este pagamento será registrado e deduzido como <strong className="text-rose-500 font-bold">Saída (Repasse Motoboy)</strong> do seu Fluxo de Caixa.
               </DialogDescription>
             </DialogHeader>
 
             {payDriverDialogData && (
-              <form onSubmit={handleConfirmPayDriver} className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Selecionar Entregador</Label>
+              <form onSubmit={handleConfirmPayDriver} className="space-y-4 pt-3 w-full overflow-hidden">
+                <div className="space-y-1.5 w-full">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Selecionar Entregador</Label>
                   <Select
                     value={payDriverDialogData.name}
                     onValueChange={(selectedName) => {
@@ -1604,69 +1606,72 @@ function ReportsPage() {
                       }
                     }}
                   >
-                    <SelectTrigger className="font-bold rounded-xl h-11">
-                      <SelectValue placeholder="Selecione um entregador" />
+                    <SelectTrigger className="font-bold rounded-2xl h-12 w-full border-border bg-card">
+                      <SelectValue placeholder="Selecione um entregador" className="truncate" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[90vw] sm:max-w-[480px]">
                       {driverBreakdown.map((drv) => (
-                        <SelectItem key={drv.name} value={drv.name} className="font-medium">
-                          {drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                        <SelectItem key={drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
+                          <span className="truncate">{drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Entregador Beneficiário</p>
-                  <p className="text-lg font-black text-foreground">{payDriverDialogData.name}</p>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-1 w-full overflow-hidden">
+                  <p className="text-[11px] text-emerald-600 uppercase font-extrabold tracking-wider">Entregador Beneficiário</p>
+                  <p className="text-lg font-black text-foreground truncate">{payDriverDialogData.name}</p>
                   <p className="text-xs text-muted-foreground font-semibold">
-                    Volume acumulado no período: {payDriverDialogData.deliveries} entregas (Ganhos 75%: {payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                    Volume acumulado: <strong className="text-foreground">{payDriverDialogData.deliveries} entregas</strong> (Ganhos 75%: <strong className="text-emerald-600 font-bold">{payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>)
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="payAmount">Valor do Repasse (R$)</Label>
-                  <CurrencyInput
-                    id="payAmount"
-                    value={payAmount}
-                    onChangeValue={(v) => setPayAmount(v)}
-                    className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-bold"
-                    required
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                  <div className="space-y-1.5 w-full">
+                    <Label htmlFor="payAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Valor do Repasse (R$)</Label>
+                    <CurrencyInput
+                      id="payAmount"
+                      value={payAmount}
+                      onChangeValue={(v) => setPayAmount(v)}
+                      className="h-12 w-full rounded-2xl border border-input bg-card px-4 py-2 text-base font-bold shadow-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 w-full">
+                    <Label htmlFor="payMethod" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</Label>
+                    <Select value={payMethod} onValueChange={setPayMethod}>
+                      <SelectTrigger className="font-bold rounded-2xl h-12 w-full border-border bg-card">
+                        <SelectValue placeholder="Forma de pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pix" className="font-semibold">Pix</SelectItem>
+                        <SelectItem value="Dinheiro" className="font-semibold">Dinheiro</SelectItem>
+                        <SelectItem value="Transferência" className="font-semibold">Transferência Bancária</SelectItem>
+                        <SelectItem value="Boleto" className="font-semibold">Boleto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="payMethod">Forma de Pagamento</Label>
-                  <Select value={payMethod} onValueChange={setPayMethod}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Forma de pagamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pix">Pix</SelectItem>
-                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                      <SelectItem value="Transferência">Transferência Bancária</SelectItem>
-                      <SelectItem value="Boleto">Boleto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="payNotes">Observação (Opcional)</Label>
+                <div className="space-y-1.5 w-full">
+                  <Label htmlFor="payNotes" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Observação (Opcional)</Label>
                   <Input
                     id="payNotes"
                     placeholder="Ex: Quitação semanal de corridas"
                     value={payNotes}
                     onChange={(e) => setPayNotes(e.target.value)}
+                    className="h-12 rounded-2xl border-input bg-card px-4 font-medium"
                   />
                 </div>
 
-                <DialogFooter className="pt-4 border-t gap-2">
-                  <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-xl">
+                <DialogFooter className="pt-3 border-t border-border flex-row gap-2 justify-end w-full">
+                  <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-2xl h-12 px-5 font-bold flex-1 sm:flex-none">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl gap-2">
-                    <DollarSign className="h-4 w-4" />
+                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20">
+                    <DollarSign className="h-5 w-5" />
                     {submittingPay ? "Efetuando..." : "Confirmar Repasse"}
                   </Button>
                 </DialogFooter>
