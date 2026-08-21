@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
+  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -105,7 +105,14 @@ function ReportsPage() {
   const [submittingPay, setSubmittingPay] = useState(false);
   const [driverSearchTerm, setDriverSearchTerm] = useState("");
 
-  const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number }) => {
+  const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; isFullyPaid?: boolean }) => {
+    if (drv.due <= 0.05 || drv.isFullyPaid) {
+      toast({
+        title: "Repasse Já Quitado",
+        description: `O entregador ${drv.name} já possui todos os repasses do período quitados.`,
+      });
+      return;
+    }
     setPayDriverDialogData(drv);
     setPayAmount(drv.due > 0 ? drv.due.toFixed(2) : "0.00");
     setPayMethod("Pix");
@@ -455,26 +462,49 @@ function ReportsPage() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredDeliveries]);
 
-  // Relação por Entregador
+  // Mapeamento de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow)
+  const driverPaymentsMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    cashFlows.forEach((cf: any) => {
+      if (cf.type === "expense" && (cf.category === "Repasse Motoboy" || cf.category === "Repasse Entregador" || cf.description?.toLowerCase().includes("repasse entregador"))) {
+        const match = cf.description.match(/Repasse Entregador:\s*([^(]+)/i);
+        if (match && match[1]) {
+          const nameKey = match[1].trim().toLowerCase();
+          map[nameKey] = (map[nameKey] || 0) + Number(cf.amount || 0);
+        }
+      }
+    });
+    return map;
+  }, [cashFlows]);
+
+  // Relação por Entregador com controle de quitado e saldo devido restante
   const driverBreakdown = useMemo(() => {
-    const map: Record<string, { name: string; deliveries: number; due: number; taxTotal: number }> = {};
+    const map: Record<string, { id: string; name: string; deliveries: number; totalEarned: number; paidAmount: number; due: number; taxTotal: number; isFullyPaid: boolean }> = {};
     const finished = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered");
 
     finished.forEach((d) => {
-      const name = d.driver_name;
+      const name = d.driver_name || "Sem Nome";
       const id = d.driver_id || "sem_motoboy";
       if (!map[id]) {
-        map[id] = { name, deliveries: 0, due: 0, taxTotal: 0 };
+        map[id] = { id, name, deliveries: 0, totalEarned: 0, paidAmount: 0, due: 0, taxTotal: 0, isFullyPaid: false };
       }
       map[id].deliveries += 1;
       // Repasse do motoboy (75% do valor da corrida)
-      map[id].due += (d.delivery_fee * 0.75);
+      map[id].totalEarned += (d.delivery_fee * 0.75);
       // Taxa fixa devida à central por entrega
-      map[id].taxTotal += d.delivery_fee_tax;
+      map[id].taxTotal += (d.delivery_fee_tax || 0);
     });
 
-    return Object.values(map).sort((a, b) => b.due - a.due).slice(0, 20);
-  }, [filteredDeliveries]);
+    Object.values(map).forEach((drv) => {
+      const nameKey = (drv.name || "").trim().toLowerCase();
+      const paid = driverPaymentsMap[nameKey] || 0;
+      drv.paidAmount = paid;
+      drv.due = Math.max(0, drv.totalEarned - paid);
+      drv.isFullyPaid = drv.totalEarned > 0 && drv.due <= 0.05;
+    });
+
+    return Object.values(map).sort((a, b) => b.due - a.due).slice(0, 30);
+  }, [filteredDeliveries, driverPaymentsMap]);
 
   // Limpar Filtros
   const handleClearFilters = () => {
@@ -992,14 +1022,20 @@ function ReportsPage() {
                               {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                             </p>
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries })}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
-                          >
-                            <DollarSign className="h-3.5 w-3.5" />
-                            Pagar
-                          </Button>
+                          {drv.isFullyPaid ? (
+                            <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                              <Check className="h-3.5 w-3.5" /> Quitado
+                            </span>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, isFullyPaid: drv.isFullyPaid })}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                            >
+                              <DollarSign className="h-3.5 w-3.5" />
+                              Pagar
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1066,19 +1102,27 @@ function ReportsPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Ganhos Entregador</p>
-                              <p className="font-black text-base text-emerald-600 mt-1.5">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+                                {drv.isFullyPaid ? "Saldo Restante" : "Ganhos Entregador"}
+                              </p>
+                              <p className={`font-black text-base mt-1.5 ${drv.isFullyPaid ? "text-emerald-600/60 line-through" : "text-emerald-600"}`}>
                                 {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                               </p>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries })}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
-                            >
-                              <DollarSign className="h-3.5 w-3.5" />
-                              Pagar Repasse
-                            </Button>
+                            {drv.isFullyPaid ? (
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                                <Check className="h-4 w-4" /> Repasse Quitado
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, isFullyPaid: drv.isFullyPaid })}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                              >
+                                <DollarSign className="h-3.5 w-3.5" />
+                                Pagar Repasse
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))
@@ -1624,7 +1668,9 @@ function ReportsPage() {
                         .filter(drv => drv.name.toLowerCase().includes((driverSearchTerm || "").toLowerCase()))
                         .map((drv) => (
                           <SelectItem key={drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
-                            <span className="truncate">{drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
+                            <span className="truncate">
+                              {drv.name} ({drv.deliveries} entregas — {drv.isFullyPaid ? "✅ Quitado" : `${drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} a pagar`})
+                            </span>
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -1635,8 +1681,13 @@ function ReportsPage() {
                   <p className="text-[11px] text-emerald-600 uppercase font-extrabold tracking-wider">Entregador Beneficiário</p>
                   <p className="text-lg font-black text-foreground truncate">{payDriverDialogData.name}</p>
                   <p className="text-xs text-muted-foreground font-semibold">
-                    Volume acumulado: <strong className="text-foreground">{payDriverDialogData.deliveries} entregas</strong> (Ganhos 75%: <strong className="text-emerald-600 font-bold">{payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>)
+                    Volume acumulado: <strong className="text-foreground">{payDriverDialogData.deliveries} entregas</strong> (Saldo Devido: <strong className="text-emerald-600 font-bold">{payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>)
                   </p>
+                  {payDriverDialogData.due <= 0.05 && (
+                    <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                      <Check className="h-4 w-4" /> Este entregador já possui todos os repasses do período quitados.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
@@ -1682,9 +1733,9 @@ function ReportsPage() {
                   <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-2xl h-12 px-5 font-bold flex-1 sm:flex-none">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20">
+                  <Button type="submit" disabled={submittingPay || payDriverDialogData.due <= 0.05} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20 disabled:opacity-50">
                     <DollarSign className="h-5 w-5" />
-                    {submittingPay ? "Efetuando..." : "Confirmar Repasse"}
+                    {submittingPay ? "Efetuando..." : payDriverDialogData.due <= 0.05 ? "Já Quitado" : "Confirmar Repasse"}
                   </Button>
                 </DialogFooter>
               </form>
