@@ -177,7 +177,7 @@ function DeliveriesPage() {
         hr { border: none; border-top: 1px dashed #ccc; margin: 16px 0; }
         .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #999; }
       </style></head><body>
-        <h1>É Pra Já Delivery</h1>
+        <h1>MT 24 Horas Express</h1>
         <p style="color:#666;margin-top:0">Ordem de Serviço</p>
         <hr/>
         <div class="label">OS</div>

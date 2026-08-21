@@ -63,9 +63,9 @@ function exportPDF(deliveries: DeliveryWithRelations[], period: string) {
   const pageHeader = (pageNum: number) => `
     <header class="page-header">
       <div class="brand">
-        <div class="brand-mark">É</div>
+        <div class="brand-mark">MT</div>
         <div>
-          <div class="brand-name">É Pra Já · Painel Admin</div>
+          <div class="brand-name">MT 24 Horas Express · Painel Admin</div>
           <div class="brand-sub">Relatório operacional de entregas</div>
         </div>
       </div>
@@ -137,7 +137,7 @@ function exportPDF(deliveries: DeliveryWithRelations[], period: string) {
             <tbody>${renderRows(slice, p * PAGE_SIZE)}</tbody>
           </table>
           <footer class="page-footer">
-            É Pra Já · Confidencial · ${generatedAt} · Pág. ${p + 1}/${totalPages}
+            MT 24 Horas Express · Confidencial · ${generatedAt} · Pág. ${p + 1}/${totalPages}
           </footer>
         </div>
       `);

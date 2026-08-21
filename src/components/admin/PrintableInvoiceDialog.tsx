@@ -110,7 +110,7 @@ export function PrintableInvoiceDialog({
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-xl text-primary">É Pra Já Delivery</p>
+                <p className="font-bold text-xl text-primary">MT 24 Horas Express</p>
                 <p className="text-sm text-gray-600">Gestão Logística e Tecnologia</p>
                 <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-100 inline-block text-left min-w-[200px]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total a Pagar</p>
@@ -244,7 +244,7 @@ export function PrintableInvoiceDialog({
             )}
 
             <div className="mt-12 text-center text-xs text-gray-400 border-t pt-4">
-              Gerado pelo sistema É Pra Já - {new Date().toLocaleString('pt-BR')}
+              Gerado pelo sistema MT 24 Horas Express - {new Date().toLocaleString('pt-BR')}
             </div>
           </div>
         )}
