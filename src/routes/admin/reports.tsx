@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Clock, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
+  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1221,7 +1221,7 @@ function ReportsPage() {
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <span>Direitos</span> <span className="text-amber-500 font-black">+</span>
                 </CardTitle>
-                <Clock className="h-4 w-4 text-amber-500" />
+                <ClockIcon className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-black text-amber-600 dark:text-amber-400">
