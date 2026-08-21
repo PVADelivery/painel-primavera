@@ -103,6 +103,7 @@ function ReportsPage() {
   const [payMethod, setPayMethod] = useState("Pix");
   const [payNotes, setPayNotes] = useState("");
   const [submittingPay, setSubmittingPay] = useState(false);
+  const [driverSearchTerm, setDriverSearchTerm] = useState("");
 
   const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number }) => {
     setPayDriverDialogData(drv);
@@ -1596,7 +1597,16 @@ function ReportsPage() {
             {payDriverDialogData && (
               <form onSubmit={handleConfirmPayDriver} className="space-y-4 pt-3 w-full overflow-hidden">
                 <div className="space-y-1.5 w-full">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Selecionar Entregador</Label>
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Buscar ou Selecionar Entregador</Label>
+                  <div className="relative w-full mb-2">
+                    <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="🔍 Digite o nome do entregador..."
+                      value={driverSearchTerm}
+                      onChange={(e) => setDriverSearchTerm(e.target.value)}
+                      className="pl-10 h-11 rounded-2xl border border-input bg-card font-semibold w-full text-xs sm:text-sm"
+                    />
+                  </div>
                   <Select
                     value={payDriverDialogData.name}
                     onValueChange={(selectedName) => {
@@ -1609,12 +1619,14 @@ function ReportsPage() {
                     <SelectTrigger className="font-bold rounded-2xl h-12 w-full border-border bg-card">
                       <SelectValue placeholder="Selecione um entregador" className="truncate" />
                     </SelectTrigger>
-                    <SelectContent className="max-w-[90vw] sm:max-w-[480px]">
-                      {driverBreakdown.map((drv) => (
-                        <SelectItem key={drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
-                          <span className="truncate">{drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="max-w-[90vw] sm:max-w-[480px] max-h-[220px]">
+                      {driverBreakdown
+                        .filter(drv => drv.name.toLowerCase().includes((driverSearchTerm || "").toLowerCase()))
+                        .map((drv) => (
+                          <SelectItem key={drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
+                            <span className="truncate">{drv.name} ({drv.deliveries} entregas — {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
