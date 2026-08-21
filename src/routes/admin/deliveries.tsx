@@ -208,6 +208,29 @@ function DeliveriesPage() {
     w.print();
   };
 
+function getElapsedSeconds(created_at: string | Date | number | null | undefined): number {
+  if (!created_at) return 999999;
+  let timestamp: number;
+
+  if (typeof created_at === "number") {
+    timestamp = created_at;
+  } else if (created_at instanceof Date) {
+    timestamp = created_at.getTime();
+  } else {
+    let str = String(created_at).trim();
+    if (!str.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(str)) {
+      str = str.replace(" ", "T") + "Z";
+    }
+    timestamp = new Date(str).getTime();
+  }
+
+  if (isNaN(timestamp)) return 999999;
+
+  const now = Date.now();
+  const elapsedMs = now - timestamp;
+  return Math.floor(elapsedMs / 1000);
+}
+
 function AdminDispatchWindowWidget({
   deliveries,
   onDispatchClick
@@ -226,8 +249,7 @@ function AdminDispatchWindowWidget({
     if (d.driver_id) return false;
     if (["delivered", "cancelled", "completed"].includes(d.status)) return false;
     if (!d.created_at) return false;
-    const createdAt = new Date(d.created_at).getTime();
-    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+    const elapsedSeconds = getElapsedSeconds(d.created_at);
     return elapsedSeconds < 120; // 2 minutos (120 segundos)
   });
 
@@ -252,8 +274,7 @@ function AdminDispatchWindowWidget({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {pendingDispatchList.map(d => {
-          const createdAt = new Date(d.created_at).getTime();
-          const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+          const elapsedSeconds = getElapsedSeconds(d.created_at);
           const remainingSeconds = Math.max(0, 120 - elapsedSeconds);
           const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
           const secs = String(remainingSeconds % 60).padStart(2, '0');
