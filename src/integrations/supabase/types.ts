@@ -806,6 +806,8 @@ export type Database = {
           batch_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_name: string | null
           change_for: number | null
           city_id: string | null
           collected_at: string | null
@@ -860,6 +862,8 @@ export type Database = {
           batch_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_name?: string | null
           change_for?: number | null
           city_id?: string | null
           collected_at?: string | null
@@ -914,6 +918,8 @@ export type Database = {
           batch_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_name?: string | null
           change_for?: number | null
           city_id?: string | null
           collected_at?: string | null
@@ -1868,6 +1874,7 @@ export type Database = {
       pricing_rules: {
         Row: {
           base_value: number
+          car_base_value: number | null
           created_at: string
           destination_region_id: string
           id: string
@@ -1878,6 +1885,7 @@ export type Database = {
         }
         Insert: {
           base_value?: number
+          car_base_value?: number | null
           created_at?: string
           destination_region_id: string
           id?: string
@@ -1888,6 +1896,7 @@ export type Database = {
         }
         Update: {
           base_value?: number
+          car_base_value?: number | null
           created_at?: string
           destination_region_id?: string
           id?: string
@@ -2167,6 +2176,7 @@ export type Database = {
       }
       regions: {
         Row: {
+          car_price: number | null
           color: string
           created_at: string
           delivery_fee: number | null
@@ -2179,6 +2189,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          car_price?: number | null
           color?: string
           created_at?: string
           delivery_fee?: number | null
@@ -2191,6 +2202,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          car_price?: number | null
           color?: string
           created_at?: string
           delivery_fee?: number | null
@@ -2723,6 +2735,7 @@ export type Database = {
       is_company_safe: { Args: never; Returns: boolean }
       is_driver: { Args: { _user_id: string }; Returns: boolean }
       refund_delivery_credit: { Args: { p_delivery_id: string }; Returns: Json }
+      request_wallet_withdrawal: { Args: { _amount: number }; Returns: Json }
       set_company_pricing_table: {
         Args: { p_company_id: string; p_pricing_table_id: string }
         Returns: Json
@@ -2741,6 +2754,10 @@ export type Database = {
             }
             Returns: Json
           }
+      update_delivery_with_credits: {
+        Args: { p_delivery_id: string; p_payload: Json }
+        Returns: Json
+      }
       user_owns_company:
         | { Args: { _company_id: string }; Returns: boolean }
         | { Args: { _company_id: string; _user_id: string }; Returns: boolean }
