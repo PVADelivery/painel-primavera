@@ -8,8 +8,8 @@ export interface ErrorPayload {
   additional_info?: Record<string, any>;
 }
 
-const TELEGRAM_BOT_TOKEN = "8408781765:AAEoxY7J9VrNeagGNFu1yHpW3HQlq103gmM";
-const TELEGRAM_CHAT_ID = "-5333281601";
+// Credenciais do Telegram vivem apenas no servidor (Edge Function telegram-logger).
+
 
 // In-memory deduplication cache: messageHash -> timestamp
 const recentErrors = new Map<string, number>();
