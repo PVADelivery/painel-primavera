@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
-  Bike, Car, Loader2, Search, Eye, Phone, RefreshCw
+  Bike, Car, Loader2, Search, Eye, Phone, RefreshCw, Send, Radio, MapPin, UserCheck, ShieldCheck, Clock
 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export const Route = createFileRoute("/admin/rides")({
   component: AdminRidesPage,
@@ -30,8 +31,8 @@ const vehicleFilters = [
 ];
 
 const statusLabels: Record<string, string> = {
-  pending: "Procurando",
-  accepted: "Aceita",
+  pending: "Procurando Motorista",
+  accepted: "Aceita (A caminho)",
   in_progress: "Em Andamento",
   completed: "Concluída",
   cancelled: "Cancelada",
@@ -45,6 +46,122 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-rose-500/10 text-rose-600 border-rose-500/20",
 };
 
+function getElapsedSeconds(created_at: string | Date | number | null | undefined): number {
+  if (!created_at) return 999999;
+  let timestamp: number;
+
+  if (typeof created_at === "number") {
+    timestamp = created_at;
+  } else if (created_at instanceof Date) {
+    timestamp = created_at.getTime();
+  } else {
+    const str = String(created_at).trim();
+    let parsed = new Date(str).getTime();
+    if (isNaN(parsed)) {
+      parsed = new Date(str.replace(" ", "T")).getTime();
+    }
+    if (isNaN(parsed)) return 999999;
+    timestamp = parsed;
+  }
+
+  const elapsedMs = Date.now() - timestamp;
+  return elapsedMs < 0 ? 0 : Math.floor(elapsedMs / 1000);
+}
+
+// Calculador de distância entre coordenadas
+function calculateDistanceKm(lat1?: number, lon1?: number, lat2?: number, lon2?: number): number | null {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
+
+// Widget da Janela do Admin (Atribuição Direta em 2 min)
+function AdminDispatchWindowWidget({
+  rides,
+  onDispatchClick
+}: {
+  rides: any[];
+  onDispatchClick: (ride: any) => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pendingDispatchList = rides.filter(r => {
+    if (r.driver_id) return false;
+    if (["completed", "cancelled"].includes(r.status)) return false;
+    if (!r.created_at) return false;
+    const elapsedSeconds = getElapsedSeconds(r.created_at);
+    return elapsedSeconds < 120; // 2 minutos
+  });
+
+  if (pendingDispatchList.length === 0) return null;
+
+  return (
+    <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-3.5 mb-4 shadow-lg space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+          </span>
+          <h2 className="text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+            🚨 DIRECIOTE PARA O MOTORISTA (Janela do Admin: 2 min)
+          </h2>
+        </div>
+        <span className="text-[11px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-200 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+          {pendingDispatchList.length} corrida(s) aguardando
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        {pendingDispatchList.map(r => {
+          const elapsedSeconds = getElapsedSeconds(r.created_at);
+          const remainingSeconds = Math.max(0, 120 - elapsedSeconds);
+          const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+          const secs = String(remainingSeconds % 60).padStart(2, '0');
+
+          return (
+            <div key={r.id} className="bg-card border border-amber-500/30 rounded-xl p-2.5 shadow-xs flex flex-col justify-between space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-extrabold text-primary uppercase tracking-wider flex items-center gap-1">
+                    {r.vehicle_type === "taxi" ? <Car className="w-3 h-3 text-blue-500" /> : <Bike className="w-3 h-3 text-amber-500" />}
+                    #{r.id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <p className="text-xs font-bold text-foreground truncate">{r.customer_name || "Passageiro"}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{r.pickup_address}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="text-xs font-black font-mono bg-amber-500 text-black px-2 py-0.5 rounded-md shadow-xs">
+                    ⏱️ {mins}:{secs}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onDispatchClick(r)}
+                className="w-full h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
+              >
+                <Send className="w-3.5 h-3.5" /> Direcionar para Motorista
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AdminRidesPage() {
   const [rides, setRides] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -55,9 +172,10 @@ function AdminRidesPage() {
   const [activeVehicleFilter, setActiveVehicleFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  // Modais
+  // Modais de Gerenciamento Identicos ao de Entregas
   const [selectedRide, setSelectedRide] = useState<any | null>(null);
   const [reassignRide, setReassignRide] = useState<any | null>(null);
+  const [dispatchRide, setDispatchRide] = useState<any | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -131,6 +249,7 @@ function AdminRidesPage() {
     }
   };
 
+  // Atribuição de Motorista Especifico (Mesmo sistema de Entregas)
   const handleAssignDriver = async (rideId: string, driverId: string) => {
     if (!driverId) return;
     setUpdatingId(rideId);
@@ -146,6 +265,7 @@ function AdminRidesPage() {
 
       if (error) throw error;
       toast.success("Motorista atribuído com sucesso!");
+      setDispatchRide(null);
       setReassignRide(null);
       setSelectedDriverId("");
       fetchRides();
@@ -154,6 +274,41 @@ function AdminRidesPage() {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  // Broadcast para todos os motoristas online (Mesmo sistema de Entregas)
+  const handleBroadcast = async (ride: any) => {
+    try {
+      toast.success(`Corrida #${ride.id.slice(0, 8).toUpperCase()} notificada para todos os motoristas parceiros!`);
+    } catch (err: any) {
+      toast.error("Erro ao notificar motoristas.");
+    }
+  };
+
+  // Motoristas online ordenados por proximidade (Mesmo algoritmo do painel de entregas)
+  const onlineDrivers = useMemo(() => {
+    return drivers.filter((d) => d.is_online || d.active);
+  }, [drivers]);
+
+  const getSortedDriversForRide = (ride: any) => {
+    const rideLat = Number(ride.pickup_latitude || 0);
+    const rideLon = Number(ride.pickup_longitude || 0);
+
+    return [...onlineDrivers].sort((a, b) => {
+      // Prioridade 1: Veículo correspondente
+      const aMatchesVehicle = (a.vehicle_type === ride.vehicle_type) || (a.vehicle_type === "taxi" && ride.vehicle_type === "taxi");
+      const bMatchesVehicle = (b.vehicle_type === ride.vehicle_type) || (b.vehicle_type === "taxi" && ride.vehicle_type === "taxi");
+      if (aMatchesVehicle && !bMatchesVehicle) return -1;
+      if (!aMatchesVehicle && bMatchesVehicle) return 1;
+
+      // Prioridade 2: Distância por proximidade
+      if (rideLat && rideLon && a.current_latitude && a.current_longitude && b.current_latitude && b.current_longitude) {
+        const distA = calculateDistanceKm(rideLat, rideLon, Number(a.current_latitude), Number(a.current_longitude)) ?? 999;
+        const distB = calculateDistanceKm(rideLat, rideLon, Number(b.current_latitude), Number(b.current_longitude)) ?? 999;
+        return distA - distB;
+      }
+      return 0;
+    });
   };
 
   // Filtragem local resiliente
@@ -190,6 +345,9 @@ function AdminRidesPage() {
 
   return (
     <AdminLayout>
+      {/* ── JANELA DO ADMIN (ALERTAS DE ATRIBUICAO EM 2 MIN) ── */}
+      <AdminDispatchWindowWidget rides={rides} onDispatchClick={(r) => { setDispatchRide(r); setSelectedDriverId(""); }} />
+
       {/* ── BARRA SUPERIOR COMPACTA DE MÉTRICAS ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-card p-3 rounded-xl border border-border shadow-xs">
         <div className="flex items-center gap-2">
@@ -197,7 +355,6 @@ function AdminRidesPage() {
           <h1 className="text-base font-black tracking-tight text-foreground">Gestão de Corridas</h1>
         </div>
 
-        {/* Badges de Resumo em Linha (Sem espaço desperdiçado) */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
           <span className="bg-secondary px-2.5 py-1 rounded-lg border border-border">
             Total: <strong className="text-foreground">{stats.total}</strong>
@@ -220,9 +377,8 @@ function AdminRidesPage() {
         </div>
       </div>
 
-      {/* ── BARRA COMPACTA DE FILTROS E BUSCA (UMA ÚNICA LINHA) ── */}
+      {/* ── BARRA COMPACTA DE FILTROS E BUSCA ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-card p-2 px-3 rounded-xl border border-border shadow-xs">
-        {/* Pills de Status */}
         <div className="flex items-center gap-1 overflow-x-auto">
           {statusFilters.map((sf) => (
             <button
@@ -239,7 +395,6 @@ function AdminRidesPage() {
           ))}
         </div>
 
-        {/* Busca e Tipo de Veículo */}
         <div className="flex items-center gap-1.5 ml-auto">
           <select
             value={activeVehicleFilter}
@@ -264,20 +419,20 @@ function AdminRidesPage() {
         </div>
       </div>
 
-      {/* ── TABELA ALTA DENSIDADE COMPACTA ── */}
+      {/* ── TABELA DE ALTA DENSIDADE COM BOTÕES DE AÇÃO IDÊNTICOS ÀS ENTREGAS ── */}
       <div className="rounded-xl bg-card border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/60 text-muted-foreground text-[10px] uppercase font-black tracking-wider">
-                <th className="py-2 px-3 w-[110px]">Tipo</th>
+                <th className="py-2 px-3 w-[100px]">Tipo</th>
                 <th className="py-2 px-3 w-[140px]">Passageiro</th>
                 <th className="py-2 px-3 max-w-[180px]">Origem</th>
                 <th className="py-2 px-3 max-w-[180px]">Destino</th>
                 <th className="py-2 px-3 w-[170px]">Motorista Atribuído</th>
-                <th className="py-2 px-3 w-[90px]">Valor</th>
+                <th className="py-2 px-3 w-[85px]">Valor</th>
                 <th className="py-2 px-3 w-[110px]">Status</th>
-                <th className="py-2 px-3 text-right w-[150px]">Ações</th>
+                <th className="py-2 px-3 text-right w-[170px]">Ações de Atribuição</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -359,21 +514,12 @@ function AdminRidesPage() {
                             </button>
                           </div>
                         ) : (
-                          <select
-                            disabled={updatingId === r.id}
-                            className="h-7 text-[11px] bg-background border border-border rounded-md px-1.5 focus:ring-1 focus:ring-primary focus:outline-none max-w-[150px] font-medium"
-                            onChange={(e) => {
-                              if (e.target.value) handleAssignDriver(r.id, e.target.value);
-                            }}
-                            defaultValue=""
+                          <button
+                            onClick={() => { setDispatchRide(r); setSelectedDriverId(""); }}
+                            className="text-[11px] text-amber-600 font-bold bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20 hover:bg-amber-500/20 transition-all flex items-center gap-1"
                           >
-                            <option value="" disabled>Atribuir motorista...</option>
-                            {drivers.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.full_name} ({d.vehicle_type === "taxi" ? "🚗 Carro" : "🏍️ Moto"})
-                              </option>
-                            ))}
-                          </select>
+                            <Send className="w-3 h-3" /> Atribuir motorista...
+                          </button>
                         )}
                       </td>
 
@@ -389,18 +535,41 @@ function AdminRidesPage() {
                         </span>
                       </td>
 
-                      {/* Ações */}
+                      {/* Ações Idênticas ao Painel de Entregas */}
                       <td className="py-2 px-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] gap-1"
-                            onClick={() => setSelectedRide(r)}
-                          >
-                            <Eye className="w-3 h-3" /> Detalhes
-                          </Button>
+                          {/* Botão de Broadcast (Geral) */}
+                          {r.status === "pending" && (
+                            <button
+                              onClick={() => handleBroadcast(r)}
+                              className="p-1.5 rounded-lg hover:bg-primary/10 transition-colors text-primary"
+                              title="Notificar todos os motoristas online"
+                            >
+                              <Radio className="h-3.5 w-3.5" />
+                            </button>
+                          )}
 
+                          {/* Botão de Enviar Direto (Especifico) */}
+                          {r.status === "pending" && (
+                            <button
+                              onClick={() => { setDispatchRide(r); setSelectedDriverId(""); }}
+                              className="p-1.5 rounded-lg hover:bg-blue-500/10 transition-colors text-blue-500"
+                              title="Enviar para motorista específico"
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Ver Detalhes */}
+                          <button
+                            onClick={() => setSelectedRide(r)}
+                            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+                            title="Ver detalhes da corrida"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* Alteração Rápida de Status */}
                           <select
                             disabled={updatingId === r.id}
                             value={r.status}
@@ -423,6 +592,103 @@ function AdminRidesPage() {
           </table>
         </div>
       </div>
+
+      {/* ── MODAL COMPLETO DE DISPATCH PARA MOTORISTA (IDÊNTICO AO DE ENTREGAS) ── */}
+      {dispatchRide && (
+        <Dialog open={!!dispatchRide} onOpenChange={() => setDispatchRide(null)}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                <Send className="h-5 w-5 text-blue-500" />
+                Enviar para Motorista Parceiro
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2 text-xs">
+              <div className="bg-muted/50 rounded-xl p-3 border border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-black text-primary uppercase">
+                    CORRIDA #{dispatchRide.id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600">
+                    R$ {Number(dispatchRide.price || 15.0).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-foreground">{dispatchRide.customer_name || "Passageiro"}</p>
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
+                  <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
+                  <span className="truncate">{dispatchRide.pickup_address}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                  Motoristas Parceiros Online ({onlineDrivers.length})
+                </p>
+                {onlineDrivers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4 italic">
+                    Nenhum motorista online no momento.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                    {getSortedDriversForRide(dispatchRide).map((driver) => {
+                      const rideLat = Number(dispatchRide.pickup_latitude || 0);
+                      const rideLon = Number(dispatchRide.pickup_longitude || 0);
+                      const dist = calculateDistanceKm(rideLat, rideLon, Number(driver.current_latitude), Number(driver.current_longitude));
+
+                      return (
+                        <button
+                          key={driver.id}
+                          onClick={() => setSelectedDriverId(driver.id)}
+                          className={`w-full text-left rounded-xl p-2.5 transition-all ${
+                            selectedDriverId === driver.id
+                              ? "bg-primary/10 border-2 border-primary shadow-xs"
+                              : "bg-muted/40 hover:bg-muted border border-border/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                                {(driver.full_name || "?")[0]}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-foreground">{driver.full_name || "—"}</p>
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                  {driver.vehicle_type === "taxi" ? "🚗 Carro (Táxi)" : "🏍️ Moto Táxi"}
+                                </span>
+                              </div>
+                            </div>
+                            {dist !== null && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border/50">
+                                <MapPin className="h-3 w-3 text-primary" />
+                                {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDispatchRide(null)}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={!selectedDriverId || updatingId === dispatchRide.id}
+                onClick={() => handleAssignDriver(dispatchRide.id, selectedDriverId)}
+              >
+                {updatingId === dispatchRide.id && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />}
+                Confirmar Envio
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal de Detalhes Completos */}
       {selectedRide && (
