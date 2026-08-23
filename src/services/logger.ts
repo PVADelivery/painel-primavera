@@ -84,44 +84,13 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
       }
     };
 
-    // 1. Try Supabase Edge Function
-    let edgeSuccess = false;
+    // Envia somente pela Edge Function (as credenciais do bot ficam no servidor).
     try {
-      const { data, error } = await supabase.functions.invoke("telegram-logger", {
-        body: requestBody
-      });
-      if (!error && (data as any)?.success) {
-        edgeSuccess = true;
-      }
+      await supabase.functions.invoke("telegram-logger", { body: requestBody });
     } catch {
-      edgeSuccess = false;
+      // Silencioso: nunca quebrar a UI por falha de log.
     }
 
-    // 2. Direct Fallback if Edge function failed or is unconfigured
-    if (!edgeSuccess) {
-      const timestamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Cuiaba" });
-      let messageText = `🚨 <b>ERRO NO SISTEMA / TELA (Direct)</b> 🚨\n\n`;
-      messageText += `📱 <b>App:</b> ${escapeHtml(appName, 80)}\n`;
-      messageText += `🕒 <b>Hora:</b> ${escapeHtml(timestamp, 50)}\n`;
-      messageText += `🔗 <b>URL:</b> <code>${escapeHtml(requestBody.url, 250)}</code>\n`;
-      messageText += `👤 <b>Usuário:</b> ${escapeHtml(requestBody.user_email, 100)} (<code>${escapeHtml(requestBody.user_id, 60)}</code>)\n\n`;
-      messageText += `⚠️ <b>Mensagem:</b>\n<b>${escapeHtml(requestBody.error_message, 800)}</b>\n\n`;
-
-      if (requestBody.stack_trace) {
-        messageText += `📜 <b>Stack Trace:</b>\n<pre>${escapeHtml(requestBody.stack_trace, 1200)}</pre>\n\n`;
-      }
-
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: messageText,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        }),
-      }).catch(() => {});
-    }
   } catch (err) {
     console.error("Failed to report error to Telegram:", err);
   } finally {
