@@ -3,13 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
-  Trash2, Bike, Car, Loader2, Search, Filter, Eye, UserCheck, 
-  CheckCircle2, Clock, MapPin, Phone, ShieldCheck, XCircle, RefreshCw
+  Bike, Car, Loader2, Search, Eye, Phone, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,8 +30,8 @@ const vehicleFilters = [
 ];
 
 const statusLabels: Record<string, string> = {
-  pending: "Procurando Motorista",
-  accepted: "Aceita (A caminho)",
+  pending: "Procurando",
+  accepted: "Aceita",
   in_progress: "Em Andamento",
   completed: "Concluída",
   cancelled: "Cancelada",
@@ -58,7 +55,7 @@ function AdminRidesPage() {
   const [activeVehicleFilter, setActiveVehicleFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  // Modal de Detalhes e Reatribuição
+  // Modais
   const [selectedRide, setSelectedRide] = useState<any | null>(null);
   const [reassignRide, setReassignRide] = useState<any | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState("");
@@ -162,11 +159,8 @@ function AdminRidesPage() {
   // Filtragem local resiliente
   const filteredRides = useMemo(() => {
     return rides.filter((r) => {
-      // 1. Filtro por status
       if (activeStatusFilter !== "all" && r.status !== activeStatusFilter) return false;
-      // 2. Filtro por veículo
       if (activeVehicleFilter !== "all" && r.vehicle_type !== activeVehicleFilter) return false;
-      // 3. Busca por texto
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesName = (r.customer_name || "").toLowerCase().includes(q);
@@ -196,56 +190,47 @@ function AdminRidesPage() {
 
   return (
     <AdminLayout>
-      {/* Header Principal */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 bg-card shadow-sm p-6 rounded-2xl border border-border">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-            <Car className="w-6 h-6 text-primary" /> Gestão de Corridas (Táxi & Moto Táxi)
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Gerenciamento em tempo real de passageiros, solicitações e atribuição de motoristas parceiros.
-          </p>
+      {/* ── BARRA SUPERIOR COMPACTA DE MÉTRICAS ── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-card p-3 rounded-xl border border-border shadow-xs">
+        <div className="flex items-center gap-2">
+          <Car className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-base font-black tracking-tight text-foreground">Gestão de Corridas</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchRides()} className="gap-2">
-          <RefreshCw className="w-4 h-4" /> Atualizar Listagem
-        </Button>
+
+        {/* Badges de Resumo em Linha (Sem espaço desperdiçado) */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+          <span className="bg-secondary px-2.5 py-1 rounded-lg border border-border">
+            Total: <strong className="text-foreground">{stats.total}</strong>
+          </span>
+          <span className="bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg border border-amber-500/20">
+            Pendentes: <strong>{stats.pending}</strong>
+          </span>
+          <span className="bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg border border-blue-500/20">
+            Em Andamento: <strong>{stats.active}</strong>
+          </span>
+          <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+            Concluídas: <strong>{stats.completed}</strong>
+          </span>
+          <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-lg border border-primary/20 font-bold">
+            Faturamento: R$ {stats.revenue.toFixed(2).replace('.', ',')}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => fetchRides()} className="h-7 w-7 p-0 ml-1" title="Atualizar">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Cards de Resumo Operacional */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-        <Card className="p-4 bg-card border-border shadow-sm">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase">Total Corridas</p>
-          <p className="text-2xl font-black text-foreground mt-1">{stats.total}</p>
-        </Card>
-        <Card className="p-4 bg-amber-500/10 border-amber-500/20 shadow-sm">
-          <p className="text-[11px] font-bold text-amber-600 uppercase">Pendentes</p>
-          <p className="text-2xl font-black text-amber-600 mt-1">{stats.pending}</p>
-        </Card>
-        <Card className="p-4 bg-blue-500/10 border-blue-500/20 shadow-sm">
-          <p className="text-[11px] font-bold text-blue-600 uppercase">Em Andamento</p>
-          <p className="text-2xl font-black text-blue-600 mt-1">{stats.active}</p>
-        </Card>
-        <Card className="p-4 bg-emerald-500/10 border-emerald-500/20 shadow-sm">
-          <p className="text-[11px] font-bold text-emerald-600 uppercase">Concluídas</p>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.completed}</p>
-        </Card>
-        <Card className="p-4 bg-primary/10 border-primary/20 shadow-sm">
-          <p className="text-[11px] font-bold text-primary uppercase">Faturamento Concluído</p>
-          <p className="text-xl font-black text-primary mt-1">R$ {stats.revenue.toFixed(2).replace('.', ',')}</p>
-        </Card>
-      </div>
-
-      {/* Barra de Filtros e Busca */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 bg-card p-4 rounded-2xl border border-border shadow-sm">
-        {/* Filtros por Status */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-2 md:pb-0">
+      {/* ── BARRA COMPACTA DE FILTROS E BUSCA (UMA ÚNICA LINHA) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-card p-2 px-3 rounded-xl border border-border shadow-xs">
+        {/* Pills de Status */}
+        <div className="flex items-center gap-1 overflow-x-auto">
           {statusFilters.map((sf) => (
             <button
               key={sf.value}
               onClick={() => setActiveStatusFilter(sf.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
                 activeStatusFilter === sf.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-secondary/60 hover:bg-secondary text-muted-foreground"
               }`}
             >
@@ -255,60 +240,60 @@ function AdminRidesPage() {
         </div>
 
         {/* Busca e Tipo de Veículo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 ml-auto">
           <select
             value={activeVehicleFilter}
             onChange={(e) => setActiveVehicleFilter(e.target.value)}
-            className="h-10 px-3 text-xs bg-background border border-border rounded-xl font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+            className="h-8 px-2 text-[11px] bg-background border border-border rounded-lg font-medium focus:ring-1 focus:ring-primary focus:outline-none"
           >
             {vehicleFilters.map((vf) => (
               <option key={vf.value} value={vf.value}>{vf.label}</option>
             ))}
           </select>
 
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-48 sm:w-60">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar por cliente, endereço ou motorista..."
+              placeholder="Buscar cliente, endereço..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-4 text-xs bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary focus:outline-none"
+              className="w-full h-8 pl-8 pr-3 text-[11px] bg-background border border-border rounded-lg focus:ring-1 focus:ring-primary focus:outline-none"
             />
           </div>
         </div>
       </div>
 
-      {/* Tabela Principal de Gerenciamento de Corridas */}
-      <div className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
+      {/* ── TABELA ALTA DENSIDADE COMPACTA ── */}
+      <div className="rounded-xl bg-card border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-border bg-muted/40 text-muted-foreground">
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Tipo</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Passageiro</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Origem</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Destino</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Motorista Atribuído</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Valor</th>
-                <th className="px-4 py-3.5 text-left font-bold uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3.5 text-right font-bold uppercase tracking-wider">Gerenciamento (Ações)</th>
+              <tr className="border-b border-border bg-muted/60 text-muted-foreground text-[10px] uppercase font-black tracking-wider">
+                <th className="py-2 px-3 w-[110px]">Tipo</th>
+                <th className="py-2 px-3 w-[140px]">Passageiro</th>
+                <th className="py-2 px-3 max-w-[180px]">Origem</th>
+                <th className="py-2 px-3 max-w-[180px]">Destino</th>
+                <th className="py-2 px-3 w-[170px]">Motorista Atribuído</th>
+                <th className="py-2 px-3 w-[90px]">Valor</th>
+                <th className="py-2 px-3 w-[110px]">Status</th>
+                <th className="py-2 px-3 text-right w-[150px]">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
                     <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" /> Carregando corridas...
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" /> Carregando corridas...
                     </div>
                   </td>
                 </tr>
               ) : filteredRides.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                    <Car className="w-8 h-8 mx-auto opacity-40 mb-2" />
-                    Nenhuma corrida encontrada para o filtro selecionado.
+                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                    <Car className="w-6 h-6 mx-auto opacity-30 mb-1" />
+                    Nenhuma corrida encontrada.
                   </td>
                 </tr>
               ) : (
@@ -325,100 +310,102 @@ function AdminRidesPage() {
                   })();
 
                   return (
-                    <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                       {/* Tipo */}
-                      <td className="px-4 py-3 font-semibold">
-                        <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 font-bold text-[11px]">
                           {r.vehicle_type === "taxi" ? (
-                            <><Car className="w-4 h-4 text-blue-500" /> Táxi (Carro)</>
+                            <><Car className="w-3.5 h-3.5 text-blue-500 shrink-0" /> Táxi</>
                           ) : (
-                            <><Bike className="w-4 h-4 text-amber-500" /> Moto Táxi</>
+                            <><Bike className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Moto</>
                           )}
                         </span>
                       </td>
 
                       {/* Passageiro */}
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-foreground">{r.customer_name || "Passageiro sem nome"}</p>
+                      <td className="py-2 px-3">
+                        <p className="font-bold text-foreground truncate max-w-[130px]" title={r.customer_name || ""}>
+                          {r.customer_name || "—"}
+                        </p>
                         {r.customer_phone && <p className="text-[10px] text-muted-foreground">{r.customer_phone}</p>}
                       </td>
 
                       {/* Origem */}
-                      <td className="px-4 py-3 max-w-xs">
-                        <p className="truncate text-muted-foreground">{r.pickup_address}</p>
+                      <td className="py-2 px-3 max-w-[180px]">
+                        <p className="truncate text-muted-foreground text-[11px]" title={r.pickup_address}>
+                          {r.pickup_address}
+                        </p>
                       </td>
 
                       {/* Destino */}
-                      <td className="px-4 py-3 max-w-xs">
-                        <p className="truncate text-muted-foreground">{r.dropoff_address}</p>
+                      <td className="py-2 px-3 max-w-[180px]">
+                        <p className="truncate text-muted-foreground text-[11px]" title={r.dropoff_address}>
+                          {r.dropoff_address}
+                        </p>
                       </td>
 
-                      {/* Motorista / Seletor Rápido */}
-                      <td className="px-4 py-3">
+                      {/* Motorista */}
+                      <td className="py-2 px-3 whitespace-nowrap">
                         {driverObj?.full_name ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground">{driverObj.full_name}</span>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-6 px-1.5 text-[10px] text-primary"
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-foreground truncate max-w-[110px]" title={driverObj.full_name}>
+                              {driverObj.full_name}
+                            </span>
+                            <button 
+                              className="text-[10px] font-bold text-primary hover:underline"
                               onClick={() => { setReassignRide(r); setSelectedDriverId(r.driver_id || ""); }}
                             >
                               Trocar
-                            </Button>
+                            </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1">
-                            <select
-                              disabled={updatingId === r.id}
-                              className="text-xs bg-background border border-border rounded-lg px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none max-w-[170px] font-medium"
-                              onChange={(e) => {
-                                if (e.target.value) handleAssignDriver(r.id, e.target.value);
-                              }}
-                              defaultValue=""
-                            >
-                              <option value="" disabled>Atribuir motorista...</option>
-                              {drivers.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                  {d.full_name} ({d.vehicle_type === "taxi" ? "🚗 Carro" : "🏍️ Moto"})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                          <select
+                            disabled={updatingId === r.id}
+                            className="h-7 text-[11px] bg-background border border-border rounded-md px-1.5 focus:ring-1 focus:ring-primary focus:outline-none max-w-[150px] font-medium"
+                            onChange={(e) => {
+                              if (e.target.value) handleAssignDriver(r.id, e.target.value);
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Atribuir motorista...</option>
+                            {drivers.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.full_name} ({d.vehicle_type === "taxi" ? "🚗 Carro" : "🏍️ Moto"})
+                              </option>
+                            ))}
+                          </select>
                         )}
                       </td>
 
                       {/* Valor */}
-                      <td className="px-4 py-3 font-extrabold text-emerald-600 text-sm">
+                      <td className="py-2 px-3 font-extrabold text-emerald-600 whitespace-nowrap text-xs">
                         R$ {ridePrice.toFixed(2).replace('.', ',')}
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-extrabold border ${statusColors[r.status] || "bg-muted text-foreground"}`}>
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold border ${statusColors[r.status] || "bg-muted text-foreground"}`}>
                           {statusLabels[r.status] || r.status}
                         </span>
                       </td>
 
-                      {/* Ações (Gerenciamento Completo do Admin) */}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Ver Detalhes */}
+                      {/* Ações */}
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 px-2 text-xs gap-1"
+                            className="h-7 px-2 text-[11px] gap-1"
                             onClick={() => setSelectedRide(r)}
                           >
-                            <Eye className="w-3.5 h-3.5" /> Detalhes
+                            <Eye className="w-3 h-3" /> Detalhes
                           </Button>
 
-                          {/* Seletor de Alteração Rápida de Status */}
                           <select
                             disabled={updatingId === r.id}
                             value={r.status}
                             onChange={(e) => handleUpdateStatus(r.id, e.target.value)}
-                            className="h-8 px-2 text-xs bg-background border border-border rounded-lg font-bold focus:ring-1 focus:ring-primary focus:outline-none"
+                            className="h-7 px-1.5 text-[11px] bg-background border border-border rounded-md font-bold focus:ring-1 focus:ring-primary focus:outline-none"
                           >
                             <option value="pending">Pendente</option>
                             <option value="accepted">Aceita</option>
@@ -437,56 +424,56 @@ function AdminRidesPage() {
         </div>
       </div>
 
-      {/* Modal de Detalhes Completos da Corrida */}
+      {/* Modal de Detalhes Completos */}
       {selectedRide && (
         <Dialog open={!!selectedRide} onOpenChange={() => setSelectedRide(null)}>
           <DialogContent className="max-w-md rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <DialogTitle className="flex items-center gap-2 text-base font-bold">
                 {selectedRide.vehicle_type === "taxi" ? <Car className="w-5 h-5 text-blue-500" /> : <Bike className="w-5 h-5 text-amber-500" />}
                 Detalhes da Corrida
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 py-2 text-xs">
-              <div className="bg-secondary/40 p-3 rounded-xl border border-border/60 flex items-center justify-between">
+            <div className="space-y-3 py-1 text-xs">
+              <div className="bg-secondary/40 p-2.5 rounded-xl border border-border/60 flex items-center justify-between">
                 <div>
                   <span className="text-muted-foreground block text-[10px]">Passageiro</span>
                   <span className="font-bold text-sm text-foreground">{selectedRide.customer_name || "Não informado"}</span>
                 </div>
                 {selectedRide.customer_phone && (
-                  <a href={`tel:${selectedRide.customer_phone}`} className="flex items-center gap-1 text-primary font-bold bg-primary/10 px-2.5 py-1 rounded-lg">
+                  <a href={`tel:${selectedRide.customer_phone}`} className="flex items-center gap-1 text-primary font-bold bg-primary/10 px-2 py-1 rounded-lg">
                     <Phone className="w-3.5 h-3.5" /> {selectedRide.customer_phone}
                   </a>
                 )}
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
                   <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Origem (Embarque)</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Origem</span>
                     <span className="font-medium text-foreground">{selectedRide.pickup_address}</span>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="w-3 h-3 rounded-full bg-rose-500 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 mt-1" />
                   <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Destino (Desembarque)</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Destino</span>
                     <span className="font-medium text-foreground">{selectedRide.dropoff_address}</span>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
-                <div className="bg-muted/40 p-2.5 rounded-xl">
+                <div className="bg-muted/40 p-2 rounded-xl">
                   <span className="text-[10px] text-muted-foreground block font-semibold">Valor da Corrida</span>
                   <span className="text-base font-extrabold text-emerald-600">
                     R$ {Number(selectedRide.price || 0).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
-                <div className="bg-muted/40 p-2.5 rounded-xl">
-                  <span className="text-[10px] text-muted-foreground block font-semibold">Distância Estimada</span>
+                <div className="bg-muted/40 p-2 rounded-xl">
+                  <span className="text-[10px] text-muted-foreground block font-semibold">Distância</span>
                   <span className="text-base font-extrabold text-foreground">
                     {selectedRide.distance_km ? `${selectedRide.distance_km} km` : "Calculado no mapa"}
                   </span>
@@ -494,7 +481,7 @@ function AdminRidesPage() {
               </div>
 
               {selectedRide.driver && (
-                <div className="bg-primary/5 border border-primary/20 p-3 rounded-xl flex items-center justify-between">
+                <div className="bg-primary/5 border border-primary/20 p-2.5 rounded-xl flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-primary uppercase block">Motorista Designado</span>
                     <span className="font-bold text-foreground text-sm">{selectedRide.driver.full_name}</span>
@@ -502,16 +489,9 @@ function AdminRidesPage() {
                   </div>
                   {selectedRide.driver.phone && (
                     <a href={`tel:${selectedRide.driver.phone}`} className="p-2 rounded-full bg-primary text-primary-foreground">
-                      <Phone className="w-4 h-4" />
+                      <Phone className="w-3.5 h-3.5" />
                     </a>
                   )}
-                </div>
-              )}
-
-              {selectedRide.notes && (
-                <div className="bg-muted/30 p-2.5 rounded-xl border border-border/50">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Observações do Passageiro</span>
-                  <p className="italic text-foreground mt-0.5">{selectedRide.notes}</p>
                 </div>
               )}
             </div>
@@ -525,7 +505,7 @@ function AdminRidesPage() {
         </Dialog>
       )}
 
-      {/* Modal de Reatribuição de Motorista */}
+      {/* Modal de Reatribuição */}
       {reassignRide && (
         <Dialog open={!!reassignRide} onOpenChange={() => setReassignRide(null)}>
           <DialogContent className="max-w-sm rounded-2xl">
@@ -535,13 +515,13 @@ function AdminRidesPage() {
 
             <div className="space-y-3 py-2 text-xs">
               <p className="text-muted-foreground">
-                Selecione o motorista parceiro para atender a corrida de <strong className="text-foreground">{reassignRide.customer_name || "Passageiro"}</strong>.
+                Selecione o motorista para a corrida de <strong className="text-foreground">{reassignRide.customer_name || "Passageiro"}</strong>.
               </p>
 
               <select
                 value={selectedDriverId}
                 onChange={(e) => setSelectedDriverId(e.target.value)}
-                className="w-full h-10 px-3 text-xs bg-background border border-border rounded-xl font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full h-9 px-3 text-xs bg-background border border-border rounded-xl font-medium focus:ring-1 focus:ring-primary focus:outline-none"
               >
                 <option value="">Selecione um motorista...</option>
                 {drivers.map((d) => (
@@ -561,7 +541,7 @@ function AdminRidesPage() {
                 disabled={!selectedDriverId || updatingId === reassignRide.id}
                 onClick={() => handleAssignDriver(reassignRide.id, selectedDriverId)}
               >
-                Confirmar Atribuição
+                Confirmar
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -569,8 +549,8 @@ function AdminRidesPage() {
       )}
 
       {/* ── BONASOFT Watermark ── */}
-      <div className="mt-16 pb-8 text-center opacity-40 select-none pointer-events-none">
-        <p className="text-[11px] font-black uppercase tracking-[0.6em] text-muted-foreground ml-2">BONASOFT</p>
+      <div className="mt-8 pb-4 text-center opacity-40 select-none pointer-events-none">
+        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-muted-foreground ml-2">BONASOFT</p>
       </div>
     </AdminLayout>
   );
