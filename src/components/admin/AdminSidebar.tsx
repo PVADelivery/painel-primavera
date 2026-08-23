@@ -30,7 +30,7 @@ const items: NavItem[] = [
   { to: "/admin/reports", label: "Financeiro", icon: DollarSign },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
   const { profile, signOut } = useAuth();
   const { theme, toggle } = useTheme();
   const { data: counts } = useDeliveryCounts();
@@ -42,20 +42,22 @@ export function AdminSidebar() {
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
 
-  const SidebarContent = (
+  const renderSidebarContent = (isCol: boolean) => (
     <>
-      <div className="flex h-20 items-center gap-3 border-b border-sidebar-border/60 px-5">
-        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-900 shadow-elevated ring-1 ring-border/70 overflow-hidden">
+      <div className={cn("flex h-20 items-center border-b border-sidebar-border/60", isCol ? "justify-center px-2" : "gap-3 px-5")}>
+        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-900 shadow-elevated ring-1 ring-border/70 overflow-hidden">
           <img src={icon} alt="MT 24horas express" className="h-full w-full object-contain p-1" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">MT 24horas express</p>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground leading-tight">Painel Admin</p>
-        </div>
+        {!isCol && (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight">MT 24horas express</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground leading-tight">Painel Admin</p>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto space-y-1 px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Operação</p>
+      <nav className="flex-1 overflow-y-auto space-y-1 px-2 py-4">
+        {!isCol && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Operação</p>}
         {items.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.to, item.exact);
@@ -63,8 +65,10 @@ export function AdminSidebar() {
             <Link
               key={item.to}
               to={item.to as "/admin"}
+              title={isCol ? item.label : undefined}
               className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                "group relative flex items-center rounded-xl py-2.5 text-sm font-medium transition-all",
+                isCol ? "justify-center px-2" : "gap-3 px-3",
                 active
                   ? "bg-gradient-to-r from-primary/20 to-primary/5 text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-sidebar-accent/80 hover:text-foreground hover:translate-x-0.5"
@@ -73,12 +77,13 @@ export function AdminSidebar() {
               {active && (
                 <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
               )}
-              <Icon className={cn("h-[18px] w-[18px] transition-colors", active && "text-primary")} />
-              <span className="flex-1 text-left font-semibold">{item.label}</span>
+              <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors", active && "text-primary")} />
+              {!isCol && <span className="flex-1 text-left font-semibold truncate">{item.label}</span>}
               {item.to === "/admin/deliveries" && (
                 <span
                   className={cn(
-                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm transition-all",
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm transition-all",
+                    isCol ? "absolute -top-1 -right-1 scale-75" : "ml-auto",
                     (counts?.open ?? 0) > 0
                       ? "bg-amber-500 text-black animate-pulse"
                       : "bg-muted/60 text-muted-foreground/60 border border-border/40"
@@ -93,21 +98,35 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border/60 p-3">
-        <Link to="/admin/profile" className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sidebar-accent/70">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-amber-500 text-sm font-bold text-primary-foreground ring-2 ring-background">
+      <div className="border-t border-sidebar-border/60 p-2">
+        <Link 
+          to="/admin/profile" 
+          title={isCol ? (profile?.full_name || "Admin") : undefined}
+          className={cn("flex items-center rounded-xl p-2 transition-colors hover:bg-sidebar-accent/70", isCol ? "justify-center" : "gap-3")}
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-amber-500 text-sm font-bold text-primary-foreground ring-2 ring-background shrink-0">
             {(profile?.full_name || "A").charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-semibold">{profile?.full_name || "Admin"}</p>
-            <p className="text-[11px] text-muted-foreground">Administrador</p>
-          </div>
-          <UserIcon className="h-4 w-4 text-muted-foreground" />
+          {!isCol && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-semibold">{profile?.full_name || "Admin"}</p>
+                <p className="text-[11px] text-muted-foreground">Administrador</p>
+              </div>
+              <UserIcon className="h-4 w-4 text-muted-foreground" />
+            </>
+          )}
         </Link>
-        <div className="mt-2 flex items-center gap-2">
+        <div className={cn("mt-2 flex items-center gap-2", isCol && "flex-col")}>
           <ThemeToggle className="h-9 w-full rounded-md" />
-          <Button variant="ghost" size="sm" onClick={signOut} className="flex-1 justify-center text-muted-foreground hover:text-destructive">
-            <LogOut className="mr-2 h-4 w-4" /> Sair
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={signOut} 
+            title={isCol ? "Sair" : undefined}
+            className={cn("text-muted-foreground hover:text-destructive", isCol ? "w-full justify-center p-0 h-9" : "flex-1 justify-center")}
+          >
+            <LogOut className={cn("h-4 w-4", !isCol && "mr-2")} /> {!isCol && "Sair"}
           </Button>
         </div>
       </div>
@@ -137,14 +156,17 @@ export function AdminSidebar() {
             >
               <X className="h-5 w-5" />
             </button>
-            {SidebarContent}
+            {renderSidebarContent(false)}
           </aside>
         </div>
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex h-screen w-64 flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20">
-        {SidebarContent}
+      <aside className={cn(
+        "hidden md:flex h-screen flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20 transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
+      )}>
+        {renderSidebarContent(collapsed)}
       </aside>
     </>
   );

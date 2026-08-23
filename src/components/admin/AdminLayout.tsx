@@ -1,13 +1,34 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AdminSidebar } from "./AdminSidebar";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useRealtimeDeliveries } from "@/hooks/useRealtimeDeliveries";
 import { useGlobalChatNotifications } from "@/hooks/useGlobalChatNotifications";
+import { PanelLeftClose, PanelLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   useRealtimeDeliveries();
   useGlobalChatNotifications();
+
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCollapsed(localStorage.getItem("admin_sidebar_collapsed") === "true");
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("admin_sidebar_collapsed", String(next));
+      }
+      return next;
+    });
+  };
+
   return (
     <ProtectedRoute requiredRole="admin">
       <div className="relative min-h-screen bg-background">
@@ -20,13 +41,31 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-accent/10 blur-[140px]" />
         </div>
 
-        <AdminSidebar />
-        <main className="md:ml-64 min-h-screen">
+        <AdminSidebar collapsed={collapsed} onToggle={toggleSidebar} />
+
+        <main className={`${collapsed ? "md:ml-16" : "md:ml-64"} transition-all duration-300 min-h-screen`}>
+          {/* Botão de Ocultar / Expandir Barra Lateral no Desktop */}
+          <div className="hidden md:flex items-center gap-2 px-6 pt-4 pb-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSidebar}
+              className="h-8 px-3 text-xs gap-2 rounded-xl shadow-sm border-border bg-card hover:bg-accent font-bold"
+              title={collapsed ? "Expandir barra lateral" : "Ocultar barra lateral"}
+            >
+              {collapsed ? (
+                <><PanelLeft className="w-4 h-4 text-primary" /> Expandir Menu</>
+              ) : (
+                <><PanelLeftClose className="w-4 h-4 text-primary" /> Ocultar Barra Lateral</>
+              )}
+            </Button>
+          </div>
+
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="mx-auto max-w-[1500px] p-3 pt-14 md:p-6 md:pt-6"
+            className="mx-auto max-w-[1600px] p-3 pt-4 md:p-6 md:pt-4"
           >
             {children}
           </motion.div>
