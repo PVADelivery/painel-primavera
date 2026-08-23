@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
   MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon,
-  Globe, ShoppingBag, Car, BookUser, Table as TableIcon
+  Globe, ShoppingBag, Car, BookUser, Table as TableIcon,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -32,7 +33,6 @@ const items: NavItem[] = [
 
 export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
   const { profile, signOut } = useAuth();
-  const { theme, toggle } = useTheme();
   const { data: counts } = useDeliveryCounts();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -135,7 +135,6 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
 
   return (
     <>
-      {/* Mobile trigger */}
       <button
         onClick={() => setMobileOpen(true)}
         className="fixed left-4 top-4 z-30 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card/90 backdrop-blur shadow-card md:hidden"
@@ -144,7 +143,6 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -161,11 +159,20 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
         </div>
       )}
 
-      {/* Desktop sidebar */}
       <aside className={cn(
-        "hidden md:flex h-screen flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20 transition-all duration-300",
+        "hidden md:flex h-screen flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20 transition-all duration-300 group/sidebar",
         collapsed ? "w-16" : "w-64"
       )}>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="absolute -right-3.5 top-8 h-7 w-7 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all z-30 cursor-pointer border border-amber-500/30"
+            title={collapsed ? "Expandir menu" : "Recolher menu"}
+            aria-label="Toggle Sidebar"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4 stroke-[3]" /> : <ChevronLeft className="h-4 w-4 stroke-[3]" />}
+          </button>
+        )}
         {renderSidebarContent(collapsed)}
       </aside>
     </>

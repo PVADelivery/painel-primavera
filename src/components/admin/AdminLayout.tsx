@@ -44,28 +44,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <AdminSidebar collapsed={collapsed} onToggle={toggleSidebar} />
 
         <main className={`${collapsed ? "md:ml-16" : "md:ml-64"} transition-all duration-300 min-h-screen`}>
-          {/* Botão de Ocultar / Expandir Barra Lateral no Desktop */}
-          <div className="hidden md:flex items-center gap-2 px-6 pt-4 pb-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleSidebar}
-              className="h-8 px-3 text-xs gap-2 rounded-xl shadow-sm border-border bg-card hover:bg-accent font-bold"
-              title={collapsed ? "Expandir barra lateral" : "Ocultar barra lateral"}
-            >
-              {collapsed ? (
-                <><PanelLeft className="w-4 h-4 text-primary" /> Expandir Menu</>
-              ) : (
-                <><PanelLeftClose className="w-4 h-4 text-primary" /> Ocultar Barra Lateral</>
-              )}
-            </Button>
-          </div>
-
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="mx-auto max-w-[1600px] p-3 pt-4 md:p-6 md:pt-4"
+            className="mx-auto max-w-[1600px] p-3 pt-14 md:p-6 md:pt-6"
           >
             {children}
           </motion.div>
