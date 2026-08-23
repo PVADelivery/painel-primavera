@@ -176,6 +176,7 @@ function AdminRidesPage() {
   const [selectedRide, setSelectedRide] = useState<any | null>(null);
   const [reassignRide, setReassignRide] = useState<any | null>(null);
   const [dispatchRide, setDispatchRide] = useState<any | null>(null);
+  const [driverSearch, setDriverSearch] = useState("");
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -325,6 +326,15 @@ function AdminRidesPage() {
       return 0;
     });
   };
+
+  // Motoristas filtrados na busca do modal
+  const filteredModalDrivers = useMemo(() => {
+    if (!dispatchRide) return [];
+    const sorted = getSortedDriversForRide(dispatchRide);
+    if (!driverSearch.trim()) return sorted;
+    const q = driverSearch.toLowerCase();
+    return sorted.filter((d) => (d.full_name || "").toLowerCase().includes(q) || (d.phone || "").includes(q));
+  }, [dispatchRide, availableDrivers, driverSearch]);
 
   // Filtragem local resiliente
   const filteredRides = useMemo(() => {
@@ -636,17 +646,32 @@ function AdminRidesPage() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Motoristas Cadastrados / Disponíveis ({availableDrivers.length})
-                </p>
-                {availableDrivers.length === 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Motoristas Cadastrados ({filteredModalDrivers.length})
+                  </p>
+                </div>
+
+                {/* Campo de Busca Rápida de Motorista por Nome */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar motorista por nome..."
+                    value={driverSearch}
+                    onChange={(e) => setDriverSearch(e.target.value)}
+                    className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-xl font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+
+                {filteredModalDrivers.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4 italic">
-                    Nenhum motorista cadastrado no momento.
+                    {driverSearch.trim() ? `Nenhum motorista encontrado para "${driverSearch}".` : "Nenhum motorista cadastrado no momento."}
                   </p>
                 ) : (
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                    {getSortedDriversForRide(dispatchRide).map((driver) => {
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {filteredModalDrivers.map((driver) => {
                       const rideLat = Number(dispatchRide.pickup_latitude || 0);
                       const rideLon = Number(dispatchRide.pickup_longitude || 0);
                       const dist = calculateDistanceKm(rideLat, rideLon, Number(driver.current_latitude || driver.latitude), Number(driver.current_longitude || driver.longitude));
