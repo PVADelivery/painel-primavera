@@ -179,13 +179,20 @@ function AdminRidesPage() {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const fetchDrivers = async () => {
+  const fetchDriversData = async () => {
     try {
-      const { data, error } = await supabase
-        .from("delivery_drivers")
-        .select("*")
-        .eq("active", true);
-      if (error) throw error;
+      // 1. Tenta buscar todos os motoristas usando o serviço unificado de motoristas
+      const { fetchDrivers: getDriversList } = await import("@/services/drivers");
+      const list = await getDriversList();
+      if (list && list.length > 0) {
+        setDrivers(list);
+        return;
+      }
+    } catch (e) {}
+
+    // Fallback: Busca direto da tabela delivery_drivers sem filtro restritivo de active
+    try {
+      const { data } = await supabase.from("delivery_drivers").select("*");
       setDrivers(data ?? []);
     } catch (err: any) {
       console.error("Erro ao carregar motoristas:", err);
@@ -213,12 +220,13 @@ function AdminRidesPage() {
 
   useEffect(() => {
     fetchRides();
-    fetchDrivers();
+    fetchDriversData();
 
     const channel = supabase
       .channel("admin-rides-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "ride_requests" }, () => {
         fetchRides();
+        fetchDriversData();
       })
       .subscribe();
 
@@ -285,23 +293,30 @@ function AdminRidesPage() {
     }
   };
 
-  // Motoristas online ordenados por proximidade (Mesmo algoritmo do painel de entregas)
-  const onlineDrivers = useMemo(() => {
-    return drivers.filter((d) => d.is_online || d.active);
+  // Motoristas disponíveis ordenados por status online e proximidade
+  const availableDrivers = useMemo(() => {
+    if (!drivers || drivers.length === 0) return [];
+    return [...drivers].sort((a, b) => {
+      const aOnline = (a.is_online || a.online) ? 1 : 0;
+      const bOnline = (b.is_online || b.online) ? 1 : 0;
+      return bOnline - aOnline;
+    });
   }, [drivers]);
 
   const getSortedDriversForRide = (ride: any) => {
     const rideLat = Number(ride.pickup_latitude || 0);
     const rideLon = Number(ride.pickup_longitude || 0);
 
-    return [...onlineDrivers].sort((a, b) => {
-      // Prioridade 1: Veículo correspondente
+    return [...availableDrivers].sort((a, b) => {
+      const aOnline = (a.is_online || a.online) ? 1 : 0;
+      const bOnline = (b.is_online || b.online) ? 1 : 0;
+      if (aOnline !== bOnline) return bOnline - aOnline;
+
       const aMatchesVehicle = (a.vehicle_type === ride.vehicle_type) || (a.vehicle_type === "taxi" && ride.vehicle_type === "taxi");
       const bMatchesVehicle = (b.vehicle_type === ride.vehicle_type) || (b.vehicle_type === "taxi" && ride.vehicle_type === "taxi");
       if (aMatchesVehicle && !bMatchesVehicle) return -1;
       if (!aMatchesVehicle && bMatchesVehicle) return 1;
 
-      // Prioridade 2: Distância por proximidade
       if (rideLat && rideLon && a.current_latitude && a.current_longitude && b.current_latitude && b.current_longitude) {
         const distA = calculateDistanceKm(rideLat, rideLon, Number(a.current_latitude), Number(a.current_longitude)) ?? 999;
         const distB = calculateDistanceKm(rideLat, rideLon, Number(b.current_latitude), Number(b.current_longitude)) ?? 999;
@@ -623,18 +638,19 @@ function AdminRidesPage() {
 
               <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Motoristas Parceiros Online ({onlineDrivers.length})
+                  Motoristas Cadastrados / Disponíveis ({availableDrivers.length})
                 </p>
-                {onlineDrivers.length === 0 ? (
+                {availableDrivers.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4 italic">
-                    Nenhum motorista online no momento.
+                    Nenhum motorista cadastrado no momento.
                   </p>
                 ) : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     {getSortedDriversForRide(dispatchRide).map((driver) => {
                       const rideLat = Number(dispatchRide.pickup_latitude || 0);
                       const rideLon = Number(dispatchRide.pickup_longitude || 0);
-                      const dist = calculateDistanceKm(rideLat, rideLon, Number(driver.current_latitude), Number(driver.current_longitude));
+                      const dist = calculateDistanceKm(rideLat, rideLon, Number(driver.current_latitude || driver.latitude), Number(driver.current_longitude || driver.longitude));
+                      const isOnline = driver.is_online || driver.online;
 
                       return (
                         <button
@@ -652,8 +668,19 @@ function AdminRidesPage() {
                                 {(driver.full_name || "?")[0]}
                               </div>
                               <div>
-                                <p className="text-xs font-bold text-foreground">{driver.full_name || "—"}</p>
-                                <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-bold text-foreground">{driver.full_name || "—"}</p>
+                                  {isOnline ? (
+                                    <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded-full">
+                                      ● Online
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.2 rounded-full">
+                                      ● Cadastrado
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold block">
                                   {driver.vehicle_type === "taxi" ? "🚗 Carro (Táxi)" : "🏍️ Moto Táxi"}
                                 </span>
                               </div>
