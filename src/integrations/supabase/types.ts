@@ -2183,9 +2183,11 @@ export type Database = {
           geometry: Json | null
           id: string
           is_active: boolean
+          mototaxi_rate_per_km: number | null
           name: string
           price: number
           sort_order: number
+          taxi_rate_per_km: number | null
           updated_at: string
         }
         Insert: {
@@ -2196,9 +2198,11 @@ export type Database = {
           geometry?: Json | null
           id?: string
           is_active?: boolean
+          mototaxi_rate_per_km?: number | null
           name: string
           price?: number
           sort_order?: number
+          taxi_rate_per_km?: number | null
           updated_at?: string
         }
         Update: {
@@ -2209,9 +2213,11 @@ export type Database = {
           geometry?: Json | null
           id?: string
           is_active?: boolean
+          mototaxi_rate_per_km?: number | null
           name?: string
           price?: number
           sort_order?: number
+          taxi_rate_per_km?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -2294,11 +2300,16 @@ export type Database = {
           created_at: string | null
           customer_name: string | null
           customer_phone: string | null
+          distance_km: number | null
           driver_id: string | null
           dropoff_address: string
+          dropoff_latitude: number | null
+          dropoff_longitude: number | null
           id: string
           notes: string | null
           pickup_address: string
+          pickup_latitude: number | null
+          pickup_longitude: number | null
           price: number | null
           status: string
           updated_at: string | null
@@ -2309,11 +2320,16 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          distance_km?: number | null
           driver_id?: string | null
           dropoff_address: string
+          dropoff_latitude?: number | null
+          dropoff_longitude?: number | null
           id?: string
           notes?: string | null
           pickup_address: string
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           price?: number | null
           status?: string
           updated_at?: string | null
@@ -2324,11 +2340,16 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          distance_km?: number | null
           driver_id?: string | null
           dropoff_address?: string
+          dropoff_latitude?: number | null
+          dropoff_longitude?: number | null
           id?: string
           notes?: string | null
           pickup_address?: string
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           price?: number | null
           status?: string
           updated_at?: string | null
