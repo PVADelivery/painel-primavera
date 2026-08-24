@@ -90,7 +90,18 @@ function DriversPage() {
   const handleDelete = async (driver: any) => {
     const driverId = driver.id;
     const userId = driver.user_id;
-    if (!confirm(`Tem certeza que deseja excluir o entregador "${driver.full_name || 'selecionado'}"?`)) return;
+    const driverName = driver.full_name;
+    if (!confirm(`Tem certeza que deseja excluir o entregador "${driverName || 'selecionado'}"?`)) return;
+
+    // Remove imediatamente da tela via Optimistic UI Update
+    qc.setQueryData(["drivers"], (old: any) => {
+      if (!Array.isArray(old)) return [];
+      return old.filter((d: any) => 
+        d.id !== driverId && 
+        d.user_id !== userId && 
+        (!driverName || (d.full_name || "").toLowerCase() !== driverName.toLowerCase())
+      );
+    });
 
     try {
       if (driverId) {
@@ -106,7 +117,6 @@ function DriversPage() {
       }
 
       toast.success("Entregador excluído com sucesso");
-      qc.invalidateQueries({ queryKey: ["drivers"] });
     } catch (err: any) {
       console.error("[handleDelete] Erro ao excluir entregador:", err);
       toast.error(err.message || "Erro ao excluir entregador");
