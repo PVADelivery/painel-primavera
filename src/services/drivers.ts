@@ -29,61 +29,32 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch user_roles for drivers/motoboys/entregadores/taxi
-  const { data: driverRoles } = await supabase
-    .from("user_roles")
-    .select("user_id, role");
-
-  const driverRoleKeywords = ["driver", "motoboy", "entregador", "taxi", "mototaxi"];
-
-  const roleDriverUserIds = (driverRoles || [])
-    .filter(r => {
-      const rRole = String(r.role || "").toLowerCase();
-      return driverRoleKeywords.some(k => rRole.includes(k));
-    })
-    .map(r => r.user_id)
-    .filter(Boolean);
-
-  // 3. Fetch all profiles and customers for maximum data recovery
+  // 2. Fetch all profiles and customers
   const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
     supabase.from("profiles").select("*"),
     supabase.from("customers").select("*"),
   ]);
 
-  const profileDriverUserIds = (allProfiles || [])
-    .filter(p => {
-      const pRole = String(p.role || "").toLowerCase();
-      const pStatus = String(p.status || "").toLowerCase();
-      const pUserId = p.user_id || p.id;
-      if (pRole === "customer" || pStatus === "deleted" || pStatus === "inactive") return false;
-      return (
-        driverRoleKeywords.some(k => pRole.includes(k)) ||
-        roleDriverUserIds.includes(pUserId)
-      );
-    })
-    .map(p => p.user_id || p.id)
-    .filter(Boolean);
-
-  const allDriverUserIds = Array.from(new Set([
-    ...(driversData || []).map(d => d.user_id || d.id),
-    ...roleDriverUserIds,
-    ...profileDriverUserIds
-  ])).filter(Boolean);
-
-  // Combine results
   const resultDrivers: DriverWithProfile[] = [];
   const processedUserIds = new Set<string>();
   const processedDriverIds = new Set<string>();
 
   for (const driver of (driversData || [])) {
     const raw = driver as any;
-    if (raw.status === "deleted" || raw.status === "inactive" || raw.is_active === false) {
+    if (raw.status === "deleted") {
       if (driver.user_id) processedUserIds.add(driver.user_id);
       if (driver.id) processedDriverIds.add(driver.id);
       continue;
     }
 
     const dUserId = driver.user_id || driver.id;
+    if (driver.user_id) processedUserIds.add(driver.user_id);
+    if (driver.id) processedDriverIds.add(driver.id);
+    if (dUserId) {
+      processedUserIds.add(dUserId);
+      processedDriverIds.add(dUserId);
+    }
+
     const dName = (raw.full_name || raw.name || "").trim().toLowerCase();
 
     const profile = allProfiles?.find(p => 
@@ -92,24 +63,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       (dName && (p.full_name || "").trim().toLowerCase() === dName)
     );
 
-    if (profile && (profile.role === "customer" || profile.status === "deleted" || profile.status === "inactive")) {
-      if (driver.user_id) processedUserIds.add(driver.user_id);
-      if (driver.id) processedDriverIds.add(driver.id);
-      continue;
-    }
-
-    if (driver.user_id) processedUserIds.add(driver.user_id);
-    if (driver.id) processedDriverIds.add(driver.id);
-    if (dUserId) {
-      processedUserIds.add(dUserId);
-      processedDriverIds.add(dUserId);
-    }
-
     const customer = allCustomers?.find(c =>
       (c.user_id && (c.user_id === driver.user_id || c.user_id === driver.id)) ||
       (c.id && (c.id === driver.user_id || c.id === driver.id)) ||
       (dName && (c.name || "").trim().toLowerCase() === dName)
     );
+
     resultDrivers.push({
       id: driver.id || driver.user_id,
       user_id: driver.user_id || driver.id,
@@ -139,38 +98,37 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     });
   }
 
-  // Add any real driver user present in profiles or user_roles but not yet in delivery_drivers
-  for (const userId of allDriverUserIds) {
-    if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
-      const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
-      if (profile && (profile.role === "customer" || profile.status === "deleted" || profile.status === "inactive")) {
-        continue;
-      }
-      const customer = allCustomers?.find(c => c.user_id === userId || c.id === userId);
-      const name = profile?.full_name || customer?.name || "";
-      
-      const isDummySeed = /^driver\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i.test(name.trim());
-      if (isDummySeed) continue;
+  // 3. Adiciona perfis com role de motorista que ainda não estão em delivery_drivers
+  for (const profile of (allProfiles || [])) {
+    const pUserId = profile.user_id || profile.id;
+    const pRole = String(profile.role || "").toLowerCase();
+    const pStatus = String(profile.status || "").toLowerCase();
+    if (!pUserId || pStatus === "deleted" || pRole === "customer") continue;
+    if (processedUserIds.has(pUserId) || processedDriverIds.has(pUserId)) continue;
+
+    if (["driver", "motoboy", "entregador", "taxi", "mototaxi"].some(k => pRole.includes(k))) {
+      const name = profile.full_name || "Entregador Cadastrado";
+      if (/^driver\s+(one|two|three|four|five|\d+)/i.test(name.trim())) continue;
 
       resultDrivers.push({
-        id: userId,
-        user_id: userId,
-        full_name: name || "Entregador Cadastrado",
-        phone: profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
-        document: profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
-        avatar_url: profile?.avatar_url || null,
-        vehicle_type: profile?.vehicle || profile?.vehicle_type || "moto",
-        is_online: profile?.is_online ?? profile?.online ?? false,
+        id: pUserId,
+        user_id: pUserId,
+        full_name: name,
+        phone: profile.phone || profile.whatsapp || profile.celular || null,
+        document: profile.document || profile.cpf || profile.cnpj || null,
+        avatar_url: profile.avatar_url || null,
+        vehicle_type: profile.vehicle || profile.vehicle_type || "moto",
+        is_online: profile.is_online ?? profile.online ?? false,
         rating: 5.0,
-        latitude: (profile?.latitude !== null && profile?.latitude !== undefined && !isNaN(Number(profile?.latitude))) ? Number(profile.latitude) : null,
-        longitude: (profile?.longitude !== null && profile?.longitude !== undefined && !isNaN(Number(profile?.longitude))) ? Number(profile.longitude) : null,
+        latitude: (profile.latitude !== null && profile.latitude !== undefined && !isNaN(Number(profile.latitude))) ? Number(profile.latitude) : null,
+        longitude: (profile.longitude !== null && profile.longitude !== undefined && !isNaN(Number(profile.longitude))) ? Number(profile.longitude) : null,
         status: "active",
         commission_rate: 25.00,
         service_types: [],
-        created_at: profile?.created_at || new Date().toISOString(),
+        created_at: profile.created_at || new Date().toISOString(),
       });
-      processedUserIds.add(userId);
-      processedDriverIds.add(userId);
+      processedUserIds.add(pUserId);
+      processedDriverIds.add(pUserId);
     }
   }
 
