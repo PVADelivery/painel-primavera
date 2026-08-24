@@ -53,7 +53,9 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   const profileDriverUserIds = (allProfiles || [])
     .filter(p => {
       const pRole = String(p.role || "").toLowerCase();
+      const pStatus = String(p.status || "").toLowerCase();
       const pUserId = p.user_id || p.id;
+      if (pRole === "customer" || pStatus === "deleted" || pStatus === "inactive") return false;
       return (
         driverRoleKeywords.some(k => pRole.includes(k)) ||
         roleDriverUserIds.includes(pUserId)
@@ -80,14 +82,8 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       if (driver.id) processedDriverIds.add(driver.id);
       continue;
     }
-    const dUserId = driver.user_id || driver.id;
-    if (driver.user_id) processedUserIds.add(driver.user_id);
-    if (driver.id) processedDriverIds.add(driver.id);
-    if (dUserId) {
-      processedUserIds.add(dUserId);
-      processedDriverIds.add(dUserId);
-    }
 
+    const dUserId = driver.user_id || driver.id;
     const dName = (raw.full_name || raw.name || "").trim().toLowerCase();
 
     const profile = allProfiles?.find(p => 
@@ -95,6 +91,20 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       (p.id && (p.id === driver.user_id || p.id === driver.id)) ||
       (dName && (p.full_name || "").trim().toLowerCase() === dName)
     );
+
+    if (profile && (profile.role === "customer" || profile.status === "deleted" || profile.status === "inactive")) {
+      if (driver.user_id) processedUserIds.add(driver.user_id);
+      if (driver.id) processedDriverIds.add(driver.id);
+      continue;
+    }
+
+    if (driver.user_id) processedUserIds.add(driver.user_id);
+    if (driver.id) processedDriverIds.add(driver.id);
+    if (dUserId) {
+      processedUserIds.add(dUserId);
+      processedDriverIds.add(dUserId);
+    }
+
     const customer = allCustomers?.find(c =>
       (c.user_id && (c.user_id === driver.user_id || c.user_id === driver.id)) ||
       (c.id && (c.id === driver.user_id || c.id === driver.id)) ||
