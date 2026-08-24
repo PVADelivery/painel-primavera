@@ -93,32 +93,16 @@ function DriversPage() {
     if (!confirm(`Tem certeza que deseja excluir o entregador "${driver.full_name || 'selecionado'}"?`)) return;
 
     try {
-      // 1. Tentar deletar da tabela delivery_drivers por id e user_id
-      let delError: any = null;
       if (driverId) {
-        const { error } = await supabase.from("delivery_drivers").delete().eq("id", driverId);
-        delError = error;
+        await supabase.from("delivery_drivers").update({ status: "deleted", is_online: false } as any).eq("id", driverId);
+        await supabase.from("delivery_drivers").delete().eq("id", driverId);
       }
-      if (delError && userId) {
-        const { error: err2 } = await supabase.from("delivery_drivers").delete().eq("user_id", userId);
-        delError = err2;
-      }
-      
-      // Se falhou por Foreign Key constraint (ex: vinculado a entregas/corridas), marcar como desativado / inativo
-      if (delError) {
-        console.warn("[handleDelete] Falha ao deletar diretamente, tentando desativar:", delError.message);
-        if (driverId) {
-          await supabase.from("delivery_drivers").update({ is_online: false, status: "inactive" } as any).eq("id", driverId);
-        }
-        if (userId) {
-          await supabase.from("delivery_drivers").update({ is_online: false, status: "inactive" } as any).eq("user_id", userId);
-        }
-      }
-
-      // 2. Limpar a role de motorista da tabela profiles ou user_roles para desvincular do painel
       if (userId) {
-        await supabase.from("profiles").update({ role: "customer" }).eq("user_id", userId);
-        await supabase.from("profiles").update({ role: "customer" }).eq("id", userId);
+        await supabase.from("delivery_drivers").update({ status: "deleted", is_online: false } as any).eq("user_id", userId);
+        await supabase.from("delivery_drivers").delete().eq("user_id", userId);
+        await supabase.from("user_roles").delete().eq("user_id", userId);
+        await supabase.from("profiles").update({ role: "customer", status: "deleted" } as any).eq("user_id", userId);
+        await supabase.from("profiles").update({ role: "customer", status: "deleted" } as any).eq("id", userId);
       }
 
       toast.success("Entregador excluído com sucesso");

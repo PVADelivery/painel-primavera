@@ -74,6 +74,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   const processedDriverIds = new Set<string>();
 
   for (const driver of (driversData || [])) {
+    const raw = driver as any;
+    if (raw.status === "deleted" || raw.status === "inactive" || raw.is_active === false) {
+      if (driver.user_id) processedUserIds.add(driver.user_id);
+      if (driver.id) processedDriverIds.add(driver.id);
+      continue;
+    }
     const dUserId = driver.user_id || driver.id;
     if (driver.user_id) processedUserIds.add(driver.user_id);
     if (driver.id) processedDriverIds.add(driver.id);
@@ -82,7 +88,6 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       processedDriverIds.add(dUserId);
     }
 
-    const raw = driver as any;
     const dName = (raw.full_name || raw.name || "").trim().toLowerCase();
 
     const profile = allProfiles?.find(p => 
@@ -115,11 +120,9 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       longitude: (raw.longitude !== null && raw.longitude !== undefined && raw.longitude !== "" && !isNaN(Number(raw.longitude))) 
         ? Number(raw.longitude) 
         : ((raw.current_longitude !== null && raw.current_longitude !== undefined && raw.current_longitude !== "" && !isNaN(Number(raw.current_longitude))) 
-          ? Number(raw.current_longitude) 
-          : ((profile?.longitude !== null && profile?.longitude !== undefined && !isNaN(Number(profile?.longitude))) 
-            ? Number(profile.longitude) 
-            : null)),
-      status: raw.status || (raw.is_active === false ? "suspended" : "active"),
+          ? Number(profile.longitude) 
+          : null),
+      status: raw.status || "active",
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 25.00,
       service_types: raw.service_types || [],
       created_at: driver.created_at || profile?.created_at,
@@ -127,10 +130,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   }
 
   // Add any real driver user present in profiles or user_roles but not yet in delivery_drivers
-  // (Filter out dummy sample profiles like "Driver One", "Driver Four", "Driver Five")
   for (const userId of allDriverUserIds) {
     if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
       const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
+      if (profile && (profile.role === "customer" || profile.status === "deleted" || profile.status === "inactive")) {
+        continue;
+      }
       const customer = allCustomers?.find(c => c.user_id === userId || c.id === userId);
       const name = profile?.full_name || customer?.name || "";
       
