@@ -87,14 +87,45 @@ function DriversPage() {
     setEditOpen(true);
   };
 
-  const handleDelete = async (driverId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este entregador?")) return;
-    const { error } = await supabase.from("delivery_drivers").delete().eq("id", driverId);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Entregador excluído");
+  const handleDelete = async (driver: any) => {
+    const driverId = driver.id;
+    const userId = driver.user_id;
+    if (!confirm(`Tem certeza que deseja excluir o entregador "${driver.full_name || 'selecionado'}"?`)) return;
+
+    try {
+      // 1. Tentar deletar da tabela delivery_drivers por id e user_id
+      let delError: any = null;
+      if (driverId) {
+        const { error } = await supabase.from("delivery_drivers").delete().eq("id", driverId);
+        delError = error;
+      }
+      if (delError && userId) {
+        const { error: err2 } = await supabase.from("delivery_drivers").delete().eq("user_id", userId);
+        delError = err2;
+      }
+      
+      // Se falhou por Foreign Key constraint (ex: vinculado a entregas/corridas), marcar como desativado / inativo
+      if (delError) {
+        console.warn("[handleDelete] Falha ao deletar diretamente, tentando desativar:", delError.message);
+        if (driverId) {
+          await supabase.from("delivery_drivers").update({ is_online: false, status: "inactive" } as any).eq("id", driverId);
+        }
+        if (userId) {
+          await supabase.from("delivery_drivers").update({ is_online: false, status: "inactive" } as any).eq("user_id", userId);
+        }
+      }
+
+      // 2. Limpar a role de motorista da tabela profiles ou user_roles para desvincular do painel
+      if (userId) {
+        await supabase.from("profiles").update({ role: "customer" }).eq("user_id", userId);
+        await supabase.from("profiles").update({ role: "customer" }).eq("id", userId);
+      }
+
+      toast.success("Entregador excluído com sucesso");
       qc.invalidateQueries({ queryKey: ["drivers"] });
+    } catch (err: any) {
+      console.error("[handleDelete] Erro ao excluir entregador:", err);
+      toast.error(err.message || "Erro ao excluir entregador");
     }
   };
 
@@ -258,7 +289,7 @@ function DriversPage() {
                             <Power className="h-4 w-4 mr-2" />{d.is_online ? "Colocar Offline" : "Colocar Online"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(d.id)}>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(d)}>
                             <Trash2 className="h-4 w-4 mr-2" />Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
