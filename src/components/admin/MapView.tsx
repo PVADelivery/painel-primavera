@@ -173,8 +173,9 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
               align-items: center;
               justify-content: center;
               overflow: hidden;
+              font-size: 18px;
             ">
-              <img src="/logo.png" style="width: 22px; height: 22px; object-fit: contain;" alt="M" />
+              <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚖' : '🏍️'}</span>
             </div>
           </div>
           
@@ -184,7 +185,8 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
             bottom: -25px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(4px);
             color: white;
             padding: 2px 8px;
             border-radius: 6px;
@@ -213,8 +215,8 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
           border-radius: 20px;
         ">
           <div style="display: flex; items-center; gap: 12px; margin-bottom: 12px;">
-            <div style="width: 48px; height: 48px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center;">
-              <img src="/logo.png" style="width: 28px; height: 28px; object-fit: contain;" />
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+              <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚖' : '🏍️'}</span>
             </div>
             <div>
               <div style="font-size: 15px; font-weight: 800; color: #111827;">${escapeHtml(driver.full_name || "Entregador")}</div>
