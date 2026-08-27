@@ -94,8 +94,13 @@ function ReportsPage() {
     type: "expense",
     date: new Date().toISOString().split("T")[0],
     origin: ""
-  });
   const [editingCf, setEditingCf] = useState(null);
+  // Filtros avançados do Fluxo de Caixa
+  const [cfFilterType, setCfFilterType] = useState<"all" | "income" | "expense" | "receivable" | "payable">("all");
+  const [cfSearch, setCfSearch] = useState("");
+  const [cfCategoryFilter, setCfCategoryFilter] = useState("all");
+  const [cfOriginFilter, setCfOriginFilter] = useState("all");
+  const [cfPeriodFilter, setCfPeriodFilter] = useState("all");
 
   // Modal de Pagamento de Repasse ao Entregador
   const [payDriverDialogData, setPayDriverDialogData] = useState<{ name: string; id: string; due: number; deliveries: number } | null>(null);
@@ -586,6 +591,72 @@ function ReportsPage() {
       receivable,
       payable
     };
+  }, [cashFlows]);
+
+  const filteredCashFlows = useMemo(() => {
+    return cashFlows.filter((item: any) => {
+      // 1. Filtro por tipo clicado nos cards de resumo
+      if (cfFilterType === "income" && item.type !== "income") return false;
+      if (cfFilterType === "expense" && item.type !== "expense") return false;
+      if (cfFilterType === "receivable" && item.type !== "receivable" && item.type !== "direito") return false;
+      if (cfFilterType === "payable" && item.type !== "payable" && item.type !== "obrigacao") return false;
+
+      // 2. Filtro por busca de texto (descrição, categoria, origem)
+      if (cfSearch.trim()) {
+        const query = cfSearch.toLowerCase();
+        const descMatch = (item.description || "").toLowerCase().includes(query);
+        const catMatch = (item.category || "").toLowerCase().includes(query);
+        const originMatch = (item.origin || "").toLowerCase().includes(query);
+        if (!descMatch && !catMatch && !originMatch) return false;
+      }
+
+      // 3. Filtro por categoria
+      if (cfCategoryFilter !== "all" && item.category !== cfCategoryFilter) return false;
+
+      // 4. Filtro por forma/origem
+      if (cfOriginFilter !== "all" && item.origin !== cfOriginFilter) return false;
+
+      // 5. Filtro por período de data
+      if (cfPeriodFilter !== "all" && item.date) {
+        const itemDate = new Date(item.date + "T00:00:00");
+        const now = new Date();
+        if (cfPeriodFilter === "today") {
+          const todayStr = now.toISOString().split("T")[0];
+          if (item.date !== todayStr) return false;
+        } else if (cfPeriodFilter === "yesterday") {
+          const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          const yestStr = yest.toISOString().split("T")[0];
+          if (item.date !== yestStr) return false;
+        } else if (cfPeriodFilter === "7d") {
+          const past7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (itemDate < past7) return false;
+        } else if (cfPeriodFilter === "month") {
+          if (itemDate.getMonth() !== now.getMonth() || itemDate.getFullYear() !== now.getFullYear()) return false;
+        } else if (cfPeriodFilter === "last_month") {
+          const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+          const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+          if (itemDate.getMonth() !== lastMonth || itemDate.getFullYear() !== lastMonthYear) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [cashFlows, cfFilterType, cfSearch, cfCategoryFilter, cfOriginFilter, cfPeriodFilter]);
+
+  const allUniqueCategories = useMemo(() => {
+    const set = new Set<string>();
+    cashFlows.forEach((c: any) => {
+      if (c.category) set.add(c.category);
+    });
+    return Array.from(set).sort();
+  }, [cashFlows]);
+
+  const allUniqueOrigins = useMemo(() => {
+    const set = new Set<string>();
+    cashFlows.forEach((c: any) => {
+      if (c.origin) set.add(c.origin);
+    });
+    return Array.from(set).sort();
   }, [cashFlows]);
 
   const handleAddCashFlow = async (e) => {
@@ -1247,48 +1318,101 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="cashflow">
-          {/* Top 5 Summary Cards */}
+          {/* Top 5 Summary Cards — Botões Interativos de Filtro Rápido */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6">
-            <Card className="border-green-500/30 bg-green-500/5">
+            {/* 1. Total de Entradas */}
+            <Card
+              onClick={() => setCfFilterType(prev => prev === 'income' ? 'all' : 'income')}
+              className={`cursor-pointer transition-all duration-200 select-none hover:scale-[1.02] active:scale-[0.98] ${
+                cfFilterType === 'income'
+                  ? 'border-green-500 bg-green-500/20 ring-2 ring-green-500 shadow-md shadow-green-500/10'
+                  : 'border-green-500/30 bg-green-500/5 hover:border-green-500/60'
+              }`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-green-700 dark:text-green-400">Total de Entradas</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                  <span>Total de Entradas</span>
+                  {cfFilterType === 'income' && (
+                    <span className="text-[9px] bg-green-500 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">Filtrando</span>
+                  )}
+                </CardTitle>
                 <ArrowUpCircle className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-black text-green-600 dark:text-green-400">
                   {cfStats.income.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-semibold">Toque para filtrar entradas</p>
               </CardContent>
             </Card>
 
-            <Card className="border-red-500/30 bg-red-500/5">
+            {/* 2. Total de Saídas */}
+            <Card
+              onClick={() => setCfFilterType(prev => prev === 'expense' ? 'all' : 'expense')}
+              className={`cursor-pointer transition-all duration-200 select-none hover:scale-[1.02] active:scale-[0.98] ${
+                cfFilterType === 'expense'
+                  ? 'border-red-500 bg-red-500/20 ring-2 ring-red-500 shadow-md shadow-red-500/10'
+                  : 'border-red-500/30 bg-red-500/5 hover:border-red-500/60'
+              }`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-400">Total de Saídas</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                  <span>Total de Saídas</span>
+                  {cfFilterType === 'expense' && (
+                    <span className="text-[9px] bg-red-500 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">Filtrando</span>
+                  )}
+                </CardTitle>
                 <ArrowDownCircle className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-black text-red-600 dark:text-red-400">
                   {cfStats.expense.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-semibold">Toque para filtrar saídas</p>
               </CardContent>
             </Card>
 
-            <Card className="border-blue-500/30 bg-blue-500/5">
+            {/* 3. Saldo Líquido */}
+            <Card
+              onClick={() => setCfFilterType('all')}
+              className={`cursor-pointer transition-all duration-200 select-none hover:scale-[1.02] active:scale-[0.98] ${
+                cfFilterType === 'all'
+                  ? 'border-blue-500 bg-blue-500/20 ring-2 ring-blue-500 shadow-md shadow-blue-500/10'
+                  : 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/60'
+              }`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">Saldo Líquido</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                  <span>Saldo Líquido</span>
+                  {cfFilterType === 'all' && (
+                    <span className="text-[9px] bg-blue-500 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">Todos</span>
+                  )}
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
                 <div className={`text-xl font-black ${cfStats.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {cfStats.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-semibold">Toque para exibir todos</p>
               </CardContent>
             </Card>
 
-            <Card className="border-amber-500/30 bg-amber-500/5">
+            {/* 4. Direitos + */}
+            <Card
+              onClick={() => setCfFilterType(prev => prev === 'receivable' ? 'all' : 'receivable')}
+              className={`cursor-pointer transition-all duration-200 select-none hover:scale-[1.02] active:scale-[0.98] ${
+                cfFilterType === 'receivable'
+                  ? 'border-amber-500 bg-amber-500/20 ring-2 ring-amber-500 shadow-md shadow-amber-500/10'
+                  : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60'
+              }`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                   <span>Direitos</span> <span className="text-amber-500 font-black">+</span>
+                  {cfFilterType === 'receivable' && (
+                    <span className="text-[9px] bg-amber-500 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">Filtrando</span>
+                  )}
                 </CardTitle>
                 <ClockIcon className="h-4 w-4 text-amber-500" />
               </CardHeader>
@@ -1300,10 +1424,21 @@ function ReportsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-rose-500/30 bg-rose-500/5">
+            {/* 5. Obrigações - */}
+            <Card
+              onClick={() => setCfFilterType(prev => prev === 'payable' ? 'all' : 'payable')}
+              className={`cursor-pointer transition-all duration-200 select-none hover:scale-[1.02] active:scale-[0.98] ${
+                cfFilterType === 'payable'
+                  ? 'border-rose-500 bg-rose-500/20 ring-2 ring-rose-500 shadow-md shadow-rose-500/10'
+                  : 'border-rose-500/30 bg-rose-500/5 hover:border-rose-500/60'
+              }`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
                   <span>Obrigações</span> <span className="text-rose-500 font-black">-</span>
+                  {cfFilterType === 'payable' && (
+                    <span className="text-[9px] bg-rose-500 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">Filtrando</span>
+                  )}
                 </CardTitle>
                 <AlertCircle className="h-4 w-4 text-rose-500" />
               </CardHeader>
@@ -1426,20 +1561,143 @@ function ReportsPage() {
 
             <div className="md:col-span-2">
               <Card className="h-full">
-                <CardHeader>
-                  <CardTitle>Histórico de Movimentações</CardTitle>
-                  <CardDescription>Lançamentos recentes da plataforma</CardDescription>
+                <CardHeader className="border-b pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg font-bold">Histórico de Movimentações</CardTitle>
+                        <span className="text-xs bg-primary/15 text-primary font-bold px-2 py-0.5 rounded-full">
+                          {filteredCashFlows.length} de {cashFlows.length}
+                        </span>
+                      </div>
+                      <CardDescription className="text-xs mt-0.5">
+                        {cfFilterType === 'income' && "Exibindo apenas: Entradas (Receitas)"}
+                        {cfFilterType === 'expense' && "Exibindo apenas: Saídas (Despesas)"}
+                        {cfFilterType === 'receivable' && "Exibindo apenas: Direitos a Receber (+)"}
+                        {cfFilterType === 'payable' && "Exibindo apenas: Obrigações a Pagar (-)"}
+                        {cfFilterType === 'all' && "Lançamentos e movimentações da plataforma"}
+                      </CardDescription>
+                    </div>
+
+                    {(cfFilterType !== 'all' || cfSearch || cfCategoryFilter !== 'all' || cfOriginFilter !== 'all' || cfPeriodFilter !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCfFilterType('all');
+                          setCfSearch('');
+                          setCfCategoryFilter('all');
+                          setCfOriginFilter('all');
+                          setCfPeriodFilter('all');
+                        }}
+                        className="h-8 px-3 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 gap-1.5 self-start sm:self-auto"
+                      >
+                        <X className="h-3.5 w-3.5" /> Limpar Filtros
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* ── BARRA DE FILTROS DO FLUXO DE CAIXA ── */}
+                  <div className="mt-4 space-y-3">
+                    {/* Campo de Busca Rápida */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por descrição, motoboy, loja, categoria ou forma..."
+                        value={cfSearch}
+                        onChange={(e) => setCfSearch(e.target.value)}
+                        className="pl-9 h-10 text-xs font-medium rounded-xl"
+                      />
+                      {cfSearch && (
+                        <button
+                          onClick={() => setCfSearch('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtros em Grid (Categoria, Forma de Pagamento, Período) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {/* Filtro de Categoria */}
+                      <div>
+                        <Select value={cfCategoryFilter} onValueChange={setCfCategoryFilter}>
+                          <SelectTrigger className="h-9 text-xs rounded-xl">
+                            <SelectValue placeholder="Todas as Categorias" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas as Categorias</SelectItem>
+                            {allUniqueCategories.map((cat) => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Filtro de Origem / Forma */}
+                      <div>
+                        <Select value={cfOriginFilter} onValueChange={setCfOriginFilter}>
+                          <SelectTrigger className="h-9 text-xs rounded-xl">
+                            <SelectValue placeholder="Todas as Formas" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas as Formas / Origens</SelectItem>
+                            {allUniqueOrigins.map((orig) => (
+                              <SelectItem key={orig} value={orig}>{orig}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Filtro de Período */}
+                      <div>
+                        <Select value={cfPeriodFilter} onValueChange={setCfPeriodFilter}>
+                          <SelectTrigger className="h-9 text-xs rounded-xl">
+                            <SelectValue placeholder="Todo o Período" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todo o Histórico</SelectItem>
+                            <SelectItem value="today">Hoje</SelectItem>
+                            <SelectItem value="yesterday">Ontem</SelectItem>
+                            <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                            <SelectItem value="month">Este Mês</SelectItem>
+                            <SelectItem value="last_month">Mês Passado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-6">
+
+                <CardContent className="p-0 sm:p-6 pt-4">
                   {isLoadingCF ? (
                     <div className="flex justify-center p-8 text-muted-foreground">Carregando fluxo de caixa...</div>
-                  ) : cashFlows.length === 0 ? (
+                  ) : filteredCashFlows.length === 0 ? (
                     <div className="text-center p-12 text-muted-foreground border-2 border-dashed rounded-2xl mx-4 sm:mx-0">
-                      Nenhum lançamento encontrado.
+                      <Filter className="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" />
+                      <p className="font-bold text-foreground">Nenhum lançamento encontrado para os filtros aplicados.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Tente remover os filtros ou buscar por outro termo.</p>
+                      {(cfFilterType !== 'all' || cfSearch || cfCategoryFilter !== 'all' || cfOriginFilter !== 'all' || cfPeriodFilter !== 'all') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCfFilterType('all');
+                            setCfSearch('');
+                            setCfCategoryFilter('all');
+                            setCfOriginFilter('all');
+                            setCfPeriodFilter('all');
+                          }}
+                          className="mt-4 font-bold rounded-xl text-xs"
+                        >
+                          Limpar Todos os Filtros
+                        </Button>
+                      )}
                     </div>
                   ) : (
-                    <div className="space-y-3 sm:px-0 px-2">
-                      {cashFlows.map((item: any) => {
+                    <div className="space-y-3 sm:px-0 px-2 max-h-[750px] overflow-y-auto pr-1">
+                      {filteredCashFlows.map((item: any) => {
                         const details = getCfTypeDetails(item.type);
                         const IconComp = details.Icon;
                         return (
