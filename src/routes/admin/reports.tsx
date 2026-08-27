@@ -94,7 +94,9 @@ function ReportsPage() {
     type: "expense",
     date: new Date().toISOString().split("T")[0],
     origin: ""
+  });
   const [editingCf, setEditingCf] = useState(null);
+
   // Filtros avançados do Fluxo de Caixa
   const [cfFilterType, setCfFilterType] = useState<"all" | "income" | "expense" | "receivable" | "payable">("all");
   const [cfSearch, setCfSearch] = useState("");
