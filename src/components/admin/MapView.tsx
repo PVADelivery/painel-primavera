@@ -141,7 +141,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
           user-select: none;
           transition: transform 0.2s;
         " onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
-          <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚖' : '🏍️'}</span>
+          <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚕' : '🏍️'}</span>
           
           <!-- Tooltip (Small and fast) -->
           <div style="
@@ -173,7 +173,7 @@ export function MapView({ centerCity, darkTheme = false }: MapViewProps) {
         ">
           <div style="display: flex; items-center; gap: 12px; margin-bottom: 12px;">
             <div style="width: 48px; height: 48px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 24px;">
-              <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚖' : '🏍️'}</span>
+              <span>${(driver.vehicle_type || '').toLowerCase().includes('taxi') || (driver.vehicle_type || '').toLowerCase().includes('car') ? '🚕' : '🏍️'}</span>
             </div>
             <div>
               <div style="font-size: 15px; font-weight: 800; color: #111827;">${escapeHtml(driver.full_name || "Entregador")}</div>
