@@ -717,16 +717,49 @@ function ReportsPage() {
     }
   };
 
+  // Controle de Abas Sincronizado com a URL (ex: ?tab=creditos ou ?tab=customer_credits)
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("tab");
+      if (t === "creditos" || t === "customer_credits" || t === "cashflow" || t === "geral") return t;
+    }
+    return "geral";
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("tab");
+      if (t && (t === "creditos" || t === "customer_credits" || t === "cashflow" || t === "geral")) {
+        setActiveTab(t);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", val);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
   return (
     <AdminLayout>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">Financeiro / Relatórios</h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">Análise de dados e exportação</p>
+      <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-foreground">Financeiro / Relatórios</h1>
+          <p className="text-sm text-muted-foreground">Análise de dados e exportação</p>
         </div>
+
         <Button
           onClick={() => {
-            if (driverBreakdown.length > 0) {
+            if (driverBreakdown && driverBreakdown.length > 0) {
               const firstDrv = driverBreakdown[0];
               openPayDriverModal({ name: firstDrv.name, id: firstDrv.id || "", due: firstDrv.due, deliveries: firstDrv.deliveries });
             } else {
@@ -740,7 +773,7 @@ function ReportsPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="geral" className="w-full min-w-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
         <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex h-auto w-max min-w-full flex-nowrap gap-1">
             <TabsTrigger value="geral" className="whitespace-nowrap text-xs sm:text-sm">
@@ -2037,6 +2070,7 @@ function ReportsPage() {
           </DialogContent>
         </Dialog>
       </Tabs>
+      </div>
     </AdminLayout>
   );
 }

@@ -167,10 +167,115 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     }
   };
 
-  const isLoading = loadingCompanies || loadingCredits;
+  const { data: creditRequests = [] } = useCreditPurchaseRequestsAdmin();
+  const approveCreditReq = useApproveCreditPurchaseRequest();
+  const rejectCreditReq = useRejectCreditPurchaseRequest();
+
+  const pendingCreditRequests = useMemo(
+    () => creditRequests.filter((r) => r.status === "pending"),
+    [creditRequests]
+  );
+
+  const handleApprove = async (req: any) => {
+    const compName = req.companies?.name || companyById.get(req.company_id)?.name || "Loja";
+    try {
+      await approveCreditReq.mutateAsync({
+        id: req.id,
+        company_id: req.company_id,
+        amount: Number(req.amount),
+        notes: req.notes,
+        payment_method: "Pix",
+        company_name: compName,
+      });
+      toast.success(`Solicitação de ${brl(req.amount)} para ${compName} aprovada com sucesso!`);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao aprovar solicitação.");
+    }
+  };
+
+  const handleReject = async (reqId: string) => {
+    try {
+      await rejectCreditReq.mutateAsync(reqId);
+      toast.info("Solicitação de recarga recusada.");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao recusar solicitação.");
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* ── SOLICITAÇÕES PENDENTES DE RECARGA DE LOJAS ── */}
+      {pendingCreditRequests.length > 0 && (
+        <Card className="border-2 border-amber-500/50 bg-amber-500/10 shadow-lg animate-pulse-subtle">
+          <CardHeader className="pb-3 border-b border-amber-500/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-black flex items-center justify-center font-black text-xs">
+                  {pendingCreditRequests.length}
+                </div>
+                <div>
+                  <CardTitle className="text-base font-black text-amber-900 dark:text-amber-300">
+                    Solicitações de Recarga de Créditos de Lojas Pendentes
+                  </CardTitle>
+                  <CardDescription className="text-xs text-amber-800 dark:text-amber-400 font-medium">
+                    Lojistas aguardando aprovação e liberação de saldo no painel
+                  </CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 divide-y divide-amber-500/20">
+            {pendingCreditRequests.map((req) => {
+              const comp = req.companies || companyById.get(req.company_id);
+              return (
+                <div
+                  key={req.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-3 hover:bg-amber-500/5 rounded-2xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-black text-sm text-amber-900 dark:text-amber-300 shrink-0">
+                      {comp?.name ? comp.name.charAt(0).toUpperCase() : "L"}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-foreground leading-tight">
+                        {comp?.name || "Loja do Sistema"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Solicitou: <strong className="text-foreground text-sm font-black">{brl(req.amount)}</strong>
+                        {req.notes && ` • Observação: "${req.notes}"`}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Em: {new Date(req.created_at).toLocaleDateString("pt-BR")} às {new Date(req.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(req)}
+                      disabled={approveCreditReq.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs h-9 px-4 rounded-xl shadow-md gap-1.5"
+                    >
+                      ✓ Aprovar e Creditar {brl(req.amount)}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReject(req.id)}
+                      disabled={rejectCreditReq.isPending}
+                      className="border-destructive/40 text-destructive hover:bg-destructive/10 font-bold text-xs h-9 px-3 rounded-xl"
+                    >
+                      ✕ Recusar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Créditos em circulação" value={brl(totals.balance)} sub={`${rows.length} lojas`} icon={Wallet} color="primary" />
