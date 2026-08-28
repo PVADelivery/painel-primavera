@@ -53,18 +53,17 @@ export function NotificationsPopover() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("orders")
-          .select("id, customer_name, total, status, created_at, company_id")
-          .in("status", ["pending", "confirmed"])
+          .select("*")
           .order("created_at", { ascending: false })
           .limit(20);
-        if (data) setPendingOrders(data);
+        if (data && !error) {
+          setPendingOrders(data.filter((o: any) => ["pending", "confirmed"].includes(o.status)));
+        }
       } catch {}
     };
     fetchOrders();
-    const interval = setInterval(fetchOrders, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   // 4. Busca corridas de passageiros pendentes
@@ -72,18 +71,17 @@ export function NotificationsPopover() {
   useEffect(() => {
     const fetchRides = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("ride_requests")
-          .select("id, customer_name, pickup_address, dropoff_address, price, status, created_at")
-          .in("status", ["pending", "searching"])
+          .select("*")
           .order("created_at", { ascending: false })
           .limit(20);
-        if (data) setPendingRides(data);
+        if (data && !error) {
+          setPendingRides(data.filter((r: any) => ["pending", "searching"].includes(r.status)));
+        }
       } catch {}
     };
     fetchRides();
-    const interval = setInterval(fetchRides, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   // Lista consolidada de todas as notificações do sistema
