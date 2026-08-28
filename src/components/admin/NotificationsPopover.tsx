@@ -55,7 +55,7 @@ export function NotificationsPopover() {
       try {
         const { data } = await supabase
           .from("orders")
-          .select("id, order_number, customer_name, total_amount, status, created_at, companies(name)")
+          .select("id, customer_name, total, status, created_at, company_id")
           .in("status", ["pending", "confirmed"])
           .order("created_at", { ascending: false })
           .limit(20);
@@ -63,7 +63,7 @@ export function NotificationsPopover() {
       } catch {}
     };
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
+    const interval = setInterval(fetchOrders, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -74,7 +74,7 @@ export function NotificationsPopover() {
       try {
         const { data } = await supabase
           .from("ride_requests")
-          .select("id, customer_name, origin_address, destination_address, total_price, status, created_at")
+          .select("id, customer_name, pickup_address, dropoff_address, price, status, created_at")
           .in("status", ["pending", "searching"])
           .order("created_at", { ascending: false })
           .limit(20);
@@ -82,7 +82,7 @@ export function NotificationsPopover() {
       } catch {}
     };
     fetchRides();
-    const interval = setInterval(fetchRides, 10000);
+    const interval = setInterval(fetchRides, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -130,14 +130,13 @@ export function NotificationsPopover() {
 
     // Notificações de Vendas de Lojas (Marketplace)
     pendingOrders.forEach((o) => {
-      const compName = o.companies?.name || "Loja Marketplace";
       list.push({
         id: `order-${o.id}`,
         rawId: o.id,
         category: "orders",
         type: "store_order",
-        title: `🛍️ Pedido no Marketplace (${compName})`,
-        message: `Cliente: ${o.customer_name || "Cliente"} • Total: ${brl(o.total_amount)}`,
+        title: `🛍️ Novo Pedido no Marketplace`,
+        message: `Cliente: ${o.customer_name || "Cliente"} • Total: ${brl(o.total || 0)}`,
         actionLabel: "Ver Vendas de Lojas",
         link: "/admin/store-sales",
         time: o.created_at,
@@ -155,7 +154,7 @@ export function NotificationsPopover() {
         category: "deliveries",
         type: "ride_request",
         title: `🚕 Nova Corrida Táxi / Moto`,
-        message: `Passageiro: ${r.customer_name || "Passageiro"} • Destino: ${r.destination_address || "Destino"}`,
+        message: `Passageiro: ${r.customer_name || "Passageiro"} • Destino: ${r.dropoff_address || r.pickup_address || "Destino"}`,
         actionLabel: "Ver Táxi & Moto",
         link: "/admin/rides",
         time: r.created_at,
