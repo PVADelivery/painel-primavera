@@ -2,8 +2,8 @@
 import { useMemo, useState } from "react";
 import {
   Wallet, TrendingUp, TrendingDown, Plus, Search, User,
-  ArrowUpCircle, ArrowDownCircle, Sparkles, History, Filter, CheckCircle2,
-  DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle,
+  Sparkles, History, Filter, CheckCircle2, Users,
+  DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,18 +39,20 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const { data: profiles = [], isLoading: loadingProfiles } = useAllCustomerProfiles();
   const addCreditsMutation = useAddCustomerCredits();
 
+  const [customerTab, setCustomerTab] = useState<"with_balance" | "all_clients">("with_balance");
   const [search, setSearch] = useState("");
   const [txSearch, setTxSearch] = useState("");
   const [txTypeFilter, setTxTypeFilter] = useState("all");
 
   // Modal de Recarga
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [rechargeForm, setRechargeForm] = useState({
     customerId: "",
     customerName: "",
     customerPhone: "",
-    paidAmount: "",
+    paidAmount: "100,00",
     bonusPercentage: 10,
     paymentMethod: "Pix",
     description: "",
@@ -66,17 +68,96 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     return { totalBalance, totalRecharged, totalBonus, totalSpent };
   }, [customerCredits]);
 
-  // Lista filtrada de carteiras
-  const filteredCustomers = useMemo(() => {
+  // Mapa de saldo de créditos por customer_id
+  const creditsByCustomerId = useMemo(() => {
+    const map = new Map<string, any>();
+    customerCredits.forEach((c) => {
+      if (c.customer_id) map.set(c.customer_id, c);
+    });
+    return map;
+  }, [customerCredits]);
+
+  // Lista combinada de todos os clientes do sistema
+  const allSystemCustomers = useMemo(() => {
+    const list: any[] = [];
+    const seen = new Set<string>();
+
+    // 1. Clientes com carteira
+    customerCredits.forEach((c) => {
+      const id = c.customer_id || c.id;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        list.push({
+          id,
+          customer_id: id,
+          name: c.customer_name || "Cliente",
+          phone: c.customer_phone || "",
+          balance: Number(c.balance || 0),
+          total_recharged: Number(c.total_recharged || 0),
+          total_spent: Number(c.total_spent || 0),
+          hasCreditAccount: true,
+        });
+      }
+    });
+
+    // 2. Perfis de usuários cadastrados
+    profiles.forEach((p) => {
+      const id = p.id;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        const cr = creditsByCustomerId.get(id);
+        list.push({
+          id,
+          customer_id: id,
+          name: p.name || p.full_name || "Cliente",
+          phone: p.phone || "",
+          email: p.email || "",
+          balance: Number(cr?.balance || 0),
+          total_recharged: Number(cr?.total_recharged || 0),
+          total_spent: Number(cr?.total_spent || 0),
+          hasCreditAccount: !!cr,
+        });
+      }
+    });
+
+    return list.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  }, [customerCredits, profiles, creditsByCustomerId]);
+
+  // Lista filtrada para a coluna esquerda
+  const displayCustomers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return customerCredits;
-    return customerCredits.filter(
+    const baseList = customerTab === "with_balance" && customerCredits.length > 0
+      ? customerCredits.map((c) => ({
+          id: c.customer_id || c.id,
+          customer_id: c.customer_id || c.id,
+          name: c.customer_name || "Cliente",
+          phone: c.customer_phone || "",
+          balance: Number(c.balance || 0),
+          total_spent: Number(c.total_spent || 0),
+        }))
+      : allSystemCustomers;
+
+    if (!q) return baseList;
+    return baseList.filter(
       (c) =>
-        c.customer_name?.toLowerCase().includes(q) ||
-        c.customer_phone?.toLowerCase().includes(q) ||
+        c.name?.toLowerCase().includes(q) ||
+        c.phone?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
         c.customer_id?.toLowerCase().includes(q)
     );
-  }, [customerCredits, search]);
+  }, [customerTab, customerCredits, allSystemCustomers, search]);
+
+  // Sugestões de busca dentro do modal de recarga
+  const modalCustomerSuggestions = useMemo(() => {
+    const q = clientSearchQuery.trim().toLowerCase();
+    if (!q) return allSystemCustomers.slice(0, 15);
+    return allSystemCustomers.filter(
+      (c) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.phone?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q)
+    ).slice(0, 15);
+  }, [allSystemCustomers, clientSearchQuery]);
 
   // Lista filtrada de transações
   const filteredTransactions = useMemo(() => {
@@ -95,11 +176,16 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
 
   // Abre modal de recarga para um cliente específico
   const handleOpenRechargeFor = (customer: any) => {
+    const cid = customer.customer_id || customer.id || crypto.randomUUID();
+    const cname = customer.name || customer.customer_name || customer.full_name || "Cliente";
+    const cphone = customer.phone || customer.customer_phone || "";
+    
     setSelectedCustomer(customer);
+    setClientSearchQuery(cname);
     setRechargeForm({
-      customerId: customer.customer_id || customer.id,
-      customerName: customer.customer_name || customer.full_name || customer.name || "Cliente",
-      customerPhone: customer.customer_phone || customer.phone || "",
+      customerId: cid,
+      customerName: cname,
+      customerPhone: cphone,
       paidAmount: "100,00",
       bonusPercentage: 10,
       paymentMethod: "Pix",
@@ -119,18 +205,15 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       return;
     }
 
-    if (!rechargeForm.customerId) {
-      toast.error("Selecione um cliente para receber os créditos.");
-      return;
-    }
-
+    const targetId = rechargeForm.customerId || crypto.randomUUID();
+    const targetName = rechargeForm.customerName || "Cliente";
     const bonusAmount = Number((rawPaid * (rechargeForm.bonusPercentage / 100)).toFixed(2));
     const totalCredits = rawPaid + bonusAmount;
 
     try {
       await addCreditsMutation.mutateAsync({
-        customer_id: rechargeForm.customerId,
-        customer_name: rechargeForm.customerName,
+        customer_id: targetId,
+        customer_name: targetName,
         customer_phone: rechargeForm.customerPhone,
         paid_amount: rawPaid,
         bonus_amount: bonusAmount,
@@ -140,7 +223,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       });
 
       toast.success(
-        `Sucesso! Creditado R$ ${totalCredits.toFixed(2)} (R$ ${rawPaid.toFixed(2)} + R$ ${bonusAmount.toFixed(2)} bônus) para ${rechargeForm.customerName}!`
+        `Sucesso! Creditado R$ ${totalCredits.toFixed(2)} (R$ ${rawPaid.toFixed(2)} + R$ ${bonusAmount.toFixed(2)} bônus 10%) para ${targetName}!`
       );
       setIsRechargeModalOpen(false);
       onCreditRecharged?.();
@@ -234,19 +317,22 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       {/* ── BOTÃO DE RECARGA & TABELAS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* COLUNA ESQUERDA: LISTAGEM DE CARTEIRAS DE CLIENTES */}
+        {/* COLUNA ESQUERDA: LISTAGEM DE CLIENTES & CARTEIRAS */}
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base font-bold">Carteiras de Clientes</CardTitle>
-                  <CardDescription className="text-xs">Saldos individuais cadastrados</CardDescription>
+                  <CardTitle className="text-base font-bold">Clientes & Carteiras</CardTitle>
+                  <CardDescription className="text-xs">
+                    {allSystemCustomers.length} clientes encontrados no sistema
+                  </CardDescription>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => {
                     setSelectedCustomer(null);
+                    setClientSearchQuery("");
                     setRechargeForm({
                       customerId: "",
                       customerName: "",
@@ -259,17 +345,43 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                     });
                     setIsRechargeModalOpen(true);
                   }}
-                  className="font-bold text-xs gap-1.5 rounded-xl h-9"
+                  className="font-bold text-xs gap-1.5 rounded-xl h-9 bg-primary text-black hover:bg-primary/90 shadow-sm"
                 >
-                  <PlusCircle className="w-4 h-4" /> Nova Recarga
+                  <PlusCircle className="w-4 h-4 text-black" /> Nova Recarga
                 </Button>
               </div>
 
+              {/* Seletor de visualização (Com Saldo vs Todos os Clientes) */}
+              <div className="grid grid-cols-2 gap-1.5 mt-3 p-1 bg-muted/50 rounded-xl border">
+                <button
+                  type="button"
+                  onClick={() => setCustomerTab("with_balance")}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    customerTab === "with_balance"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Com Saldo ({customerCredits.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerTab("all_clients")}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    customerTab === "all_clients"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Todos ({allSystemCustomers.length})
+                </button>
+              </div>
+
               {/* Barra de Busca de Clientes */}
-              <div className="relative mt-3">
+              <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar cliente por nome ou telefone..."
+                  placeholder="Buscar por nome, telefone ou e-mail..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9 h-9 text-xs rounded-xl"
@@ -277,27 +389,40 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               </div>
             </CardHeader>
 
-            <CardContent className="p-0 max-h-[600px] overflow-y-auto divide-y divide-border">
-              {loadingCredits ? (
-                <div className="p-6 text-center text-xs text-muted-foreground">Carregando carteiras...</div>
-              ) : filteredCustomers.length === 0 ? (
-                <div className="p-8 text-center text-xs text-muted-foreground">
-                  <User className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  Nenhum cliente com créditos encontrado.
+            <CardContent className="p-0 max-h-[580px] overflow-y-auto divide-y divide-border">
+              {loadingCredits && loadingProfiles ? (
+                <div className="p-6 text-center text-xs text-muted-foreground">Carregando clientes...</div>
+              ) : displayCustomers.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground space-y-3">
+                  <User className="w-8 h-8 mx-auto mb-1 opacity-30 text-muted-foreground" />
+                  <p className="font-bold text-foreground">Nenhum cliente com créditos encontrado.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Clique no botão abaixo para buscar qualquer cliente do app ou fazer a primeira recarga!
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setCustomerTab("all_clients");
+                      setIsRechargeModalOpen(true);
+                    }}
+                    className="font-bold text-xs bg-primary text-black hover:bg-primary/90 rounded-xl"
+                  >
+                    <PlusCircle className="w-4 h-4 mr-1 text-black" /> Recarregar Primeiro Cliente
+                  </Button>
                 </div>
               ) : (
-                filteredCustomers.map((cust) => (
+                displayCustomers.map((cust) => (
                   <div key={cust.id} className="p-3.5 hover:bg-muted/40 transition-colors flex items-center justify-between gap-3">
                     <div className="min-w-0 flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-sm shrink-0">
-                        {cust.customer_name ? cust.customer_name.charAt(0).toUpperCase() : "C"}
+                      <div className="w-9 h-9 rounded-xl bg-primary/15 text-foreground font-black text-sm flex items-center justify-center shrink-0 border border-primary/30">
+                        {cust.name ? cust.name.charAt(0).toUpperCase() : "C"}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-xs text-foreground truncate leading-tight">
-                          {cust.customer_name || "Cliente"}
+                          {cust.name || "Cliente"}
                         </p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {cust.customer_phone || "Sem telefone"}
+                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                          {cust.phone || cust.email || "Sem telefone"}
                         </p>
                       </div>
                     </div>
@@ -311,7 +436,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                         size="sm"
                         variant="outline"
                         onClick={() => handleOpenRechargeFor(cust)}
-                        className="h-7 px-2 text-[10px] font-bold rounded-lg"
+                        className="h-7 px-2 text-[10px] font-bold rounded-lg border-primary/40 hover:bg-primary/10"
                       >
                         + Recarregar
                       </Button>
@@ -376,7 +501,10 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               ) : filteredTransactions.length === 0 ? (
                 <div className="p-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-2xl mx-4 my-2">
                   <History className="w-8 h-8 mx-auto mb-2 opacity-40 text-muted-foreground" />
-                  Nenhuma transação encontrada para os filtros selecionados.
+                  <p className="font-bold text-foreground">Nenhuma transação registrada ainda.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Assim que recarregar créditos ou um cliente fizer pedidos, os lançamentos auditáveis aparecerão aqui.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2 px-2 sm:px-0">
@@ -437,59 +565,89 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
 
       {/* ── MODAL DE NOVA RECARGA DE CRÉDITOS ── */}
       <Dialog open={isRechargeModalOpen} onOpenChange={setIsRechargeModalOpen}>
-        <DialogContent className="sm:max-w-[480px] rounded-3xl">
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-black flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" /> Recarga de Créditos do Cliente
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Adicione saldo à carteira do cliente com cálculo automático de +10% de Bônus.
+              Busque qualquer cliente cadastrado ou digite os dados para recarga com +10% de Bônus.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmitRecharge} className="space-y-4 pt-2">
-            {/* Seleção do Cliente */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">Cliente</Label>
-              <Select
-                value={rechargeForm.customerId}
-                onValueChange={(val) => {
-                  const prof = profiles.find((p) => p.id === val);
-                  setRechargeForm({
-                    ...rechargeForm,
-                    customerId: val,
-                    customerName: prof?.name || prof?.full_name || "Cliente",
-                    customerPhone: prof?.phone || "",
-                  });
-                }}
-              >
-                <SelectTrigger className="h-10 text-xs rounded-xl">
-                  <SelectValue placeholder="Selecione o cliente cadastrado" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name || p.full_name || "Cliente"} {p.phone ? `(${p.phone})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Campo Inteligente de Busca / Seleção de Cliente */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">1. Selecionar Cliente do Sistema</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={clientSearchQuery}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setClientSearchQuery(q);
+                    setRechargeForm((prev) => ({
+                      ...prev,
+                      customerName: q,
+                    }));
+                  }}
+                  placeholder="Digite o nome, WhatsApp ou e-mail do cliente..."
+                  className="pl-9 h-10 text-xs rounded-xl font-medium"
+                />
+              </div>
+
+              {/* Lista rápida de sugestões de clientes */}
+              <div className="max-h-36 overflow-y-auto border rounded-xl divide-y bg-muted/20 p-1">
+                {modalCustomerSuggestions.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground p-2 text-center">
+                    Nenhum cliente pré-cadastrado encontrado. Preencha os campos abaixo para criar a carteira!
+                  </p>
+                ) : (
+                  modalCustomerSuggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomer(c);
+                        setClientSearchQuery(c.name);
+                        setRechargeForm((prev) => ({
+                          ...prev,
+                          customerId: c.customer_id || c.id,
+                          customerName: c.name,
+                          customerPhone: c.phone || "",
+                        }));
+                      }}
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                        rechargeForm.customerId === c.id
+                          ? "bg-primary text-black font-bold"
+                          : "hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{c.name}</p>
+                        <p className="text-[10px] opacity-80 truncate">{c.phone || c.email || "Sem contato"}</p>
+                      </div>
+                      {rechargeForm.customerId === c.id && <Check className="w-4 h-4 text-black shrink-0" />}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Inputs de Nome e Telefone Manuais se necessário */}
+            {/* Inputs de Confirmação do Nome e Telefone */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Nome de Exibição</Label>
+                <Label className="text-xs font-semibold">Nome do Cliente</Label>
                 <Input
                   value={rechargeForm.customerName}
                   onChange={(e) => setRechargeForm({ ...rechargeForm, customerName: e.target.value })}
-                  placeholder="Nome do cliente"
+                  placeholder="Ex: Anthony Both"
                   className="h-9 text-xs rounded-xl"
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">WhatsApp / Telefone</Label>
+                <Label className="text-xs font-semibold">WhatsApp / Telefone</Label>
                 <Input
                   value={rechargeForm.customerPhone}
                   onChange={(e) => setRechargeForm({ ...rechargeForm, customerPhone: e.target.value })}
@@ -532,7 +690,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
             {/* Box Demonstrativo do Bônus de 10% */}
             <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Valor Pago em Dinheiro/Pix:</span>
+                <span className="text-muted-foreground">Valor Pago no Pix/Dinheiro:</span>
                 <span className="font-bold text-foreground">R$ {currentPaidVal.toFixed(2).replace(".", ",")}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -543,7 +701,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               </div>
               <div className="h-px bg-primary/20 my-1" />
               <div className="flex items-center justify-between text-sm font-black">
-                <span className="text-primary">Total de Créditos Creditados:</span>
+                <span className="text-foreground">Total Creditado ao Cliente:</span>
                 <span className="text-xl text-primary font-black">
                   R$ {currentTotalCredits.toFixed(2).replace(".", ",")}
                 </span>
@@ -557,7 +715,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                 id="registerCashFlow"
                 checked={rechargeForm.registerCashFlow}
                 onChange={(e) => setRechargeForm({ ...rechargeForm, registerCashFlow: e.target.checked })}
-                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer"
               />
               <Label htmlFor="registerCashFlow" className="text-xs font-medium cursor-pointer text-muted-foreground">
                 Lançar automaticamente como <strong>Entrada no Fluxo de Caixa</strong> ("Venda de Créditos Cliente")
@@ -576,7 +734,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               <Button
                 type="submit"
                 disabled={addCreditsMutation.isPending}
-                className="font-bold text-xs rounded-xl gap-1.5"
+                className="font-bold text-xs rounded-xl gap-1.5 bg-primary text-black hover:bg-primary/90 shadow-sm"
               >
                 {addCreditsMutation.isPending ? "Processando..." : `Confirmar Recarga (+${brl(currentTotalCredits)})`}
               </Button>

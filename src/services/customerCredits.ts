@@ -77,27 +77,67 @@ export function useCustomerCreditTransactionsList(limit = 400) {
   });
 }
 
-/** Hook para buscar clientes cadastrados em profiles */
+/** Hook para buscar todos os clientes cadastrados em profiles/customers */
 export function useAllCustomerProfiles() {
   return useQuery({
     queryKey: ["admin-all-profiles-customers"],
     queryFn: async () => {
+      const customersList: any[] = [];
+      const seenIds = new Set<string>();
+
+      // 1. Busca da tabela profiles
       try {
-        const { data, error } = await supabase
+        const { data: profiles, error } = await supabase
           .from("profiles")
-          .select("id, name, phone, email, full_name")
-          .order("name", { ascending: true })
-          .limit(500);
-        if (error) {
-          console.warn("[CustomerCredits] Erro ao buscar profiles:", error.message);
-          return [];
+          .select("*")
+          .limit(1000);
+        
+        if (!error && profiles) {
+          profiles.forEach((p: any) => {
+            const uid = p.user_id || p.id;
+            if (uid && !seenIds.has(uid)) {
+              seenIds.add(uid);
+              customersList.push({
+                id: uid,
+                name: p.full_name || p.name || p.email?.split("@")[0] || "Cliente",
+                phone: p.phone || "",
+                email: p.email || "",
+                source: "profile",
+              });
+            }
+          });
         }
-        return data || [];
-      } catch (err) {
-        return [];
-      }
+      } catch (err) {}
+
+      // 2. Busca complementar de customers (se existir)
+      try {
+        const { data: custs } = await supabase
+          .from("customers")
+          .select("*")
+          .limit(500);
+        if (custs) {
+          custs.forEach((c: any) => {
+            const cid = c.id || c.user_id;
+            if (cid && !seenIds.has(cid)) {
+              seenIds.add(cid);
+              customersList.push({
+                id: cid,
+                name: c.name || c.full_name || "Cliente",
+                phone: c.phone || "",
+                email: c.email || "",
+                source: "customer",
+              });
+            }
+          });
+        }
+      } catch (err) {}
+
+      // 3. Ordena alfabeticamente
+      return customersList.sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", "pt-BR")
+      );
     },
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 30,
   });
 }
 
