@@ -5,7 +5,7 @@ import {
   Sparkles, History, Filter, CheckCircle2, Users,
   DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check,
   X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard,
-  ArrowLeft, Loader2
+  ArrowLeft, Loader2, Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -21,6 +24,7 @@ import {
   useCustomerCreditTransactionsList,
   useAllCustomerProfiles,
   useAddCustomerCredits,
+  useUpdateCustomerContact,
 } from "@/services/customerCredits";
 
 const brl = (n: number) =>
@@ -38,6 +42,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const { data: transactions = [], isLoading: loadingTxs } = useCustomerCreditTransactionsList();
   const { data: profiles = [], isLoading: loadingProfiles } = useAllCustomerProfiles();
   const addCreditsMutation = useAddCustomerCredits();
+  const updateContactMutation = useUpdateCustomerContact();
 
   // Modo de visualização: "overview" (painel padrão) ou "workspace" (janela dedicada no sistema)
   const [viewMode, setViewMode] = useState<"overview" | "workspace">("overview");
@@ -51,6 +56,51 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [modalCategoryFilter, setModalCategoryFilter] = useState<"all" | "balance">("all");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+
+  // Estados de Edição de Contato do Cliente
+  const [editContactModalOpen, setEditContactModalOpen] = useState(false);
+  const [editContactForm, setEditContactForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    cpf: "",
+    address: "",
+  });
+
+  const handleOpenEditContact = (cust: any) => {
+    if (!cust) return;
+    setEditContactForm({
+      name: cust.name || "",
+      phone: cust.phone || "",
+      email: cust.email || "",
+      cpf: cust.cpf || "",
+      address: cust.address || "",
+    });
+    setEditContactModalOpen(true);
+  };
+
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    try {
+      await updateContactMutation.mutateAsync({
+        customerId: selectedCustomer.customer_id || selectedCustomer.id,
+        name: editContactForm.name,
+        phone: editContactForm.phone,
+        email: editContactForm.email,
+        cpf: editContactForm.cpf,
+        address: editContactForm.address,
+      });
+      setSelectedCustomer((prev: any) => ({
+        ...prev,
+        ...editContactForm,
+      }));
+      setEditContactModalOpen(false);
+      toast.success("Dados do cliente atualizados com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao atualizar dados: " + err.message);
+    }
+  };
 
   const [rechargeForm, setRechargeForm] = useState({
     customerId: "",
@@ -576,7 +626,22 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   </div>
 
                   {/* GRID DE DADOS OBRIGATÓRIOS: TELEFONE, EMAIL, CPF */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                  <div className="flex items-center justify-between pt-1">
+                    <p className="text-[11px] font-black text-muted-foreground uppercase tracking-wider">
+                      Dados de Identificação & Contato
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenEditContact(selectedCustomer)}
+                      className="h-7 text-xs font-bold gap-1.5 rounded-xl border-primary/40 bg-primary/10 hover:bg-primary/20 text-foreground"
+                    >
+                      <Pencil className="w-3 h-3 text-primary" /> Editar / Cadastrar Contato
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="p-3 rounded-2xl bg-card border flex items-center gap-3 shadow-xs">
                       <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
                         <Phone className="w-4 h-4" />
@@ -1130,6 +1195,89 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
           </Card>
         </div>
       </div>
+
+      {/* MODAL DE EDIÇÃO DE CONTATO DO CLIENTE */}
+      <Dialog open={editContactModalOpen} onOpenChange={setEditContactModalOpen}>
+        <DialogContent className="sm:max-w-[480px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-black text-lg">
+              <Pencil className="w-5 h-5 text-primary" /> Atualizar Dados do Cliente
+            </DialogTitle>
+            <DialogDescription>
+              Vincule ou corrija o E-mail de cadastro, WhatsApp e CPF do cliente no sistema.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveContact} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Nome Completo</Label>
+              <Input
+                value={editContactForm.name}
+                onChange={(e) => setEditContactForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Nome do cliente"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5 text-blue-500" /> E-mail de Cadastro / Login
+              </Label>
+              <Input
+                type="email"
+                value={editContactForm.email}
+                onChange={(e) => setEditContactForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="exemplo@email.com"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp / Telefone
+                </Label>
+                <Input
+                  value={editContactForm.phone}
+                  onChange={(e) => setEditContactForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="(66) 99999-9999"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-purple-500" /> CPF / Documento
+                </Label>
+                <Input
+                  value={editContactForm.cpf}
+                  onChange={(e) => setEditContactForm((p) => ({ ...p, cpf: e.target.value }))}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-primary" /> Endereço de Entrega
+              </Label>
+              <Input
+                value={editContactForm.address}
+                onChange={(e) => setEditContactForm((p) => ({ ...p, address: e.target.value }))}
+                placeholder="Rua, número, bairro..."
+              />
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditContactModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateContactMutation.isPending} className="font-bold">
+                {updateContactMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

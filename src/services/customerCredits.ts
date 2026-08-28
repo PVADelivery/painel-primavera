@@ -198,13 +198,16 @@ export function useAllCustomerProfiles() {
           profiles.forEach((p: any) => {
             const uid = p.user_id || p.id;
             const name = p.full_name || p.name || (p.email ? p.email.split("@")[0] : "");
-            if (name) {
+            const email = p.email || p.user_email || p.contact_email || "";
+            const phone = p.phone || p.whatsapp || "";
+            const cpf = p.cpf || p.document || "";
+            if (name || email || phone || uid) {
               addUniqueCustomer({
                 id: uid,
-                name,
-                phone: p.phone || "",
-                email: p.email || "",
-                cpf: p.cpf || "",
+                name: name || (email ? email.split("@")[0] : "Cliente Marketplace"),
+                phone,
+                email,
+                cpf,
                 address: p.address || "",
                 source: "app_marketplace",
               });
@@ -278,7 +281,32 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 5. Busca da tabela ride_requests (Corridas do App de Passageiro)
+      // 5. Busca da tabela deliveries (Entregas e cadastros de clientes da cidade)
+      try {
+        const { data: deliveriesData } = await supabase
+          .from("deliveries")
+          .select("customer_id, customer_name, customer_phone, customer_cpf, delivery_address")
+          .not("customer_name", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+
+        if (deliveriesData) {
+          deliveriesData.forEach((d: any) => {
+            if (d.customer_name && !isJunkName(d.customer_name)) {
+              addUniqueCustomer({
+                id: d.customer_id || "",
+                name: d.customer_name,
+                phone: d.customer_phone || "",
+                cpf: d.customer_cpf || "",
+                address: d.delivery_address || "",
+                source: "app_marketplace",
+              });
+            }
+          });
+        }
+      } catch (err) {}
+
+      // 6. Busca da tabela ride_requests (Corridas do App de Passageiro)
       try {
         const { data: recentRides } = await supabase
           .from("ride_requests")
@@ -305,6 +333,66 @@ export function useAllCustomerProfiles() {
       );
     },
     staleTime: 1000 * 15,
+  });
+}
+
+/** Hook para atualizar dados de contato do cliente (Email, Telefone, CPF) */
+export function useUpdateCustomerContact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      customerId: string;
+      name?: string;
+      phone?: string;
+      email?: string;
+      cpf?: string;
+      address?: string;
+    }) => {
+      // Update in profiles
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            ...(input.name ? { full_name: input.name } : {}),
+            ...(input.phone ? { phone: input.phone } : {}),
+            ...(input.cpf ? { document: input.cpf } : {}),
+            ...(input.email ? { email: input.email } : {}),
+          } as any)
+          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
+      } catch (e) {}
+
+      // Update in customers
+      try {
+        await supabase
+          .from("customers")
+          .update({
+            ...(input.name ? { name: input.name } : {}),
+            ...(input.phone ? { phone: input.phone } : {}),
+            ...(input.cpf ? { cpf: input.cpf } : {}),
+            ...(input.email ? { email: input.email } : {}),
+          } as any)
+          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
+      } catch (e) {}
+
+      // Update in customer_credits
+      try {
+        await supabase
+          .from("customer_credits")
+          .update({
+            ...(input.name ? { customer_name: input.name } : {}),
+            ...(input.phone ? { customer_phone: input.phone } : {}),
+            ...(input.email ? { customer_email: input.email } : {}),
+            ...(input.cpf ? { customer_cpf: input.cpf } : {}),
+          } as any)
+          .eq("customer_id", input.customerId);
+      } catch (e) {}
+
+      return true;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-all-customer-profiles"] });
+      qc.invalidateQueries({ queryKey: ["admin-customer-credits"] });
+    },
   });
 }
 
