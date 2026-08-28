@@ -160,13 +160,13 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
       )}
 
       <aside className={cn(
-        "hidden md:flex h-screen flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-20 transition-all duration-300 group/sidebar",
+        "hidden md:flex h-screen flex-col border-r border-sidebar-border/60 bg-sidebar/95 backdrop-blur-xl fixed left-0 top-0 z-40 transition-all duration-300 group/sidebar",
         collapsed ? "w-16" : "w-64"
       )}>
         {onToggle && (
           <button
             onClick={onToggle}
-            className="absolute -right-3.5 top-8 h-7 w-7 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all z-30 cursor-pointer border border-amber-500/30"
+            className="absolute -right-3.5 top-6 h-7 w-7 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer border-2 border-background ring-2 ring-amber-400/50"
             title={collapsed ? "Expandir menu" : "Recolher menu"}
             aria-label="Toggle Sidebar"
           >
