@@ -280,7 +280,7 @@ export function NotificationsPopover() {
               )}
             </div>
             <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
-              Alertas ao vivo de créditos, corridas e pedidos
+              Central de alertas de créditos, corridas e pedidos
             </p>
           </div>
 
