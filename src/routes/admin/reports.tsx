@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { StoreCreditsPanel } from "@/components/admin/StoreCreditsPanel";
 import { CustomerCreditsPanel } from "@/components/admin/CustomerCreditsPanel";
 import {
