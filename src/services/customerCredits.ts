@@ -126,7 +126,7 @@ export function useAllCustomerProfiles() {
         });
       };
 
-      // 1. Tenta buscar via RPC de Administrador (se disponível no banco)
+      // 1. Tenta buscar via RPC de Administrador (auth.users do app)
       try {
         const { data: rpcUsers, error: rpcErr } = await supabase.rpc(
           "rpc_get_all_customers_for_admin"
@@ -139,13 +139,37 @@ export function useAllCustomerProfiles() {
               phone: u.phone || "",
               email: u.email || "",
               cpf: u.cpf || "",
-              source: "auth_users",
+              source: "app_marketplace",
             });
           });
         }
       } catch (err) {}
 
-      // 2. Busca da tabela customer_credits
+      // 2. Busca da tabela profiles (Usuários registrados no App do Marketplace)
+      try {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("*")
+          .limit(1000);
+        if (profiles) {
+          profiles.forEach((p: any) => {
+            const uid = p.user_id || p.id;
+            const name = p.full_name || p.name || p.email?.split("@")[0] || "Cliente";
+            // Ignora termos de balcão / sistema
+            if (name && !name.toUpperCase().includes("BALCÃO") && !name.toUpperCase().includes("IFOOD")) {
+              addUniqueCustomer({
+                id: uid,
+                name,
+                phone: p.phone || "",
+                email: p.email || "",
+                source: "app_marketplace",
+              });
+            }
+          });
+        }
+      } catch (err) {}
+
+      // 3. Busca da tabela customer_credits (Carteiras de clientes do App)
       try {
         const { data: creditAccounts } = await supabase
           .from("customer_credits")
@@ -157,78 +181,13 @@ export function useAllCustomerProfiles() {
               id: c.customer_id || c.id,
               name: c.customer_name || "Cliente",
               phone: c.customer_phone || "",
-              source: "customer_credits",
+              source: "app_marketplace",
             });
           });
         }
       } catch (err) {}
 
-      // 3. Busca da tabela customers (Cadastro Geral de Clientes)
-      try {
-        const { data: rawCustomers } = await supabase
-          .from("customers")
-          .select("*")
-          .limit(1000);
-        if (rawCustomers) {
-          rawCustomers.forEach((c: any) => {
-            addUniqueCustomer({
-              id: c.id,
-              name: c.name || "Cliente",
-              phone: c.phone || "",
-              email: c.email || "",
-              cpf: c.cpf || "",
-              source: "customers",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 4. Busca da tabela profiles
-      try {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("*")
-          .limit(1000);
-        if (profiles) {
-          profiles.forEach((p: any) => {
-            const uid = p.user_id || p.id;
-            addUniqueCustomer({
-              id: uid,
-              name: p.full_name || p.name || p.email?.split("@")[0] || "Cliente",
-              phone: p.phone || "",
-              email: p.email || "",
-              source: "profiles",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 5. Busca da tabela deliveries (Histórico rico de despachos de lojas)
-      try {
-        const { data: recentDeliveries } = await supabase
-          .from("deliveries")
-          .select("customer_id, customer_name, customer_phone, customer_cpf, address")
-          .not("customer_name", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(500);
-
-        if (recentDeliveries) {
-          recentDeliveries.forEach((d: any) => {
-            if (d.customer_name && d.customer_name.trim().length > 1) {
-              addUniqueCustomer({
-                id: d.customer_id || "",
-                name: d.customer_name,
-                phone: d.customer_phone || "",
-                cpf: d.customer_cpf || "",
-                address: d.address || "",
-                source: "deliveries",
-              });
-            }
-          });
-        }
-      } catch (err) {}
-
-      // 6. Busca da tabela orders (Pedidos Marketplace)
+      // 4. Busca da tabela orders (Pedidos reais do Marketplace no App)
       try {
         const { data: recentOrders } = await supabase
           .from("orders")
@@ -239,20 +198,26 @@ export function useAllCustomerProfiles() {
 
         if (recentOrders) {
           recentOrders.forEach((o: any) => {
-            if (o.customer_name && o.customer_name.trim().length > 1) {
+            const name = (o.customer_name || "").trim();
+            if (
+              name.length >= 2 &&
+              !name.toUpperCase().includes("BALCÃO") &&
+              !name.toUpperCase().includes("IFOOD") &&
+              !/^\d+$/.test(name)
+            ) {
               addUniqueCustomer({
                 id: o.user_id || "",
                 name: o.customer_name,
                 phone: o.customer_phone || "",
                 address: typeof o.delivery_address === "string" ? o.delivery_address : "",
-                source: "orders",
+                source: "app_marketplace",
               });
             }
           });
         }
       } catch (err) {}
 
-      // 7. Busca da tabela ride_requests (Corridas Táxi / Moto)
+      // 5. Busca da tabela ride_requests (Corridas de passageiros no App)
       try {
         const { data: recentRides } = await supabase
           .from("ride_requests")
@@ -263,12 +228,18 @@ export function useAllCustomerProfiles() {
 
         if (recentRides) {
           recentRides.forEach((r: any) => {
-            if (r.customer_name && r.customer_name.trim().length > 1) {
+            const name = (r.customer_name || "").trim();
+            if (
+              name.length >= 2 &&
+              !name.toUpperCase().includes("BALCÃO") &&
+              !name.toUpperCase().includes("IFOOD") &&
+              !/^\d+$/.test(name)
+            ) {
               addUniqueCustomer({
                 id: r.user_id || "",
                 name: r.customer_name,
                 phone: r.customer_phone || "",
-                source: "ride_requests",
+                source: "app_marketplace",
               });
             }
           });

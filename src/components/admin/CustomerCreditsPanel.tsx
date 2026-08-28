@@ -4,7 +4,8 @@ import {
   Wallet, TrendingUp, TrendingDown, Plus, Search, User,
   Sparkles, History, Filter, CheckCircle2, Users,
   DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check,
-  X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard
+  X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard,
+  ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -41,15 +39,17 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const { data: profiles = [], isLoading: loadingProfiles } = useAllCustomerProfiles();
   const addCreditsMutation = useAddCustomerCredits();
 
-  const [customerTab, setCustomerTab] = useState<"with_balance" | "all_clients">("all_clients");
+  // Modo de visualização: "overview" (painel padrão) ou "workspace" (janela dedicada no sistema)
+  const [viewMode, setViewMode] = useState<"overview" | "workspace">("overview");
+
+  const [customerTab, setCustomerTab] = useState<"all_clients" | "with_balance">("all_clients");
   const [search, setSearch] = useState("");
   const [txSearch, setTxSearch] = useState("");
   const [txTypeFilter, setTxTypeFilter] = useState("all");
 
-  // Janela / Workspace de Recarga e Gestão de Créditos
-  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
+  // Estados do Workspace Dedicado
   const [modalSearchQuery, setModalSearchQuery] = useState("");
-  const [modalCategoryFilter, setModalCategoryFilter] = useState<"all" | "balance" | "orders">("all");
+  const [modalCategoryFilter, setModalCategoryFilter] = useState<"all" | "balance">("all");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   const [rechargeForm, setRechargeForm] = useState({
@@ -174,15 +174,13 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     );
   }, [customerTab, allSystemCustomers, search]);
 
-  // Lista filtrada para o Workspace Interno de Recargas (Busca Universal em Tempo Real)
+  // Lista filtrada para o Workspace Dedicado (Busca Universal em Tempo Real)
   const workspaceFilteredCustomers = useMemo(() => {
     const q = modalSearchQuery.trim().toLowerCase();
     let list = allSystemCustomers;
 
     if (modalCategoryFilter === "balance") {
       list = list.filter((c) => c.balance > 0);
-    } else if (modalCategoryFilter === "orders") {
-      list = list.filter((c) => c.source === "orders" || c.source === "deliveries" || c.source === "ride_requests");
     }
 
     if (!q) return list.slice(0, 100);
@@ -228,7 +226,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     });
   }, [transactions, txSearch, txTypeFilter]);
 
-  // Abre a Central de Recarga para um cliente específico
+  // Abre a Central / Workspace Dedicado para um cliente específico
   const handleOpenWorkspaceFor = (customer?: any) => {
     if (customer) {
       const cid = customer.customer_id || customer.id || crypto.randomUUID();
@@ -248,12 +246,13 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
         registerCashFlow: true,
       });
     } else {
-      setSelectedCustomer(allSystemCustomers[0] || null);
+      const first = allSystemCustomers[0] || null;
+      setSelectedCustomer(first);
       setModalSearchQuery("");
       setRechargeForm({
-        customerId: allSystemCustomers[0]?.id || "",
-        customerName: allSystemCustomers[0]?.name || "",
-        customerPhone: allSystemCustomers[0]?.phone || "",
+        customerId: first?.id || "",
+        customerName: first?.name || "",
+        customerPhone: first?.phone || "",
         paidAmount: "100,00",
         bonusPercentage: 10,
         paymentMethod: "Pix",
@@ -261,7 +260,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
         registerCashFlow: true,
       });
     }
-    setIsWorkspaceOpen(true);
+    setViewMode("workspace");
   };
 
   // Submissão da recarga
@@ -315,6 +314,455 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const currentBonusVal = Number((currentPaidVal * (rechargeForm.bonusPercentage / 100)).toFixed(2));
   const currentTotalCredits = currentPaidVal + currentBonusVal;
 
+  // ══════════════════════════════════════════════════════════════════════════════════
+  // MODO 1: WORKSPACE / JANELA COMPLETA DENTRO DO APP (SEM MODAL BLOQUEANDO A TELA)
+  // ══════════════════════════════════════════════════════════════════════════════════
+  if (viewMode === "workspace") {
+    return (
+      <div className="space-y-6">
+        {/* BARRA SUPERIOR DE NAVEGAÇÃO COM BOTÃO VOLTAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-primary/40 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setViewMode("overview")}
+              className="gap-2 font-black text-xs rounded-2xl h-11 px-4 border-2 border-primary hover:bg-primary text-black bg-primary/10 shadow-sm cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-black" /> Voltar para Visão Geral
+            </Button>
+            <div>
+              <h2 className="text-lg font-black flex items-center gap-2 text-foreground">
+                <Sparkles className="w-5 h-5 text-primary" /> Central de Gestão & Recarga de Créditos
+              </h2>
+              <p className="text-xs text-muted-foreground font-medium">
+                Workspace financeiro para gerenciar carteiras de clientes e efetivar recargas instantâneas (+10% Bônus)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-right bg-primary/15 px-4 py-2 rounded-2xl border border-primary/40">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                Total em Circulação
+              </span>
+              <span className="text-base font-black text-foreground">
+                {brl(totals.totalBalance)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* WORKSPACE PRINCIPAL: 2 COLUNAS (LISTA DE CLIENTES + PAINEL DE AÇÃO E RECARGA) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[650px]">
+          
+          {/* COLUNA ESQUERDA (5/12): LISTAGEM E BUSCA AVANÇADA DE CLIENTES */}
+          <div className="lg:col-span-5 flex flex-col bg-card border-2 rounded-3xl overflow-hidden shadow-sm">
+            
+            {/* Header da Busca */}
+            <div className="p-4 border-b space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                  <Search className="w-4 h-4 text-primary" /> Localizar Cliente
+                </Label>
+                <span className="text-[11px] font-bold text-muted-foreground">
+                  {workspaceFilteredCustomers.length} de {allSystemCustomers.length} clientes
+                </span>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={modalSearchQuery}
+                  onChange={(e) => setModalSearchQuery(e.target.value)}
+                  placeholder="Nome, WhatsApp, e-mail, CPF..."
+                  className="pl-10 h-11 text-xs rounded-2xl font-medium border-2 focus:border-primary bg-background"
+                  autoFocus
+                />
+                {modalSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setModalSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filtros rápidos da lista */}
+              <div className="flex items-center gap-1.5 pt-1 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setModalCategoryFilter("all")}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                    modalCategoryFilter === "all"
+                      ? "bg-primary text-black font-black shadow-sm"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Todos ({allSystemCustomers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalCategoryFilter("balance")}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                    modalCategoryFilter === "balance"
+                      ? "bg-primary text-black font-black shadow-sm"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Com Saldo ({customerCredits.length})
+                </button>
+              </div>
+
+              {/* Opção para cadastrar novo cliente avulso */}
+              {modalSearchQuery.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isEmail = modalSearchQuery.includes("@");
+                    const generatedId = crypto.randomUUID();
+                    const newCust = {
+                      id: generatedId,
+                      customer_id: generatedId,
+                      name: isEmail ? modalSearchQuery.split("@")[0] : modalSearchQuery,
+                      phone: isEmail ? "" : modalSearchQuery.replace(/\D/g, ""),
+                      email: isEmail ? modalSearchQuery : "",
+                      balance: 0,
+                      total_recharged: 0,
+                      total_spent: 0,
+                    };
+                    setSelectedCustomer(newCust);
+                    setRechargeForm((prev) => ({
+                      ...prev,
+                      customerId: generatedId,
+                      customerName: newCust.name,
+                      customerPhone: newCust.phone,
+                    }));
+                    toast.success(`Cliente "${newCust.name}" selecionado para nova recarga!`);
+                  }}
+                  className="w-full text-left p-2.5 rounded-2xl text-xs bg-primary/20 hover:bg-primary/30 text-foreground border border-primary/40 flex items-center justify-between font-black transition-all"
+                >
+                  <span className="truncate">✨ Usar "<strong>{modalSearchQuery}</strong>" como cliente</span>
+                  <Plus className="w-4 h-4 text-primary shrink-0" />
+                </button>
+              )}
+            </div>
+
+            {/* Lista Rolável de Clientes */}
+            <div className="flex-1 overflow-y-auto divide-y divide-border p-2 space-y-1.5 max-h-[600px]">
+              {workspaceFilteredCustomers.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground space-y-2">
+                  <User className="w-8 h-8 mx-auto opacity-30" />
+                  <p className="font-bold text-foreground">Nenhum cliente encontrado.</p>
+                  <p className="text-[11px]">Você pode digitar o nome ou e-mail na busca acima para criar a carteira!</p>
+                </div>
+              ) : (
+                workspaceFilteredCustomers.map((c) => {
+                  const isSelected = selectedCustomer?.id === c.id || rechargeForm.customerId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomer(c);
+                        setRechargeForm((prev) => ({
+                          ...prev,
+                          customerId: c.customer_id || c.id,
+                          customerName: c.name,
+                          customerPhone: c.phone || "",
+                        }));
+                      }}
+                      className={`w-full text-left p-3.5 rounded-2xl text-xs flex items-center justify-between transition-all ${
+                        isSelected
+                          ? "bg-primary text-black font-bold shadow-md ring-2 ring-primary scale-[1.01]"
+                          : "hover:bg-muted/70 text-foreground border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                          isSelected ? "bg-black text-white border-black" : "bg-primary/20 text-foreground border-primary/30"
+                        }`}>
+                          {c.name ? c.name.charAt(0).toUpperCase() : "C"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-sm leading-tight">{c.name}</p>
+                          <p className="text-[11px] opacity-80 truncate mt-0.5">
+                            {c.phone || c.email || c.cpf || "Sem contato informado"}
+                          </p>
+                          {c.address && (
+                            <p className="text-[10px] opacity-70 truncate mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 shrink-0" /> {c.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 pl-2">
+                        <p className={`font-black text-xs ${isSelected ? "text-black" : "text-primary"}`}>
+                          {brl(c.balance)}
+                        </p>
+                        {c.total_spent > 0 && (
+                          <p className="text-[9px] opacity-75">Gasto: {brl(c.total_spent)}</p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA (7/12): PAINEL DE AÇÃO E RECARGA DO CLIENTE SELECIONADO */}
+          <div className="lg:col-span-7 flex flex-col bg-card border-2 rounded-3xl p-6 shadow-sm space-y-6">
+            
+            {selectedCustomer ? (
+              <>
+                {/* CARD DE DETALHES COMPLETOS DO CLIENTE */}
+                <div className="p-5 rounded-3xl border-2 border-primary/30 bg-primary/5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-14 h-14 rounded-2xl bg-primary text-black font-black text-xl flex items-center justify-center shrink-0 shadow-md">
+                        {selectedCustomer.name ? selectedCustomer.name.charAt(0).toUpperCase() : "C"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-black text-lg text-foreground truncate leading-tight">
+                            {selectedCustomer.name}
+                          </h3>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 shrink-0 flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" /> Cliente Ativo
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap font-medium">
+                          {selectedCustomer.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.phone}
+                            </span>
+                          )}
+                          {selectedCustomer.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.email}
+                            </span>
+                          )}
+                          {selectedCustomer.cpf && (
+                            <span className="flex items-center gap-1">
+                              <FileText className="w-3.5 h-3.5 text-primary" /> CPF: {selectedCustomer.cpf}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Saldo Atual em Destaque */}
+                    <div className="bg-background/90 p-3.5 rounded-2xl border text-right shrink-0">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                        Saldo Atual da Carteira
+                      </span>
+                      <span className="text-2xl font-black text-primary">
+                        {brl(selectedCustomer.balance || 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedCustomer.address && (
+                    <div className="text-xs bg-background/80 p-3 rounded-xl border flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4 text-primary shrink-0" />
+                      <span className="truncate"><strong>Endereço:</strong> {selectedCustomer.address}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* FORMULÁRIO DE RECARGA DE CRÉDITOS */}
+                <form onSubmit={handleSubmitRecharge} className="space-y-5">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <Label className="text-sm font-black uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary" /> Recarga de Saldo & Bônus
+                    </Label>
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      Selecione o valor ou digite o montante pago
+                    </span>
+                  </div>
+
+                  {/* Atalhos Rápidos de Valores */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-muted-foreground">Valores Rápidos de Recarga:</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {QUICK_AMOUNTS.map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setRechargeForm({ ...rechargeForm, paidAmount: `${amt},00` })}
+                          className={`px-4 py-2 text-xs font-black rounded-xl border transition-all ${
+                            rechargeForm.paidAmount === `${amt},00`
+                              ? "bg-primary text-black border-primary shadow-md scale-105"
+                              : "bg-muted hover:bg-muted/80 text-foreground border-border"
+                          }`}
+                        >
+                          R$ {amt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Inputs de Valor Real Pago e Forma de Pagamento */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-black">Valor Real Pago (R$)</Label>
+                      <CurrencyInput
+                        value={rechargeForm.paidAmount}
+                        onChangeValue={(v) => setRechargeForm({ ...rechargeForm, paidAmount: v })}
+                        placeholder="100,00"
+                        className="h-12 text-lg font-black rounded-2xl border-2 focus:border-primary bg-background"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-black">Forma de Pagamento</Label>
+                      <Select
+                        value={rechargeForm.paymentMethod}
+                        onValueChange={(val) => setRechargeForm({ ...rechargeForm, paymentMethod: val })}
+                      >
+                        <SelectTrigger className="h-12 text-sm font-semibold rounded-2xl bg-background border-2">
+                          <SelectValue placeholder="Selecione a forma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_METHODS.map((m) => (
+                            <SelectItem key={m} value={m} className="font-medium">{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Seletor de Bônus (% de Bônus) */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-black">Percentual de Bônus:</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[10, 15, 20, 0].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setRechargeForm({ ...rechargeForm, bonusPercentage: pct })}
+                          className={`py-2.5 text-xs font-black rounded-xl border transition-all ${
+                            rechargeForm.bonusPercentage === pct
+                              ? "bg-amber-500 text-black border-amber-500 shadow-md"
+                              : "bg-muted hover:bg-muted/80 text-foreground border-border"
+                          }`}
+                        >
+                          {pct === 0 ? "0% (Sem bônus)" : `+${pct}% Bônus`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* BOX EXPLICATIVO DE ALTO CONTRASTE DO BÔNUS */}
+                  <div className="bg-primary/10 border-2 border-primary/40 rounded-3xl p-5 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-semibold">Valor Recebido do Cliente:</span>
+                      <span className="font-black text-foreground text-sm">{brl(currentPaidVal)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
+                      </span>
+                      <span className="font-black text-amber-600 dark:text-amber-400 text-sm">
+                        + {brl(currentBonusVal)}
+                      </span>
+                    </div>
+
+                    <div className="h-px bg-primary/30 my-1" />
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-foreground font-black text-sm block">Total a ser Creditado:</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Novo Saldo Final: {brl((selectedCustomer.balance || 0) + currentTotalCredits)}
+                        </span>
+                      </div>
+                      <span className="text-2xl sm:text-3xl text-primary font-black">
+                        {brl(currentTotalCredits)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Checkbox Fluxo de Caixa */}
+                  <div className="flex items-center gap-3 p-3.5 bg-muted/30 rounded-2xl border">
+                    <input
+                      type="checkbox"
+                      id="workspaceRegisterCashFlow"
+                      checked={rechargeForm.registerCashFlow}
+                      onChange={(e) => setRechargeForm({ ...rechargeForm, registerCashFlow: e.target.checked })}
+                      className="rounded border-border text-primary focus:ring-primary h-5 w-5 cursor-pointer"
+                    />
+                    <Label htmlFor="workspaceRegisterCashFlow" className="text-xs font-medium cursor-pointer text-foreground">
+                      Lançar automaticamente como <strong>Entrada no Fluxo de Caixa</strong> ("Venda de Créditos Cliente - {rechargeForm.paymentMethod}")
+                    </Label>
+                  </div>
+
+                  {/* BOTÃO DE AÇÃO GIGANTE */}
+                  <Button
+                    type="submit"
+                    disabled={addCreditsMutation.isPending}
+                    className="w-full h-14 text-base font-black rounded-2xl gap-2 bg-primary text-black hover:bg-primary/90 shadow-xl cursor-pointer"
+                  >
+                    {addCreditsMutation.isPending ? (
+                      "Processando Recarga..."
+                    ) : (
+                      `⚡ Confirmar Recarga e Creditar ${brl(currentTotalCredits)} para ${selectedCustomer.name}`
+                    )}
+                  </Button>
+                </form>
+
+                {/* MINI EXTRATO RECENTE DO CLIENTE SELECIONADO */}
+                <div className="border-t pt-4 space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <History className="w-3.5 h-3.5 text-primary" /> Histórico de Recargas e Consumo de {selectedCustomer.name} ({selectedCustomerTransactions.length})
+                  </h4>
+
+                  {selectedCustomerTransactions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic p-3.5 bg-muted/20 rounded-2xl border">
+                      Nenhuma movimentação anterior registrada para este cliente.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-52 overflow-y-auto">
+                      {selectedCustomerTransactions.map((tx) => (
+                        <div key={tx.id} className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-bold text-foreground">{tx.description}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleDateString("pt-BR")} às {new Date(tx.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+                          </div>
+                          <span className={`font-black ${Number(tx.amount) > 0 ? "text-emerald-500" : "text-foreground"}`}>
+                            {Number(tx.amount) > 0 ? "+" : ""}{brl(tx.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-12 text-muted-foreground space-y-3">
+                <Users className="w-16 h-16 opacity-20 text-muted-foreground" />
+                <h3 className="font-bold text-lg text-foreground">Selecione um cliente na coluna esquerda</h3>
+                <p className="text-xs max-w-md">
+                  Escolha um cliente da lista ou digite o nome/telefone na barra de busca para visualizar os detalhes, histórico e realizar recargas de créditos com bônus.
+                </p>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════════
+  // MODO 2: VISÃO GERAL DO PAINEL DE CRÉDITOS (COM BOTÃO DIRETO PARA A CENTRAL)
+  // ══════════════════════════════════════════════════════════════════════════════════
   return (
     <div className="space-y-6">
       {/* ── TOP KPI CARDS ── */}
@@ -392,7 +840,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
         </Card>
       </div>
 
-      {/* ── BOTÃO DE ABERTURA DO WORKSPACE & TABELAS PRINCIPAIS ── */}
+      {/* ── PAINEL PRINCIPAL COM TABELAS E BOTÃO DE ABERTURA DA CENTRAL ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* COLUNA ESQUERDA: LISTAGEM DE CLIENTES & CARTEIRAS */}
@@ -626,435 +1074,6 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
           </Card>
         </div>
       </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════════════
-          ── JANELA / WORKSPACE GIGANTE DE GESTÃO E RECARGA DE CRÉDITOS (96vw x 90vh) ──
-          ══════════════════════════════════════════════════════════════════════════════ */}
-      <Dialog open={isWorkspaceOpen} onOpenChange={setIsWorkspaceOpen}>
-        <DialogContent className="w-[96vw] max-w-6xl h-[90vh] max-h-[90vh] p-0 rounded-3xl border-2 border-primary/40 flex flex-col overflow-hidden bg-background">
-          
-          {/* TOPO DO WORKSPACE */}
-          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0 flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl font-black flex items-center gap-2.5">
-                <Sparkles className="w-6 h-6 text-primary" /> Central de Gestão & Recarga de Créditos (+10% Bônus)
-              </DialogTitle>
-              <DialogDescription className="text-xs mt-0.5">
-                Workspace financeiro para localizar clientes, gerenciar saldos individuais e efetivar recargas instantâneas.
-              </DialogDescription>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs bg-primary text-black font-black px-3 py-1 rounded-xl shadow-sm">
-                BÔNUS AUTOMÁTICO DE +10%
-              </span>
-            </div>
-          </DialogHeader>
-
-          {/* CORPO DO WORKSPACE: 2 COLUNAS (BUSCA DE CLIENTES + PAINEL DE AÇÃO) */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
-            
-            {/* COLUNA ESQUERDA (5/12): LISTAGEM E BUSCA AVANÇADA DE CLIENTES */}
-            <div className="md:col-span-5 border-r flex flex-col h-full bg-muted/10 overflow-hidden">
-              
-              {/* Barra de Busca de Clientes no Workspace */}
-              <div className="p-4 border-b space-y-2.5 bg-background">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Search className="w-4 h-4 text-primary" /> Localizar Cliente
-                  </Label>
-                  <span className="text-[11px] font-bold text-muted-foreground">
-                    {workspaceFilteredCustomers.length} de {allSystemCustomers.length} clientes
-                  </span>
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={modalSearchQuery}
-                    onChange={(e) => setModalSearchQuery(e.target.value)}
-                    placeholder="Nome, telefone, WhatsApp, e-mail, CPF..."
-                    className="pl-10 h-10 text-xs rounded-xl font-medium border-2 focus:border-primary"
-                    autoFocus
-                  />
-                  {modalSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setModalSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filtros rápidos da lista de clientes */}
-                <div className="flex items-center gap-1.5 pt-1 overflow-x-auto">
-                  <button
-                    type="button"
-                    onClick={() => setModalCategoryFilter("all")}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                      modalCategoryFilter === "all"
-                        ? "bg-primary text-black font-black"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Todos ({allSystemCustomers.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalCategoryFilter("balance")}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                      modalCategoryFilter === "balance"
-                        ? "bg-primary text-black font-black"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Com Saldo ({customerCredits.length})
-                  </button>
-                </div>
-
-                {/* Opção para usar texto digitado como cliente avulso */}
-                {modalSearchQuery.trim().length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const isEmail = modalSearchQuery.includes("@");
-                      const generatedId = crypto.randomUUID();
-                      const newCust = {
-                        id: generatedId,
-                        customer_id: generatedId,
-                        name: isEmail ? modalSearchQuery.split("@")[0] : modalSearchQuery,
-                        phone: isEmail ? "" : modalSearchQuery.replace(/\D/g, ""),
-                        email: isEmail ? modalSearchQuery : "",
-                        balance: 0,
-                        total_recharged: 0,
-                        total_spent: 0,
-                      };
-                      setSelectedCustomer(newCust);
-                      setRechargeForm((prev) => ({
-                        ...prev,
-                        customerId: generatedId,
-                        customerName: newCust.name,
-                        customerPhone: newCust.phone,
-                      }));
-                      toast.success(`Cliente "${newCust.name}" selecionado para nova recarga!`);
-                    }}
-                    className="w-full text-left p-2.5 rounded-xl text-xs bg-primary/20 hover:bg-primary/30 text-foreground border border-primary/40 flex items-center justify-between font-black transition-all"
-                  >
-                    <span className="truncate">✨ Usar "<strong>{modalSearchQuery}</strong>" como cliente</span>
-                    <Plus className="w-4 h-4 text-primary shrink-0" />
-                  </button>
-                )}
-              </div>
-
-              {/* Lista Rolável de Clientes */}
-              <div className="flex-1 overflow-y-auto divide-y divide-border p-2 space-y-1">
-                {workspaceFilteredCustomers.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground space-y-2">
-                    <User className="w-8 h-8 mx-auto opacity-30" />
-                    <p className="font-bold text-foreground">Nenhum cliente encontrado.</p>
-                    <p className="text-[11px]">Você pode digitar o nome ou e-mail na busca acima para criar a carteira!</p>
-                  </div>
-                ) : (
-                  workspaceFilteredCustomers.map((c) => {
-                    const isSelected = selectedCustomer?.id === c.id || rechargeForm.customerId === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCustomer(c);
-                          setRechargeForm((prev) => ({
-                            ...prev,
-                            customerId: c.customer_id || c.id,
-                            customerName: c.name,
-                            customerPhone: c.phone || "",
-                          }));
-                        }}
-                        className={`w-full text-left p-3 rounded-2xl text-xs flex items-center justify-between transition-all ${
-                          isSelected
-                            ? "bg-primary text-black font-bold shadow-md ring-2 ring-primary"
-                            : "hover:bg-muted/70 text-foreground border border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
-                            isSelected ? "bg-black text-white border-black" : "bg-primary/20 text-foreground border-primary/30"
-                          }`}>
-                            {c.name ? c.name.charAt(0).toUpperCase() : "C"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-sm leading-tight">{c.name}</p>
-                            <p className="text-[11px] opacity-80 truncate mt-0.5">
-                              {c.phone || c.email || c.cpf || "Sem contato"}
-                            </p>
-                            {c.address && (
-                              <p className="text-[10px] opacity-70 truncate mt-0.5 flex items-center gap-1">
-                                <MapPin className="w-3 h-3 shrink-0" /> {c.address}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0 pl-2">
-                          <p className={`font-black text-xs ${isSelected ? "text-black" : "text-primary"}`}>
-                            {brl(c.balance)}
-                          </p>
-                          {c.total_spent > 0 && (
-                            <p className="text-[9px] opacity-75">Gasto: {brl(c.total_spent)}</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* COLUNA DIREITA (7/12): DETALHES DO CLIENTE SELECIONADO & FORMULÁRIO DE RECARGA */}
-            <div className="md:col-span-7 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-              
-              {selectedCustomer ? (
-                <>
-                  {/* CARD DE DETALHES COMPLETOS DO CLIENTE */}
-                  <div className="p-5 rounded-3xl border-2 border-primary/30 bg-primary/5 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-14 h-14 rounded-2xl bg-primary text-black font-black text-xl flex items-center justify-center shrink-0 shadow-md">
-                          {selectedCustomer.name ? selectedCustomer.name.charAt(0).toUpperCase() : "C"}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-lg text-foreground truncate leading-tight">
-                              {selectedCustomer.name}
-                            </h3>
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 shrink-0 flex items-center gap-1">
-                              <UserCheck className="w-3 h-3" /> Cliente Ativo
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap font-medium">
-                            {selectedCustomer.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.phone}
-                              </span>
-                            )}
-                            {selectedCustomer.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.email}
-                              </span>
-                            )}
-                            {selectedCustomer.cpf && (
-                              <span className="flex items-center gap-1">
-                                <FileText className="w-3.5 h-3.5 text-primary" /> CPF: {selectedCustomer.cpf}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Saldo Atual em Destaque */}
-                      <div className="bg-background/80 p-3 rounded-2xl border text-right shrink-0">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                          Saldo Atual da Carteira
-                        </span>
-                        <span className="text-xl font-black text-primary">
-                          {brl(selectedCustomer.balance || 0)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {selectedCustomer.address && (
-                      <div className="text-xs bg-background/60 p-2.5 rounded-xl border flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate"><strong>Endereço:</strong> {selectedCustomer.address}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* FORMULÁRIO DE RECARGA DE CRÉDITOS */}
-                  <form onSubmit={handleSubmitRecharge} className="space-y-5">
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <Label className="text-sm font-black uppercase tracking-wider text-foreground flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-primary" /> Recarga de Saldo & Bônus
-                      </Label>
-                      <span className="text-xs text-muted-foreground font-semibold">
-                        Preencha o valor pago e selecione a forma
-                      </span>
-                    </div>
-
-                    {/* Atalhos Rápidos de Valores */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground">Valores Rápidos de Recarga:</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {QUICK_AMOUNTS.map((amt) => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => setRechargeForm({ ...rechargeForm, paidAmount: `${amt},00` })}
-                            className={`px-4 py-2 text-xs font-black rounded-xl border transition-all ${
-                              rechargeForm.paidAmount === `${amt},00`
-                                ? "bg-primary text-black border-primary shadow-md scale-105"
-                                : "bg-muted hover:bg-muted/80 text-foreground border-border"
-                            }`}
-                          >
-                            R$ {amt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Inputs de Valor Real Pago e Forma de Pagamento */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-black">Valor Real Pago (R$)</Label>
-                        <CurrencyInput
-                          value={rechargeForm.paidAmount}
-                          onChangeValue={(v) => setRechargeForm({ ...rechargeForm, paidAmount: v })}
-                          placeholder="100,00"
-                          className="h-12 text-lg font-black rounded-2xl border-2 focus:border-primary bg-background"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-black">Forma de Pagamento</Label>
-                        <Select
-                          value={rechargeForm.paymentMethod}
-                          onValueChange={(val) => setRechargeForm({ ...rechargeForm, paymentMethod: val })}
-                        >
-                          <SelectTrigger className="h-12 text-sm font-semibold rounded-2xl bg-background border-2">
-                            <SelectValue placeholder="Selecione a forma" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PAYMENT_METHODS.map((m) => (
-                              <SelectItem key={m} value={m} className="font-medium">{m}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Seletor de Bônus (% de Bônus) */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-black">Percentual de Bônus:</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[10, 15, 20, 0].map((pct) => (
-                          <button
-                            key={pct}
-                            type="button"
-                            onClick={() => setRechargeForm({ ...rechargeForm, bonusPercentage: pct })}
-                            className={`py-2 text-xs font-black rounded-xl border transition-all ${
-                              rechargeForm.bonusPercentage === pct
-                                ? "bg-amber-500 text-black border-amber-500 shadow-md"
-                                : "bg-muted hover:bg-muted/80 text-foreground border-border"
-                            }`}
-                          >
-                            {pct === 0 ? "0% (Sem bônus)" : `+${pct}% Bônus`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* BOX EXPLICATIVO DE ALTO CONTRASTE DO BÔNUS */}
-                    <div className="bg-primary/10 border-2 border-primary/40 rounded-3xl p-5 space-y-3">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground font-semibold">Valor Recebido do Cliente:</span>
-                        <span className="font-black text-foreground text-sm">{brl(currentPaidVal)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
-                          <Sparkles className="w-4 h-4 text-amber-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
-                        </span>
-                        <span className="font-black text-amber-600 dark:text-amber-400 text-sm">
-                          + {brl(currentBonusVal)}
-                        </span>
-                      </div>
-
-                      <div className="h-px bg-primary/30 my-1" />
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-foreground font-black text-sm block">Total a ser Creditado:</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            Novo Saldo Final: {brl((selectedCustomer.balance || 0) + currentTotalCredits)}
-                          </span>
-                        </div>
-                        <span className="text-2xl sm:text-3xl text-primary font-black">
-                          {brl(currentTotalCredits)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Checkbox Fluxo de Caixa */}
-                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-2xl border">
-                      <input
-                        type="checkbox"
-                        id="workspaceRegisterCashFlow"
-                        checked={rechargeForm.registerCashFlow}
-                        onChange={(e) => setRechargeForm({ ...rechargeForm, registerCashFlow: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-5 w-5 cursor-pointer"
-                      />
-                      <Label htmlFor="workspaceRegisterCashFlow" className="text-xs font-medium cursor-pointer text-foreground">
-                        Lançar automaticamente como <strong>Entrada no Fluxo de Caixa</strong> ("Venda de Créditos Cliente - {rechargeForm.paymentMethod}")
-                      </Label>
-                    </div>
-
-                    {/* BOTÃO DE AÇÃO GIGANTE */}
-                    <Button
-                      type="submit"
-                      disabled={addCreditsMutation.isPending}
-                      className="w-full h-14 text-base font-black rounded-2xl gap-2 bg-primary text-black hover:bg-primary/90 shadow-xl cursor-pointer"
-                    >
-                      {addCreditsMutation.isPending ? (
-                        "Processando Recarga..."
-                      ) : (
-                        `⚡ Confirmar Recarga e Creditar ${brl(currentTotalCredits)} para ${selectedCustomer.name}`
-                      )}
-                    </Button>
-                  </form>
-
-                  {/* MINI EXTRATO RECENTE DO CLIENTE SELECIONADO */}
-                  <div className="border-t pt-4 space-y-3">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <History className="w-3.5 h-3.5 text-primary" /> Histórico Recente de {selectedCustomer.name} ({selectedCustomerTransactions.length})
-                    </h4>
-
-                    {selectedCustomerTransactions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic p-3 bg-muted/20 rounded-xl border">
-                        Nenhuma movimentação anterior registrada para este cliente.
-                      </p>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {selectedCustomerTransactions.map((tx) => (
-                          <div key={tx.id} className="p-2.5 rounded-xl border bg-muted/20 flex items-center justify-between text-xs">
-                            <div>
-                              <p className="font-bold text-foreground">{tx.description}</p>
-                              <p className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleDateString("pt-BR")} às {new Date(tx.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
-                            </div>
-                            <span className={`font-black ${Number(tx.amount) > 0 ? "text-emerald-500" : "text-foreground"}`}>
-                              {Number(tx.amount) > 0 ? "+" : ""}{brl(tx.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 text-muted-foreground space-y-3">
-                  <Users className="w-16 h-16 opacity-20 text-muted-foreground" />
-                  <h3 className="font-bold text-lg text-foreground">Selecione um cliente na coluna esquerda</h3>
-                  <p className="text-xs max-w-md">
-                    Escolha um cliente da lista ou digite o nome/telefone na barra de busca para visualizar os detalhes, histórico e realizar recargas de créditos com bônus.
-                  </p>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
