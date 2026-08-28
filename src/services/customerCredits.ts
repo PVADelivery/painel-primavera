@@ -90,13 +90,11 @@ export function useAllCustomerProfiles() {
       const excludedNames = new Set<string>();
 
       try {
-        const { data: driversData } = await supabase.from("delivery_drivers").select("id, user_id, name, full_name");
+        const { data: driversData } = await supabase.from("delivery_drivers").select("id, user_id");
         if (driversData) {
           driversData.forEach((d: any) => {
             if (d.user_id) excludedIds.add(String(d.user_id).toLowerCase());
             if (d.id) excludedIds.add(String(d.id).toLowerCase());
-            if (d.name) excludedNames.add(String(d.name).trim().toLowerCase());
-            if (d.full_name) excludedNames.add(String(d.full_name).trim().toLowerCase());
           });
         }
       } catch (err) {}
