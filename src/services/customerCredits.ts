@@ -90,7 +90,7 @@ export function useAllCustomerProfiles() {
       const excludedNames = new Set<string>();
 
       try {
-        const { data: driversData } = await supabase.from("drivers").select("*");
+        const { data: driversData } = await supabase.from("delivery_drivers").select("id, user_id, name, full_name");
         if (driversData) {
           driversData.forEach((d: any) => {
             if (d.user_id) excludedIds.add(String(d.user_id).toLowerCase());
@@ -102,7 +102,7 @@ export function useAllCustomerProfiles() {
       } catch (err) {}
 
       try {
-        const { data: companiesData } = await supabase.from("companies").select("*");
+        const { data: companiesData } = await supabase.from("companies").select("id, user_id, name");
         if (companiesData) {
           companiesData.forEach((c: any) => {
             if (c.user_id) excludedIds.add(String(c.user_id).toLowerCase());
@@ -113,7 +113,7 @@ export function useAllCustomerProfiles() {
       } catch (err) {}
 
       try {
-        const { data: rolesData } = await supabase.from("user_roles").select("*");
+        const { data: rolesData } = await supabase.from("user_roles").select("user_id, role");
         if (rolesData) {
           rolesData.forEach((r: any) => {
             if (r.role !== "customer" && r.user_id) {
@@ -265,51 +265,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 4. Busca da tabela invitations (Convites e emails cadastrados)
-      try {
-        const { data: invData } = await supabase
-          .from("invitations")
-          .select("email, role")
-          .limit(1000);
-        if (invData) {
-          invData.forEach((inv: any) => {
-            if (inv.email && inv.role === "customer") {
-              addUniqueCustomer({
-                id: inv.email,
-                name: inv.email.split("@")[0],
-                email: inv.email,
-                source: "invitations",
-              });
-            }
-          });
-        }
-      } catch (err) {}
-
-      // 5. Busca da tabela orders (Pedidos reais do Marketplace)
-      try {
-        const { data: recentOrders } = await supabase
-          .from("orders")
-          .select("user_id, customer_name, customer_phone, customer_email, customer_cpf, delivery_address")
-          .not("customer_name", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(500);
-
-        if (recentOrders) {
-          recentOrders.forEach((o: any) => {
-            addUniqueCustomer({
-              id: o.user_id || "",
-              name: o.customer_name,
-              phone: o.customer_phone || "",
-              email: o.customer_email || "",
-              cpf: o.customer_cpf || "",
-              address: typeof o.delivery_address === "string" ? o.delivery_address : "",
-              source: "app_marketplace",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 6. Busca da tabela deliveries
+      // 4. Busca da tabela deliveries (Cadastros de clientes em entregas)
       try {
         const { data: deliveriesData } = await supabase
           .from("deliveries")
@@ -334,7 +290,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 7. Busca da tabela ride_requests
+      // 5. Busca da tabela ride_requests (Passageiros de corridas)
       try {
         const { data: recentRides } = await supabase
           .from("ride_requests")
