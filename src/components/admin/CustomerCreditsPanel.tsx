@@ -476,23 +476,46 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                       }}
                       className={`w-full text-left p-3.5 rounded-2xl text-xs flex items-center justify-between transition-all ${
                         isSelected
-                          ? "bg-primary text-black font-bold shadow-md ring-2 ring-primary scale-[1.01]"
-                          : "hover:bg-muted/70 text-foreground border border-transparent"
+                          ? "bg-primary/20 border-2 border-primary shadow-md ring-2 ring-primary/40 scale-[1.01]"
+                          : "hover:bg-muted/70 text-foreground border border-border/60"
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
-                          isSelected ? "bg-black text-white border-black" : "bg-primary/20 text-foreground border-primary/30"
+                          isSelected ? "bg-primary text-black border-primary" : "bg-muted text-foreground border-border"
                         }`}>
                           {c.name ? c.name.charAt(0).toUpperCase() : "C"}
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-bold text-sm leading-tight">{c.name}</p>
-                          <p className="text-[11px] opacity-80 truncate mt-0.5">
-                            {c.phone || c.email || c.cpf || "Sem contato informado"}
-                          </p>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-black text-sm leading-tight text-foreground">{c.name}</p>
+                          
+                          {/* DADOS VISÍVEIS: TELEFONE, EMAIL, CPF */}
+                          <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-muted-foreground">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {c.phone ? (
+                                <span className="flex items-center gap-1 font-bold text-foreground">
+                                  <Phone className="w-3 h-3 text-emerald-500 shrink-0" /> {c.phone}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground/60 italic">Sem telefone</span>
+                              )}
+                              
+                              {c.cpf && (
+                                <span className="flex items-center gap-1 text-[10px] font-mono bg-muted/60 px-1.5 py-0.2 rounded border">
+                                  <FileText className="w-3 h-3 text-purple-500 shrink-0" /> CPF: {c.cpf}
+                                </span>
+                              )}
+                            </div>
+
+                            {c.email && (
+                              <span className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+                                <Mail className="w-3 h-3 text-blue-500 shrink-0" /> {c.email}
+                              </span>
+                            )}
+                          </div>
+
                           {c.address && (
-                            <p className="text-[10px] opacity-70 truncate mt-0.5 flex items-center gap-1">
+                            <p className="text-[10px] text-muted-foreground/80 truncate mt-0.5 flex items-center gap-1">
                               <MapPin className="w-3 h-3 shrink-0" /> {c.address}
                             </p>
                           )}
@@ -500,11 +523,11 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                       </div>
 
                       <div className="text-right shrink-0 pl-2">
-                        <p className={`font-black text-xs ${isSelected ? "text-black" : "text-primary"}`}>
+                        <p className="font-black text-xs text-emerald-600 dark:text-emerald-400">
                           {brl(c.balance)}
                         </p>
                         {c.total_spent > 0 && (
-                          <p className="text-[9px] opacity-75">Gasto: {brl(c.total_spent)}</p>
+                          <p className="text-[9px] text-muted-foreground">Gasto: {brl(c.total_spent)}</p>
                         )}
                       </div>
                     </button>
@@ -519,57 +542,82 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
             
             {selectedCustomer ? (
               <>
-                {/* CARD DE DETALHES COMPLETOS DO CLIENTE */}
-                <div className="p-5 rounded-3xl border-2 border-primary/30 bg-primary/5 space-y-4">
+                {/* CARD DE AUDITORIA E DETALHES COMPLETOS DO CLIENTE */}
+                <div className="p-5 rounded-3xl border-2 border-border bg-muted/20 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-14 h-14 rounded-2xl bg-primary text-black font-black text-xl flex items-center justify-center shrink-0 shadow-md">
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-800 font-black text-xl flex items-center justify-center shrink-0 shadow-md border">
                         {selectedCustomer.name ? selectedCustomer.name.charAt(0).toUpperCase() : "C"}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-black text-lg text-foreground truncate leading-tight">
+                          <h3 className="font-black text-xl text-foreground truncate leading-tight">
                             {selectedCustomer.name}
                           </h3>
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 shrink-0 flex items-center gap-1">
-                            <UserCheck className="w-3 h-3" /> Cliente Ativo
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30 shrink-0 flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" /> Cliente Marketplace
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap font-medium">
-                          {selectedCustomer.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.phone}
-                            </span>
-                          )}
-                          {selectedCustomer.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="w-3.5 h-3.5 text-primary" /> {selectedCustomer.email}
-                            </span>
-                          )}
-                          {selectedCustomer.cpf && (
-                            <span className="flex items-center gap-1">
-                              <FileText className="w-3.5 h-3.5 text-primary" /> CPF: {selectedCustomer.cpf}
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                          Identificação auditada para recarga de carteira no App Marketplace
+                        </p>
                       </div>
                     </div>
 
                     {/* Saldo Atual em Destaque */}
-                    <div className="bg-background/90 p-3.5 rounded-2xl border text-right shrink-0">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Saldo Atual da Carteira
+                    <div className="bg-card p-3.5 rounded-2xl border-2 border-border shadow-sm text-right shrink-0">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground block">
+                        Saldo da Carteira
                       </span>
-                      <span className="text-2xl font-black text-primary">
+                      <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
                         {brl(selectedCustomer.balance || 0)}
                       </span>
                     </div>
                   </div>
 
+                  {/* GRID DE DADOS OBRIGATÓRIOS: TELEFONE, EMAIL, CPF */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                    <div className="p-3 rounded-2xl bg-card border flex items-center gap-3 shadow-xs">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">WhatsApp / Telefone</p>
+                        <p className="text-xs font-black text-foreground truncate">
+                          {selectedCustomer.phone || "Não informado"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-card border flex items-center gap-3 shadow-xs">
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 font-bold">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">E-mail de Cadastro</p>
+                        <p className="text-xs font-black text-foreground truncate" title={selectedCustomer.email}>
+                          {selectedCustomer.email || "Não informado"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-card border flex items-center gap-3 shadow-xs">
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 font-bold">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">CPF / Documento</p>
+                        <p className="text-xs font-black text-foreground font-mono truncate">
+                          {selectedCustomer.cpf || "Não informado"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {selectedCustomer.address && (
-                    <div className="text-xs bg-background/80 p-3 rounded-xl border flex items-center gap-2 text-muted-foreground">
+                    <div className="text-xs bg-card p-3 rounded-2xl border flex items-center gap-2 text-muted-foreground">
                       <MapPin className="w-4 h-4 text-primary shrink-0" />
-                      <span className="truncate"><strong>Endereço:</strong> {selectedCustomer.address}</span>
+                      <span className="truncate"><strong>Endereço de Entrega:</strong> {selectedCustomer.address}</span>
                     </div>
                   )}
                 </div>

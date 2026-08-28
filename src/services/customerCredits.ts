@@ -85,6 +85,51 @@ export function useAllCustomerProfiles() {
       const customersList: any[] = [];
       const seenKeys = new Set<string>();
 
+      // Obter IDs/nomes de motoristas e empresas para exclusão
+      const excludedIds = new Set<string>();
+      const excludedNames = new Set<string>();
+
+      try {
+        const [{ data: driversData }, { data: companiesData }, { data: rolesData }] = await Promise.all([
+          supabase.from("drivers").select("id, user_id, name"),
+          supabase.from("companies").select("id, user_id, name"),
+          supabase.from("user_roles").select("user_id, role").in("role", ["driver", "company", "admin"]),
+        ]);
+
+        if (driversData) {
+          driversData.forEach((d: any) => {
+            if (d.user_id) excludedIds.add(String(d.user_id).toLowerCase());
+            if (d.id) excludedIds.add(String(d.id).toLowerCase());
+            if (d.name) excludedNames.add(String(d.name).trim().toLowerCase());
+          });
+        }
+        if (companiesData) {
+          companiesData.forEach((c: any) => {
+            if (c.user_id) excludedIds.add(String(c.user_id).toLowerCase());
+            if (c.id) excludedIds.add(String(c.id).toLowerCase());
+            if (c.name) excludedNames.add(String(c.name).trim().toLowerCase());
+          });
+        }
+        if (rolesData) {
+          rolesData.forEach((r: any) => {
+            if (r.user_id) excludedIds.add(String(r.user_id).toLowerCase());
+          });
+        }
+      } catch (err) {}
+
+      // Lista de termos lixo a serem ignorados completamente
+      const isJunkName = (name: string) => {
+        const n = (name || "").toUpperCase().trim();
+        if (n.length < 2) return true;
+        if (/^\d+$/.test(n)) return true;
+        const junkWords = [
+          "BALCÃO", "BALÇAO", "BALCOM", "CAIXA MT", "CACAU SHOW", "DRIVER", "MOTORISTA",
+          "IFOOD", "IFOODS", "TESTE", "TEST", "TES TES", "CLIENTE TESTE", "UPVET",
+          "SELECIONE", "ADMIN", "ADMINISTRADOR", "ENTREGADOR"
+        ];
+        return junkWords.some((word) => n.includes(word));
+      };
+
       const addUniqueCustomer = (item: {
         id: string;
         name: string;
@@ -99,11 +144,22 @@ export function useAllCustomerProfiles() {
         const phoneKey = item.phone ? String(item.phone).replace(/\D/g, "") : "";
         const emailKey = item.email ? String(item.email).trim().toLowerCase() : "";
 
+        // Se for motorista, empresa, admin ou nome de teste/balcão, descarta
+        if (idKey && excludedIds.has(idKey)) return;
+        if (nameKey && excludedNames.has(nameKey)) return;
+        if (isJunkName(item.name)) return;
+
+        // Se não possui nenhum dado de contato (nem telefone, nem email, nem cpf) e não veio de pedidos/autenticação com ID válido, descarta
+        const hasContact = phoneKey.length >= 8 || (emailKey.includes("@") && !emailKey.includes("exemplo")) || item.cpf;
+        if (!hasContact && (!idKey || idKey.length < 10)) {
+          return;
+        }
+
         // Chave de unicidade inteligente
         const primaryKey = idKey || (phoneKey.length >= 8 ? phoneKey : "") || (emailKey ? emailKey : nameKey);
         if (!primaryKey || seenKeys.has(primaryKey)) {
-          // Se já viu, tenta mesclar informações faltantes
-          const existing = customersList.find((c) => c._key === primaryKey);
+          // Se já viu, mescla as informações para enriquecer o cadastro
+          const existing = customersList.find((c) => c._key === primaryKey || (phoneKey && c.phone && c.phone.replace(/\D/g, "") === phoneKey) || (emailKey && c.email && c.email.toLowerCase() === emailKey));
           if (existing) {
             if (!existing.phone && item.phone) existing.phone = item.phone;
             if (!existing.email && item.email) existing.email = item.email;
@@ -118,7 +174,7 @@ export function useAllCustomerProfiles() {
           ...item,
           _key: primaryKey,
           id: item.id || primaryKey,
-          name: item.name || "Cliente",
+          name: item.name || "Cliente Marketplace",
           phone: item.phone || "",
           email: item.email || "",
           cpf: item.cpf || "",
@@ -126,26 +182,7 @@ export function useAllCustomerProfiles() {
         });
       };
 
-      // 1. Tenta buscar via RPC de Administrador (auth.users do app)
-      try {
-        const { data: rpcUsers, error: rpcErr } = await supabase.rpc(
-          "rpc_get_all_customers_for_admin"
-        );
-        if (!rpcErr && rpcUsers && rpcUsers.length > 0) {
-          rpcUsers.forEach((u: any) => {
-            addUniqueCustomer({
-              id: u.id,
-              name: u.name || u.full_name || u.email?.split("@")[0] || "Cliente",
-              phone: u.phone || "",
-              email: u.email || "",
-              cpf: u.cpf || "",
-              source: "app_marketplace",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 2. Busca da tabela profiles (Usuários registrados no App do Marketplace)
+      // 1. Busca da tabela profiles (Usuários registrados no App do Marketplace)
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -154,14 +191,15 @@ export function useAllCustomerProfiles() {
         if (profiles) {
           profiles.forEach((p: any) => {
             const uid = p.user_id || p.id;
-            const name = p.full_name || p.name || p.email?.split("@")[0] || "Cliente";
-            // Ignora termos de balcão / sistema
-            if (name && !name.toUpperCase().includes("BALCÃO") && !name.toUpperCase().includes("IFOOD")) {
+            const name = p.full_name || p.name || (p.email ? p.email.split("@")[0] : "");
+            if (name) {
               addUniqueCustomer({
                 id: uid,
                 name,
                 phone: p.phone || "",
                 email: p.email || "",
+                cpf: p.cpf || "",
+                address: p.address || "",
                 source: "app_marketplace",
               });
             }
@@ -169,7 +207,28 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 3. Busca da tabela customer_credits (Carteiras de clientes do App)
+      // 2. Busca da tabela customers (Clientes cadastrados com dados completos)
+      try {
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("*")
+          .limit(1000);
+        if (customersData) {
+          customersData.forEach((c: any) => {
+            addUniqueCustomer({
+              id: c.user_id || c.id,
+              name: c.name || "Cliente",
+              phone: c.phone || "",
+              email: c.email || "",
+              cpf: c.cpf || "",
+              address: c.address || "",
+              source: "app_marketplace",
+            });
+          });
+        }
+      } catch (err) {}
+
+      // 3. Busca da tabela customer_credits (Carteiras existentes)
       try {
         const { data: creditAccounts } = await supabase
           .from("customer_credits")
@@ -181,43 +240,39 @@ export function useAllCustomerProfiles() {
               id: c.customer_id || c.id,
               name: c.customer_name || "Cliente",
               phone: c.customer_phone || "",
+              email: c.customer_email || "",
+              cpf: c.customer_cpf || "",
               source: "app_marketplace",
             });
           });
         }
       } catch (err) {}
 
-      // 4. Busca da tabela orders (Pedidos reais do Marketplace no App)
+      // 4. Busca da tabela orders (Pedidos reais do Marketplace no App com endereços e telefones)
       try {
         const { data: recentOrders } = await supabase
           .from("orders")
-          .select("user_id, customer_name, customer_phone, delivery_address")
+          .select("user_id, customer_name, customer_phone, customer_email, customer_cpf, delivery_address")
           .not("customer_name", "is", null)
           .order("created_at", { ascending: false })
           .limit(500);
 
         if (recentOrders) {
           recentOrders.forEach((o: any) => {
-            const name = (o.customer_name || "").trim();
-            if (
-              name.length >= 2 &&
-              !name.toUpperCase().includes("BALCÃO") &&
-              !name.toUpperCase().includes("IFOOD") &&
-              !/^\d+$/.test(name)
-            ) {
-              addUniqueCustomer({
-                id: o.user_id || "",
-                name: o.customer_name,
-                phone: o.customer_phone || "",
-                address: typeof o.delivery_address === "string" ? o.delivery_address : "",
-                source: "app_marketplace",
-              });
-            }
+            addUniqueCustomer({
+              id: o.user_id || "",
+              name: o.customer_name,
+              phone: o.customer_phone || "",
+              email: o.customer_email || "",
+              cpf: o.customer_cpf || "",
+              address: typeof o.delivery_address === "string" ? o.delivery_address : "",
+              source: "app_marketplace",
+            });
           });
         }
       } catch (err) {}
 
-      // 5. Busca da tabela ride_requests (Corridas de passageiros no App)
+      // 5. Busca da tabela ride_requests (Corridas do App de Passageiro)
       try {
         const { data: recentRides } = await supabase
           .from("ride_requests")
@@ -228,20 +283,12 @@ export function useAllCustomerProfiles() {
 
         if (recentRides) {
           recentRides.forEach((r: any) => {
-            const name = (r.customer_name || "").trim();
-            if (
-              name.length >= 2 &&
-              !name.toUpperCase().includes("BALCÃO") &&
-              !name.toUpperCase().includes("IFOOD") &&
-              !/^\d+$/.test(name)
-            ) {
-              addUniqueCustomer({
-                id: r.user_id || "",
-                name: r.customer_name,
-                phone: r.customer_phone || "",
-                source: "app_marketplace",
-              });
-            }
+            addUniqueCustomer({
+              id: r.user_id || "",
+              name: r.customer_name,
+              phone: r.customer_phone || "",
+              source: "app_marketplace",
+            });
           });
         }
       } catch (err) {}
