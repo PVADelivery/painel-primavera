@@ -77,7 +77,7 @@ export function useCustomerCreditTransactionsList(limit = 400) {
   });
 }
 
-/** Hook para buscar todos os clientes cadastrados em profiles/customers */
+/** Hook para buscar todos os clientes cadastrados em auth.users/profiles/orders/customers */
 export function useAllCustomerProfiles() {
   return useQuery({
     queryKey: ["admin-all-profiles-customers"],
@@ -85,7 +85,31 @@ export function useAllCustomerProfiles() {
       const customersList: any[] = [];
       const seenIds = new Set<string>();
 
-      // 1. Busca da tabela profiles
+      // 1. Tenta buscar via RPC de Administrador (busca direta em auth.users + profiles)
+      try {
+        const { data: rpcUsers, error: rpcErr } = await supabase.rpc(
+          "rpc_get_all_customers_for_admin"
+        );
+        if (!rpcErr && rpcUsers && rpcUsers.length > 0) {
+          rpcUsers.forEach((u: any) => {
+            if (u.id && !seenIds.has(u.id)) {
+              seenIds.add(u.id);
+              customersList.push({
+                id: u.id,
+                name: u.name || u.email?.split("@")[0] || "Cliente",
+                phone: u.phone || "",
+                email: u.email || "",
+                source: "auth_users",
+              });
+            }
+          });
+          return customersList.sort((a, b) =>
+            (a.name || "").localeCompare(b.name || "", "pt-BR")
+          );
+        }
+      } catch (err) {}
+
+      // 2. Busca da tabela profiles
       try {
         const { data: profiles, error } = await supabase
           .from("profiles")
@@ -109,30 +133,57 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 2. Busca complementar de customers (se existir)
+      // 3. Busca complementar de clientes recentes em orders
       try {
-        const { data: custs } = await supabase
-          .from("customers")
-          .select("*")
-          .limit(500);
-        if (custs) {
-          custs.forEach((c: any) => {
-            const cid = c.id || c.user_id;
-            if (cid && !seenIds.has(cid)) {
-              seenIds.add(cid);
+        const { data: recentOrders } = await supabase
+          .from("orders")
+          .select("user_id, customer_name, customer_phone")
+          .not("user_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(300);
+
+        if (recentOrders) {
+          recentOrders.forEach((o: any) => {
+            if (o.user_id && !seenIds.has(o.user_id)) {
+              seenIds.add(o.user_id);
               customersList.push({
-                id: cid,
-                name: c.name || c.full_name || "Cliente",
-                phone: c.phone || "",
-                email: c.email || "",
-                source: "customer",
+                id: o.user_id,
+                name: o.customer_name || "Cliente",
+                phone: o.customer_phone || "",
+                email: "",
+                source: "orders",
               });
             }
           });
         }
       } catch (err) {}
 
-      // 3. Ordena alfabeticamente
+      // 4. Busca complementar de ride_requests
+      try {
+        const { data: recentRides } = await supabase
+          .from("ride_requests")
+          .select("user_id, customer_name, customer_phone")
+          .not("user_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(200);
+
+        if (recentRides) {
+          recentRides.forEach((r: any) => {
+            if (r.user_id && !seenIds.has(r.user_id)) {
+              seenIds.add(r.user_id);
+              customersList.push({
+                id: r.user_id,
+                name: r.customer_name || "Cliente",
+                phone: r.customer_phone || "",
+                email: "",
+                source: "ride_requests",
+              });
+            }
+          });
+        }
+      } catch (err) {}
+
+      // 5. Ordena alfabeticamente
       return customersList.sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", "pt-BR")
       );

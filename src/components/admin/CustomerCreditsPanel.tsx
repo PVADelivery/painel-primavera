@@ -597,8 +597,28 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               </div>
 
               {/* Lista rápida de sugestões de clientes */}
-              <div className="max-h-36 overflow-y-auto border rounded-xl divide-y bg-muted/20 p-1">
-                {modalCustomerSuggestions.length === 0 ? (
+              <div className="max-h-44 overflow-y-auto border rounded-xl divide-y bg-muted/20 p-1 space-y-1">
+                {clientSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isEmail = clientSearchQuery.includes("@");
+                      const generatedId = crypto.randomUUID();
+                      setRechargeForm((prev) => ({
+                        ...prev,
+                        customerId: generatedId,
+                        customerName: isEmail ? clientSearchQuery.split("@")[0] : clientSearchQuery,
+                        customerPhone: isEmail ? "" : prev.customerPhone,
+                      }));
+                    }}
+                    className="w-full text-left p-2 rounded-lg text-xs bg-primary/20 hover:bg-primary/30 text-foreground border border-primary/40 flex items-center justify-between font-bold"
+                  >
+                    <span>✨ Usar "<strong>{clientSearchQuery}</strong>" como cliente</span>
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                  </button>
+                )}
+
+                {modalCustomerSuggestions.length === 0 && !clientSearchQuery ? (
                   <p className="text-[11px] text-muted-foreground p-2 text-center">
                     Nenhum cliente pré-cadastrado encontrado. Preencha os campos abaixo para criar a carteira!
                   </p>
@@ -625,7 +645,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                     >
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{c.name}</p>
-                        <p className="text-[10px] opacity-80 truncate">{c.phone || c.email || "Sem contato"}</p>
+                        <p className="text-[10px] opacity-80 truncate">{c.email || c.phone || "Sem contato"}</p>
                       </div>
                       {rechargeForm.customerId === c.id && <Check className="w-4 h-4 text-black shrink-0" />}
                     </button>
