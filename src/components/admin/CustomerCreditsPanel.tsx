@@ -413,21 +413,19 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const currentBonusVal = Number((currentPaidVal * (rechargeForm.bonusPercentage / 100)).toFixed(2));
   const currentTotalCredits = currentPaidVal + currentBonusVal;
 
-  // ══════════════════════════════════════════════════════════════════════════════════
-  // MODO 1: WORKSPACE / JANELA COMPLETA DENTRO DO APP (SEM MODAL BLOQUEANDO A TELA)
-  // ══════════════════════════════════════════════════════════════════════════════════
-  if (viewMode === "workspace") {
-    return (
-      <div className="space-y-6">
-        {/* BARRA SUPERIOR DE NAVEGAÇÃO COM BOTÃO VOLTAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-primary/40 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setViewMode("overview")}
-              className="gap-2 font-black text-xs rounded-2xl h-11 px-4 border-2 border-primary hover:bg-primary text-black bg-primary/10 shadow-sm cursor-pointer"
-            >
+  return (
+    <div className="space-y-6">
+      {viewMode === "workspace" ? (
+        <div className="space-y-6">
+          {/* BARRA SUPERIOR DE NAVEGAÇÃO COM BOTÃO VOLTAR */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-primary/40 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setViewMode("overview")}
+                className="gap-2 font-black text-xs rounded-2xl h-11 px-4 border-2 border-primary hover:bg-primary text-black bg-primary/10 shadow-sm cursor-pointer"
+              >
               <ArrowLeft className="w-4 h-4 text-black" /> Voltar para Visão Geral
             </Button>
             <div>
@@ -937,27 +935,20 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               </div>
             )}
           </div>
-
         </div>
       </div>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════════════
-  // MODO 2: VISÃO GERAL DO PAINEL DE CRÉDITOS (COM BOTÃO DIRETO PARA A CENTRAL)
-  // ══════════════════════════════════════════════════════════════════════════════════
-  return (
-    <div className="space-y-6">
-      {/* ── TOP KPI CARDS ── */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {/* 1. Saldo em Circulação */}
-        <Card className="border-primary/40 bg-primary/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
-              Saldo em Circulação
-            </CardTitle>
-            <Wallet className="h-4 w-4 text-primary" />
-          </CardHeader>
+      ) : (
+        <div className="space-y-6">
+          {/* ── TOP KPI CARDS ── */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {/* 1. Saldo em Circulação */}
+            <Card className="border-primary/40 bg-primary/5 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Saldo em Circulação
+                </CardTitle>
+                <Wallet className="h-4 w-4 text-primary" />
+              </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-foreground">
               {brl(totals.totalBalance)}
@@ -1269,6 +1260,8 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
           </Card>
         </div>
       </div>
+    </div>
+  )}
 
       {/* MODAL DE EDIÇÃO DE CONTATO DO CLIENTE */}
       <Dialog open={editContactModalOpen} onOpenChange={setEditContactModalOpen}>

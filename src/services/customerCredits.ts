@@ -163,14 +163,22 @@ export function useAllCustomerProfiles() {
 
         // Chave de unicidade inteligente
         const primaryKey = idKey || (phoneKey.length >= 8 ? phoneKey : "") || (emailKey ? emailKey : nameKey);
-        if (!primaryKey || seenKeys.has(primaryKey)) {
-          // Se já viu, mescla as informações para enriquecer o cadastro
-          const existing = customersList.find((c) => c._key === primaryKey || (phoneKey && c.phone && c.phone.replace(/\D/g, "") === phoneKey) || (emailKey && c.email && c.email.toLowerCase() === emailKey));
-          if (existing) {
-            if (!existing.phone && item.phone) existing.phone = item.phone;
-            if (!existing.email && item.email) existing.email = item.email;
-            if (!existing.cpf && item.cpf) existing.cpf = item.cpf;
-            if (!existing.address && item.address) existing.address = item.address;
+        
+        // Verifica se já temos este cliente (por ID, telefone, email ou correspondência de nome)
+        const existing = customersList.find((c) => 
+          (idKey && (String(c.id || "").toLowerCase() === idKey || String(c._key || "").toLowerCase() === idKey)) ||
+          (phoneKey && c.phone && c.phone.replace(/\D/g, "") === phoneKey) ||
+          (emailKey && c.email && c.email.toLowerCase() === emailKey) ||
+          (nameKey && c.name && nameKey.length >= 3 && (c.name.toLowerCase().trim() === nameKey || nameKey.includes(c.name.toLowerCase().trim()) || c.name.toLowerCase().trim().includes(nameKey)))
+        );
+
+        if (existing) {
+          if (!existing.phone && item.phone) existing.phone = item.phone;
+          if (!existing.email && item.email) existing.email = item.email;
+          if (!existing.cpf && item.cpf) existing.cpf = item.cpf;
+          if (!existing.address && item.address) existing.address = item.address;
+          if (item.name && item.name.length > (existing.name || "").length && !isJunkName(item.name)) {
+            existing.name = item.name;
           }
           return;
         }
@@ -188,7 +196,48 @@ export function useAllCustomerProfiles() {
         });
       };
 
-      // 1. Busca da tabela profiles (Usuários registrados no App do Marketplace)
+      // 1. Busca da tabela customer_credits (Carteiras com saldo e dados auditados)
+      try {
+        const { data: creditAccounts } = await supabase
+          .from("customer_credits")
+          .select("*")
+          .limit(1000);
+        if (creditAccounts) {
+          creditAccounts.forEach((c: any) => {
+            addUniqueCustomer({
+              id: c.customer_id || c.id,
+              name: c.customer_name || "Cliente",
+              phone: c.customer_phone || "",
+              email: c.customer_email || "",
+              cpf: c.customer_cpf || "",
+              source: "app_marketplace",
+            });
+          });
+        }
+      } catch (err) {}
+
+      // 2. Busca da tabela customers (Clientes cadastrados no sistema)
+      try {
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("*")
+          .limit(1000);
+        if (customersData) {
+          customersData.forEach((c: any) => {
+            addUniqueCustomer({
+              id: c.user_id || c.id,
+              name: c.name || "Cliente",
+              phone: c.phone || "",
+              email: c.email || "",
+              cpf: c.cpf || "",
+              address: c.address || "",
+              source: "app_marketplace",
+            });
+          });
+        }
+      } catch (err) {}
+
+      // 3. Busca da tabela profiles (Usuários do app)
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -216,48 +265,27 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 2. Busca da tabela customers (Clientes cadastrados com dados completos)
+      // 4. Busca da tabela invitations (Convites e emails cadastrados)
       try {
-        const { data: customersData } = await supabase
-          .from("customers")
-          .select("*")
+        const { data: invData } = await supabase
+          .from("invitations")
+          .select("email, role")
           .limit(1000);
-        if (customersData) {
-          customersData.forEach((c: any) => {
-            addUniqueCustomer({
-              id: c.user_id || c.id,
-              name: c.name || "Cliente",
-              phone: c.phone || "",
-              email: c.email || "",
-              cpf: c.cpf || "",
-              address: c.address || "",
-              source: "app_marketplace",
-            });
+        if (invData) {
+          invData.forEach((inv: any) => {
+            if (inv.email && inv.role === "customer") {
+              addUniqueCustomer({
+                id: inv.email,
+                name: inv.email.split("@")[0],
+                email: inv.email,
+                source: "invitations",
+              });
+            }
           });
         }
       } catch (err) {}
 
-      // 3. Busca da tabela customer_credits (Carteiras existentes)
-      try {
-        const { data: creditAccounts } = await supabase
-          .from("customer_credits")
-          .select("*")
-          .limit(1000);
-        if (creditAccounts) {
-          creditAccounts.forEach((c: any) => {
-            addUniqueCustomer({
-              id: c.customer_id || c.id,
-              name: c.customer_name || "Cliente",
-              phone: c.customer_phone || "",
-              email: c.customer_email || "",
-              cpf: c.customer_cpf || "",
-              source: "app_marketplace",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 4. Busca da tabela orders (Pedidos reais do Marketplace no App com endereços e telefones)
+      // 5. Busca da tabela orders (Pedidos reais do Marketplace)
       try {
         const { data: recentOrders } = await supabase
           .from("orders")
@@ -281,7 +309,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 5. Busca da tabela deliveries (Entregas e cadastros de clientes da cidade)
+      // 6. Busca da tabela deliveries
       try {
         const { data: deliveriesData } = await supabase
           .from("deliveries")
@@ -306,7 +334,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 6. Busca da tabela ride_requests (Corridas do App de Passageiro)
+      // 7. Busca da tabela ride_requests
       try {
         const { data: recentRides } = await supabase
           .from("ride_requests")
@@ -348,33 +376,7 @@ export function useUpdateCustomerContact() {
       cpf?: string;
       address?: string;
     }) => {
-      // Update in profiles
-      try {
-        await supabase
-          .from("profiles")
-          .update({
-            ...(input.name ? { full_name: input.name } : {}),
-            ...(input.phone ? { phone: input.phone } : {}),
-            ...(input.cpf ? { document: input.cpf } : {}),
-            ...(input.email ? { email: input.email } : {}),
-          } as any)
-          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
-      } catch (e) {}
-
-      // Update in customers
-      try {
-        await supabase
-          .from("customers")
-          .update({
-            ...(input.name ? { name: input.name } : {}),
-            ...(input.phone ? { phone: input.phone } : {}),
-            ...(input.cpf ? { cpf: input.cpf } : {}),
-            ...(input.email ? { email: input.email } : {}),
-          } as any)
-          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
-      } catch (e) {}
-
-      // Update in customer_credits
+      // 1. Update in customer_credits
       try {
         await supabase
           .from("customer_credits")
@@ -383,15 +385,45 @@ export function useUpdateCustomerContact() {
             ...(input.phone ? { customer_phone: input.phone } : {}),
             ...(input.email ? { customer_email: input.email } : {}),
             ...(input.cpf ? { customer_cpf: input.cpf } : {}),
+            updated_at: new Date().toISOString(),
           } as any)
-          .eq("customer_id", input.customerId);
+          .or(`customer_id.eq.${input.customerId},customer_name.ilike.%${input.name || "___"}%`);
+      } catch (e) {}
+
+      // 2. Update in customers
+      try {
+        await supabase
+          .from("customers")
+          .update({
+            ...(input.name ? { name: input.name } : {}),
+            ...(input.phone ? { phone: input.phone } : {}),
+            ...(input.cpf ? { cpf: input.cpf } : {}),
+            ...(input.email ? { email: input.email } : {}),
+            ...(input.address ? { address: input.address } : {}),
+            updated_at: new Date().toISOString(),
+          } as any)
+          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
+      } catch (e) {}
+
+      // 3. Update in profiles
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            ...(input.name ? { full_name: input.name } : {}),
+            ...(input.phone ? { phone: input.phone } : {}),
+            ...(input.cpf ? { document: input.cpf } : {}),
+            updated_at: new Date().toISOString(),
+          } as any)
+          .or(`user_id.eq.${input.customerId},id.eq.${input.customerId}`);
       } catch (e) {}
 
       return true;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-all-customer-profiles"] });
+      qc.invalidateQueries({ queryKey: ["admin-all-profiles-customers"] });
       qc.invalidateQueries({ queryKey: ["admin-customer-credits"] });
+      qc.invalidateQueries({ queryKey: ["admin-customer-credit-transactions"] });
     },
   });
 }
