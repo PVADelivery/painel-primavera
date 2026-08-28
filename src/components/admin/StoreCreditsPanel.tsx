@@ -25,8 +25,7 @@ import { StatsCard } from "@/components/admin/StatsCard";
 import { useCompanies } from "@/services/companies";
 import {
   useCompanyCredits, useCreditTransactions, useAddCompanyCredits,
-  useCreditPurchaseRequestsAdmin, useApproveCreditPurchaseRequest,
-  useRejectCreditPurchaseRequest,
+  useCreditPurchaseRequestsAdmin, useApproveCreditPurchaseRequest, useRejectCreditPurchaseRequest,
 } from "@/services/companyCredits";
 
 import { supabase } from "@/integrations/supabase/client";
