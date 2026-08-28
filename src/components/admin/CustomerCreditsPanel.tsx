@@ -5,7 +5,7 @@ import {
   Sparkles, History, Filter, CheckCircle2, Users,
   DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check,
   X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard,
-  ArrowLeft
+  ArrowLeft, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -659,60 +659,68 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   </div>
 
                   {/* BOX EXPLICATIVO DE ALTO CONTRASTE DO BÔNUS */}
-                  <div className="bg-primary/10 border-2 border-primary/40 rounded-3xl p-5 space-y-3">
+                  <div className="bg-muted/40 border-2 border-border/80 rounded-3xl p-5 space-y-3 shadow-sm">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground font-semibold">Valor Recebido do Cliente:</span>
+                      <span className="text-muted-foreground font-medium">Valor Pago pelo Cliente:</span>
                       <span className="font-black text-foreground text-sm">{brl(currentPaidVal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-amber-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
                       </span>
-                      <span className="font-black text-amber-600 dark:text-amber-400 text-sm">
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                         + {brl(currentBonusVal)}
                       </span>
                     </div>
 
-                    <div className="h-px bg-primary/30 my-1" />
+                    <div className="h-px bg-border/60 my-1" />
 
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-foreground font-black text-sm block">Total a ser Creditado:</span>
-                        <span className="text-[11px] text-muted-foreground">
-                          Novo Saldo Final: {brl((selectedCustomer.balance || 0) + currentTotalCredits)}
+                        <span className="text-[11px] text-muted-foreground font-medium">
+                          Novo Saldo Final: <strong className="text-foreground">{brl((selectedCustomer.balance || 0) + currentTotalCredits)}</strong>
                         </span>
                       </div>
-                      <span className="text-2xl sm:text-3xl text-primary font-black">
+                      <span className="text-2xl sm:text-3xl text-emerald-600 dark:text-emerald-400 font-black">
                         {brl(currentTotalCredits)}
                       </span>
                     </div>
                   </div>
 
                   {/* Checkbox Fluxo de Caixa */}
-                  <div className="flex items-center gap-3 p-3.5 bg-muted/30 rounded-2xl border">
+                  <div className="flex items-center gap-3 p-3.5 bg-muted/20 rounded-2xl border border-border">
                     <input
                       type="checkbox"
                       id="workspaceRegisterCashFlow"
                       checked={rechargeForm.registerCashFlow}
                       onChange={(e) => setRechargeForm({ ...rechargeForm, registerCashFlow: e.target.checked })}
-                      className="rounded border-border text-primary focus:ring-primary h-5 w-5 cursor-pointer"
+                      className="rounded border-border text-emerald-600 focus:ring-emerald-500 h-5 w-5 cursor-pointer"
                     />
                     <Label htmlFor="workspaceRegisterCashFlow" className="text-xs font-medium cursor-pointer text-foreground">
                       Lançar automaticamente como <strong>Entrada no Fluxo de Caixa</strong> ("Venda de Créditos Cliente - {rechargeForm.paymentMethod}")
                     </Label>
                   </div>
 
-                  {/* BOTÃO DE AÇÃO GIGANTE */}
+                  {/* BOTÃO DE AÇÃO PREMIUM E DE ALTA VISIBILIDADE */}
                   <Button
                     type="submit"
-                    disabled={addCreditsMutation.isPending}
-                    className="w-full h-14 text-base font-black rounded-2xl gap-2 bg-primary text-black hover:bg-primary/90 shadow-xl cursor-pointer"
+                    disabled={addCreditsMutation.isPending || currentTotalCredits <= 0}
+                    className="w-full min-h-[56px] h-auto py-3.5 px-6 text-sm sm:text-base font-black rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/20 transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center border border-emerald-500/40"
                   >
                     {addCreditsMutation.isPending ? (
-                      "Processando Recarga..."
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-white" />
+                        <span>Processando Recarga...</span>
+                      </div>
                     ) : (
-                      `⚡ Confirmar Recarga e Creditar ${brl(currentTotalCredits)} para ${selectedCustomer.name}`
+                      <div className="flex items-center gap-2.5 text-center leading-tight">
+                        <Zap className="w-5 h-5 text-amber-300 shrink-0 fill-amber-300" />
+                        <span>
+                          Confirmar Recarga e Creditar <span className="underline decoration-2 underline-offset-2">{brl(currentTotalCredits)}</span> para {selectedCustomer.name}
+                        </span>
+                      </div>
                     )}
                   </Button>
                 </form>
