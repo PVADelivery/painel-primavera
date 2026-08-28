@@ -90,19 +90,19 @@ export function useAllCustomerProfiles() {
       const excludedNames = new Set<string>();
 
       try {
-        const [{ data: driversData }, { data: companiesData }, { data: rolesData }] = await Promise.all([
-          supabase.from("drivers").select("id, user_id, name"),
-          supabase.from("companies").select("id, user_id, name"),
-          supabase.from("user_roles").select("user_id, role").in("role", ["driver", "company", "admin"]),
-        ]);
-
+        const { data: driversData } = await supabase.from("drivers").select("*");
         if (driversData) {
           driversData.forEach((d: any) => {
             if (d.user_id) excludedIds.add(String(d.user_id).toLowerCase());
             if (d.id) excludedIds.add(String(d.id).toLowerCase());
             if (d.name) excludedNames.add(String(d.name).trim().toLowerCase());
+            if (d.full_name) excludedNames.add(String(d.full_name).trim().toLowerCase());
           });
         }
+      } catch (err) {}
+
+      try {
+        const { data: companiesData } = await supabase.from("companies").select("*");
         if (companiesData) {
           companiesData.forEach((c: any) => {
             if (c.user_id) excludedIds.add(String(c.user_id).toLowerCase());
@@ -110,9 +110,15 @@ export function useAllCustomerProfiles() {
             if (c.name) excludedNames.add(String(c.name).trim().toLowerCase());
           });
         }
+      } catch (err) {}
+
+      try {
+        const { data: rolesData } = await supabase.from("user_roles").select("*");
         if (rolesData) {
           rolesData.forEach((r: any) => {
-            if (r.user_id) excludedIds.add(String(r.user_id).toLowerCase());
+            if (r.role !== "customer" && r.user_id) {
+              excludedIds.add(String(r.user_id).toLowerCase());
+            }
           });
         }
       } catch (err) {}

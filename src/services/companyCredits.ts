@@ -33,25 +33,19 @@ export function useCreditPurchaseRequestsAdmin() {
   return useQuery({
     queryKey: ["admin-credit-purchase-requests"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("credit_purchase_requests")
-        .select("*, companies(id, name, logo_url, phone, address)")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) {
-        // Fallback sem join de companies se relation falhar
-        const { data: rawData, error: rawErr } = await supabase
+      try {
+        const { data, error } = await supabase
           .from("credit_purchase_requests")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(100);
-        if (rawErr) throw rawErr;
-        return rawData ?? [];
+
+        if (error) return [];
+        return data ?? [];
+      } catch (err) {
+        return [];
       }
-      return data ?? [];
     },
-    refetchInterval: 10000,
   });
 }
 

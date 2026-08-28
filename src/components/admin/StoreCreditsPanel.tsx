@@ -168,6 +168,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     }
   };
 
+  const isLoading = loadingCompanies || loadingCredits;
   const { data: creditRequests = [] } = useCreditPurchaseRequestsAdmin();
   const approveCreditReq = useApproveCreditPurchaseRequest();
   const rejectCreditReq = useRejectCreditPurchaseRequest();
