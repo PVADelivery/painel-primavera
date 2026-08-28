@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -30,6 +30,7 @@ export type Database = {
           region_id: string | null
           state: string
           street: string
+          user_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -47,6 +48,7 @@ export type Database = {
           region_id?: string | null
           state?: string
           street: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -64,6 +66,7 @@ export type Database = {
           region_id?: string | null
           state?: string
           street?: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Relationships: [
@@ -764,6 +767,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customer_credit_transactions: {
+        Row: {
+          amount: number
+          bonus_amount: number | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          description: string
+          id: string
+          paid_amount: number | null
+          reference_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          bonus_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description: string
+          id?: string
+          paid_amount?: number | null
+          reference_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          bonus_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string
+          id?: string
+          paid_amount?: number | null
+          reference_id?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      customer_credits: {
+        Row: {
+          balance: number
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          total_bonus: number
+          total_recharged: number
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          total_bonus?: number
+          total_recharged?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          total_bonus?: number
+          total_recharged?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       customers: {
         Row: {
@@ -2757,6 +2844,28 @@ export type Database = {
       is_driver: { Args: { _user_id: string }; Returns: boolean }
       refund_delivery_credit: { Args: { p_delivery_id: string }; Returns: Json }
       request_wallet_withdrawal: { Args: { _amount: number }; Returns: Json }
+      rpc_add_customer_credits: {
+        Args: {
+          p_admin_identifier: string
+          p_bonus_amount: number
+          p_customer_id: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_description: string
+          p_paid_amount: number
+        }
+        Returns: Json
+      }
+      rpc_deduct_customer_credits: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_description: string
+          p_reference_id: string
+          p_type: string
+        }
+        Returns: Json
+      }
       set_company_pricing_table: {
         Args: { p_company_id: string; p_pricing_table_id: string }
         Returns: Json
