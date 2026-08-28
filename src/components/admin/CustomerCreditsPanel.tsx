@@ -5,7 +5,7 @@ import {
   Sparkles, History, Filter, CheckCircle2, Users,
   DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check,
   X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard,
-  ArrowLeft, Loader2, Pencil
+  ArrowLeft, Loader2, Pencil, RotateCcw, Trash2, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   useAllCustomerProfiles,
   useAddCustomerCredits,
   useUpdateCustomerContact,
+  useRevokeCustomerCredits,
 } from "@/services/customerCredits";
 
 const brl = (n: number) =>
@@ -43,6 +44,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const { data: profiles = [], isLoading: loadingProfiles } = useAllCustomerProfiles();
   const addCreditsMutation = useAddCustomerCredits();
   const updateContactMutation = useUpdateCustomerContact();
+  const revokeCreditsMutation = useRevokeCustomerCredits();
 
   // Modo de visualização: "overview" (painel padrão) ou "workspace" (janela dedicada no sistema)
   const [viewMode, setViewMode] = useState<"overview" | "workspace">("overview");
@@ -99,6 +101,53 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       toast.success("Dados do cliente atualizados com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao atualizar dados: " + err.message);
+    }
+  };
+
+  // Estados de Revogação / Estorno de Créditos
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [revokeTargetCustomer, setRevokeTargetCustomer] = useState<any>(null);
+  const [revokeAmountInput, setRevokeAmountInput] = useState("");
+  const [revokeReason, setRevokeReason] = useState("Crédito enviado para usuário incorreto");
+  const [revokeCashFlowReversal, setRevokeCashFlowReversal] = useState(true);
+
+  const handleOpenRevoke = (cust: any) => {
+    if (!cust) return;
+    const curBalance = Number(cust.balance || 0);
+    setRevokeTargetCustomer(cust);
+    setRevokeAmountInput(curBalance > 0 ? curBalance.toFixed(2).replace(".", ",") : "0,00");
+    setRevokeReason("Crédito enviado para usuário incorreto");
+    setRevokeCashFlowReversal(true);
+    setRevokeModalOpen(true);
+  };
+
+  const handleConfirmRevoke = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!revokeTargetCustomer) return;
+    const numAmount = parseFloat(revokeAmountInput.replace(/\./g, "").replace(",", ".")) || 0;
+    if (numAmount <= 0) {
+      toast.error("Informe um valor maior que zero para revogar.");
+      return;
+    }
+    try {
+      await revokeCreditsMutation.mutateAsync({
+        customer_id: revokeTargetCustomer.customer_id || revokeTargetCustomer.id,
+        customer_name: revokeTargetCustomer.name,
+        customer_phone: revokeTargetCustomer.phone,
+        revoke_amount: numAmount,
+        reason: revokeReason,
+        reversalCashFlow: revokeCashFlowReversal,
+      });
+      toast.success(`Créditos de ${brl(numAmount)} revogados com sucesso!`);
+      setRevokeModalOpen(false);
+      if (selectedCustomer && (selectedCustomer.id === revokeTargetCustomer.id || selectedCustomer.customer_id === revokeTargetCustomer.id)) {
+        setSelectedCustomer((prev: any) => ({
+          ...prev,
+          balance: Math.max(0, (Number(prev.balance) || 0) - numAmount),
+        }));
+      }
+    } catch (err: any) {
+      toast.error("Erro ao revogar créditos: " + err.message);
     }
   };
 
@@ -614,14 +663,27 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                       </div>
                     </div>
 
-                    {/* Saldo Atual em Destaque */}
-                    <div className="bg-card p-3.5 rounded-2xl border-2 border-border shadow-sm text-right shrink-0">
-                      <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground block">
-                        Saldo da Carteira
-                      </span>
-                      <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                        {brl(selectedCustomer.balance || 0)}
-                      </span>
+                    {/* Saldo Atual em Destaque e Ação de Revogação */}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="bg-card p-3.5 rounded-2xl border-2 border-border shadow-sm text-right w-full sm:w-auto">
+                        <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground block">
+                          Saldo da Carteira
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                          {brl(selectedCustomer.balance || 0)}
+                        </span>
+                      </div>
+                      {Number(selectedCustomer.balance || 0) > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenRevoke(selectedCustomer)}
+                          className="h-7 text-xs font-bold gap-1 rounded-xl border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 w-full sm:w-auto justify-center"
+                        >
+                          <RotateCcw className="w-3 h-3 text-rose-500" /> Revogar / Estornar Saldo
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -1071,6 +1133,17 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                       >
                         Recarregar
                       </Button>
+                      {Number(cust.balance || 0) > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenRevoke(cust)}
+                          className="h-7 px-2 text-[10px] font-bold rounded-lg border-rose-500/40 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/10 transition-colors"
+                          title="Revogar ou estornar créditos indevidos"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" /> Revogar
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -1119,10 +1192,11 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                     <SelectItem value="all">Todas as Movimentações</SelectItem>
                     <SelectItem value="recharge">Recargas (+)</SelectItem>
                     <SelectItem value="bonus">Bônus Concedidos (+)</SelectItem>
+                    <SelectItem value="revoke">Revogações / Estornos (-)</SelectItem>
                     <SelectItem value="payment_order">Pagamentos de Pedidos (-)</SelectItem>
                     <SelectItem value="payment_ride">Corridas Táxi / Moto (-)</SelectItem>
                     <SelectItem value="payment_errand">Entregas / Motoboy (-)</SelectItem>
-                    <SelectItem value="refund">Estornos (+)</SelectItem>
+                    <SelectItem value="refund">Outros Estornos (+)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1273,6 +1347,88 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               <Button type="submit" disabled={updateContactMutation.isPending} className="font-bold">
                 {updateContactMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
                 Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE REVOGAÇÃO / ESTORNO DE CRÉDITOS */}
+      <Dialog open={revokeModalOpen} onOpenChange={setRevokeModalOpen}>
+        <DialogContent className="sm:max-w-[480px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-black text-lg text-rose-600 dark:text-rose-400">
+              <RotateCcw className="w-5 h-5 text-rose-500" /> Revogar / Estornar Créditos
+            </DialogTitle>
+            <DialogDescription>
+              Cancele ou remova créditos enviados indevidamente para a carteira de {revokeTargetCustomer?.name || "este cliente"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmRevoke} className="space-y-4 py-2">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase">Saldo Atual Disponível</p>
+                <p className="text-xl font-black text-foreground">{brl(revokeTargetCustomer?.balance || 0)}</p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setRevokeAmountInput(Number(revokeTargetCustomer?.balance || 0).toFixed(2).replace(".", ","))}
+                className="text-xs font-bold rounded-xl border-rose-500/30 text-rose-600 hover:bg-rose-500/20"
+              >
+                Revogar Tudo ({brl(revokeTargetCustomer?.balance || 0)})
+              </Button>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Valor a Revogar / Estornar (R$)</Label>
+              <CurrencyInput
+                value={revokeAmountInput}
+                onChange={(val) => setRevokeAmountInput(val)}
+                placeholder="0,00"
+                required
+              />
+              <p className="text-[11px] text-muted-foreground">
+                O valor informado será debitado imediatamente do saldo da conta do cliente.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Motivo da Revogação / Cancelamento</Label>
+              <Input
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                placeholder="Ex: Envio incorreto para este cliente / cancelamento de recarga"
+                required
+              />
+            </div>
+
+            <div className="flex items-center gap-2 p-3 rounded-2xl border bg-muted/20">
+              <input
+                type="checkbox"
+                id="revokeCashFlow"
+                checked={revokeCashFlowReversal}
+                onChange={(e) => setRevokeCashFlowReversal(e.target.checked)}
+                className="rounded w-4 h-4 text-primary cursor-pointer"
+              />
+              <label htmlFor="revokeCashFlow" className="text-xs font-medium cursor-pointer text-foreground">
+                Lançar estorno / saída compensatória no Fluxo de Caixa da empresa
+              </label>
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button type="button" variant="outline" onClick={() => setRevokeModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={revokeCreditsMutation.isPending}
+                className="font-bold bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {revokeCreditsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                Confirmar Revogação
               </Button>
             </DialogFooter>
           </form>

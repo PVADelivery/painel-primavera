@@ -23,7 +23,7 @@ export interface CustomerCreditTransaction {
   amount: number;
   paid_amount?: number;
   bonus_amount?: number;
-  type: "recharge" | "bonus" | "payment_order" | "payment_ride" | "payment_errand" | "refund" | "admin_adjustment";
+  type: "recharge" | "bonus" | "payment_order" | "payment_ride" | "payment_errand" | "refund" | "revoke" | "admin_adjustment";
   reference_id?: string;
   description: string;
   created_by: string;
@@ -492,6 +492,87 @@ export function useAddCustomerCredits() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-customer-credits"] });
       qc.invalidateQueries({ queryKey: ["admin-customer-credit-transactions"] });
+      qc.invalidateQueries({ queryKey: ["platform-cash-flow"] });
+    },
+  });
+}
+
+/** Mutation para Revogar / Estornar / Zerar Créditos de Cliente */
+export function useRevokeCustomerCredits() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      customer_id: string;
+      customer_name?: string;
+      customer_phone?: string;
+      revoke_amount: number;
+      reason: string;
+      reversalCashFlow?: boolean;
+    }) => {
+      const revokeVal = Math.abs(Number(input.revoke_amount || 0));
+      if (revokeVal <= 0) throw new Error("Informe um valor válido para revogação.");
+
+      // 1. Obter saldo atual do cliente
+      const { data: currentAcc, error: getErr } = await supabase
+        .from("customer_credits")
+        .select("balance, total_recharged, total_bonus")
+        .eq("customer_id", input.customer_id)
+        .maybeSingle();
+
+      if (getErr) throw getErr;
+
+      const currentBalance = Number(currentAcc?.balance || 0);
+      const finalBalance = Math.max(0, currentBalance - revokeVal);
+
+      // 2. Atualizar saldo em customer_credits
+      const { error: updateErr } = await supabase
+        .from("customer_credits")
+        .upsert({
+          customer_id: input.customer_id,
+          customer_name: input.customer_name || "Cliente",
+          customer_phone: input.customer_phone || "",
+          balance: finalBalance,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (updateErr) throw updateErr;
+
+      // 3. Inserir registro de transação negativa no extrato
+      await supabase.from("customer_credit_transactions").insert({
+        customer_id: input.customer_id,
+        customer_name: input.customer_name || "Cliente",
+        customer_phone: input.customer_phone || "",
+        amount: -revokeVal,
+        paid_amount: -revokeVal,
+        bonus_amount: 0,
+        type: "revoke",
+        description: `Estorno / Revogação de Créditos: ${input.reason || "Correção de envio indevido"}`,
+        created_by: "admin",
+      });
+
+      // 4. Se solicitado, lançar saída compensatória no Fluxo de Caixa
+      if (input.reversalCashFlow) {
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          await supabase.from("platform_cash_flow").insert({
+            type: "expense",
+            category: "Estorno de Créditos Cliente",
+            description: `Estorno / Revogação de Crédito - Cliente: ${input.customer_name || "Cliente"} (${input.reason || "Envio incorreto"})`,
+            amount: revokeVal,
+            origin: "Estorno Admin",
+            date: today,
+          });
+        } catch (cfErr) {
+          console.warn("[CustomerCredits] Aviso ao salvar estorno no fluxo de caixa:", cfErr);
+        }
+      }
+
+      return { finalBalance, revokedAmount: revokeVal };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-customer-credits"] });
+      qc.invalidateQueries({ queryKey: ["admin-customer-credit-transactions"] });
+      qc.invalidateQueries({ queryKey: ["admin-all-customer-profiles"] });
       qc.invalidateQueries({ queryKey: ["platform-cash-flow"] });
     },
   });
