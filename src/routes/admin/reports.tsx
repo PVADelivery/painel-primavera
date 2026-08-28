@@ -16,8 +16,8 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { StoreCreditsPanel } from "@/components/admin/StoreCreditsPanel";
+import { CustomerCreditsPanel } from "@/components/admin/CustomerCreditsPanel";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -747,8 +747,12 @@ function ReportsPage() {
               <span className="hidden sm:inline">Painel Operacional (Corridas)</span>
             </TabsTrigger>
             <TabsTrigger value="creditos" className="whitespace-nowrap text-xs sm:text-sm">
-              <span className="sm:hidden">Créditos</span>
+              <span className="sm:hidden">Lojas</span>
               <span className="hidden sm:inline">Créditos de Lojas</span>
+            </TabsTrigger>
+            <TabsTrigger value="customer_credits" className="whitespace-nowrap text-xs sm:text-sm">
+              <span className="sm:hidden">Clientes</span>
+              <span className="hidden sm:inline">Créditos de Clientes (+10%)</span>
             </TabsTrigger>
             <TabsTrigger value="cashflow" className="whitespace-nowrap text-xs sm:text-sm">
               <span className="sm:hidden">Caixa</span>
@@ -1317,6 +1321,10 @@ function ReportsPage() {
 
         <TabsContent value="creditos">
           <StoreCreditsPanel onCreditPurchased={fetchCashFlow} />
+        </TabsContent>
+
+        <TabsContent value="customer_credits">
+          <CustomerCreditsPanel onCreditRecharged={fetchCashFlow} />
         </TabsContent>
 
         <TabsContent value="cashflow">
