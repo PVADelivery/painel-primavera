@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect, useRef } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check
+  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check,
+  Percent, Sparkles, Coins
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,6 +85,8 @@ function ReportsPage() {
   const [loadingDeliveries, setLoadingDeliveries] = useState(true);
   const [companies, setCompanies] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [storeCreditTxs, setStoreCreditTxs] = useState<any[]>([]);
+  const [storeCredits, setStoreCredits] = useState<any[]>([]);
 
   // Fluxo de Caixa states
   const [cashFlows, setCashFlows] = useState([]);
@@ -244,12 +247,17 @@ function ReportsPage() {
   const fetchData = async () => {
     setLoadingDeliveries(true);
 
-    // 1. Buscar empresas e motoristas para preencher filtros e breakdowns
-    const [companiesRes, driversRes, profilesRes] = await Promise.all([
+    // 1. Buscar empresas, motoristas, perfis e transações de créditos para preencher filtros e breakdowns
+    const [companiesRes, driversRes, profilesRes, creditTxsRes, storeCreditsRes] = await Promise.all([
       supabase.from("companies").select("id, name, commission_percentage"),
       supabase.from("delivery_drivers").select("id, user_id, delivery_fee_tax"),
-      supabase.from("profiles").select("user_id, full_name, phone")
+      supabase.from("profiles").select("user_id, full_name, phone"),
+      supabase.from("company_credit_transactions").select("*").order("created_at", { ascending: false }),
+      supabase.from("company_credits").select("*"),
     ]);
+
+    if (creditTxsRes.data) setStoreCreditTxs(creditTxsRes.data);
+    if (storeCreditsRes.data) setStoreCredits(storeCreditsRes.data);
 
     const compData = companiesRes.data || [];
     setCompanies(compData);
@@ -428,15 +436,47 @@ function ReportsPage() {
     // Ticket Médio
     const averageTicket = finished > 0 ? grossRevenue / finished : 0;
 
+    // ── COMISSÃO DA PLATAFORMA (2% SOBRE OS CRÉDITOS VENDIDOS AOS LOJISTAS) ──
+    let relevantCreditTxs = (storeCreditTxs || []).filter(
+      (t: any) => t.type === "purchase" || (t.type === "manual_add" && Number(t.amount) > 0) || Number(t.amount) > 0
+    );
+
+    if (selectedCompany && selectedCompany !== "all") {
+      relevantCreditTxs = relevantCreditTxs.filter((t: any) => t.company_id === selectedCompany);
+    }
+
+    if (dateFrom) {
+      const [fy, fm, fd] = dateFrom.split("-").map(Number);
+      const fromDate = new Date(fy, fm - 1, fd, 0, 0, 0);
+      relevantCreditTxs = relevantCreditTxs.filter((t: any) => new Date(t.created_at) >= fromDate);
+    }
+    if (dateTo) {
+      const [ty, tm, td] = dateTo.split("-").map(Number);
+      const toDate = new Date(ty, tm - 1, td, 23, 59, 59, 999);
+      relevantCreditTxs = relevantCreditTxs.filter((t: any) => new Date(t.created_at) <= toDate);
+    }
+
+    let totalCreditsSold = relevantCreditTxs.reduce((s: number, t: any) => s + Number(t.amount || 0), 0);
+
+    // Fallback: se não houver transações detalhadas ou não houver filtro de data/empresa
+    if (totalCreditsSold === 0 && !dateFrom && !dateTo && (!selectedCompany || selectedCompany === "all")) {
+      totalCreditsSold = (storeCredits || []).reduce((s: number, c: any) => s + Number(c.total_purchased || 0), 0);
+    }
+
+    // Comissão da plataforma devida pela cliente (2% dos créditos vendidos)
+    const platformCommission = totalCreditsSold * 0.02;
+
     return {
       total,
       finished,
       successRate,
       grossRevenue,
       estimatedCommissions,
-      averageTicket
+      averageTicket,
+      totalCreditsSold,
+      platformCommission
     };
-  }, [filteredDeliveries]);
+  }, [filteredDeliveries, storeCreditTxs, storeCredits, selectedCompany, dateFrom, dateTo]);
 
   // Gráfico de Tendência (Agrupado por dia)
   const chartData = useMemo(() => {
@@ -954,7 +994,7 @@ function ReportsPage() {
           </Card>
 
           {/* Cards KPI */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
             <Card className="rounded-3xl border-border/80 shadow-sm relative overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Total de Corridas</CardTitle>
@@ -996,6 +1036,29 @@ function ReportsPage() {
                     {((kpis.estimatedCommissions / kpis.grossRevenue) * 100).toFixed(1)}% do faturamento
                   </p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* CARD: COMISSÃO DA PLATAFORMA (2% DOS CRÉDITOS VENDIDOS AOS LOJISTAS) */}
+            <Card className="rounded-3xl border-indigo-500/30 bg-gradient-to-br from-indigo-500/[0.08] via-purple-500/[0.03] to-transparent shadow-sm relative overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                  Comissão da Plataforma
+                </CardTitle>
+                <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  <Percent className="h-4 w-4 font-black" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  {kpis.platformCommission.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+                <p className="text-xs font-bold text-muted-foreground mt-1">
+                  2,0% de comissão sobre {kpis.totalCreditsSold.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em créditos vendidos
+                </p>
+                <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase tracking-wider">
+                  <Sparkles className="w-3 h-3 text-indigo-500" /> A Pagar pela Cliente
+                </div>
               </CardContent>
             </Card>
 
