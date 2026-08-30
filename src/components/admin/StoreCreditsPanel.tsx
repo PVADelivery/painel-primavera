@@ -133,30 +133,17 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     try {
       await addCredits.mutateAsync({
         company_id: dialogCompany.id,
+        company_name: dialogCompany.name,
         amount: mode === "purchase" ? value : -value,
         payment_method: mode === "purchase" ? form.payment_method : null,
         description: form.description || (mode === "purchase" ? "Compra de créditos" : "Ajuste manual"),
         type: mode === "purchase" ? "purchase" : "adjustment",
       });
 
-      // Vincula a venda de créditos ao Fluxo de Caixa Operacional como Entrada (Receita)
       if (mode === "purchase") {
-        const { error: cfErr } = await supabase.from('platform_cash_flow').insert({
-          description: `Venda de Créditos: ${dialogCompany.name}`,
-          category: "Venda - Créditos Lojista",
-          amount: value,
-          type: "income",
-          date: new Date().toISOString().split("T")[0],
-          origin: form.payment_method || "Pix"
-        });
-
-        if (!cfErr) {
-          toast.success(
-            `${brl(value)} em créditos adicionados e lançados nas ENTRADAS do Fluxo de Caixa!`,
-          );
-        } else {
-          toast.success(`${brl(value)} em créditos adicionados a ${dialogCompany.name}`);
-        }
+        toast.success(
+          `${brl(value)} em créditos adicionados e lançados nas ENTRADAS do Fluxo de Caixa para ${dialogCompany.name}!`,
+        );
       } else {
         toast.success(`${brl(value)} debitados de ${dialogCompany.name}`);
       }

@@ -54,9 +54,10 @@ export function useAddCompanyCredits() {
   return useMutation({
     mutationFn: async (input: {
       company_id: string;
+      company_name?: string;
       amount: number;
       description?: string;
-      payment_method?: string;
+      payment_method?: string | null;
       type?: string;
     }) => {
       let success = false;
@@ -114,13 +115,17 @@ export function useAddCompanyCredits() {
         } catch (e) {}
       }
 
-      // Lançar no fluxo de caixa se for compra de créditos
+      // Lançar no fluxo de caixa se for compra de créditos (Lançamento Único Centralizado)
       if (input.type !== "debit" && input.amount > 0) {
         try {
+          const compName = input.company_name || input.description || "Lojista";
+          const desc = input.description && input.description.startsWith("Solicitação")
+            ? input.description
+            : `Venda de Créditos: ${compName}`;
           await supabase.from("platform_cash_flow").insert({
             type: "income",
-            category: "Venda de Créditos Loja",
-            description: `Recarga de Créditos Loja - ${input.description || "Recarga de Saldo"}`,
+            category: "Venda - Créditos Lojista",
+            description: desc,
             amount: input.amount,
             origin: input.payment_method || "Pix",
             date: new Date().toISOString().split("T")[0],
