@@ -194,7 +194,7 @@ export function useAllCustomerProfiles() {
         });
       };
 
-      // 1. Busca da tabela customer_credits (Carteiras com saldo e dados auditados)
+      // 1. Busca da tabela customer_credits (Carteiras de clientes com saldo e dados auditados)
       try {
         const { data: creditAccounts } = await supabase
           .from("customer_credits")
@@ -214,28 +214,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 2. Busca da tabela customers (Clientes cadastrados no sistema)
-      try {
-        const { data: customersData } = await supabase
-          .from("customers")
-          .select("*")
-          .limit(1000);
-        if (customersData) {
-          customersData.forEach((c: any) => {
-            addUniqueCustomer({
-              id: c.user_id || c.id,
-              name: c.name || "Cliente",
-              phone: c.phone || "",
-              email: c.email || "",
-              cpf: c.cpf || "",
-              address: c.address || "",
-              source: "app_marketplace",
-            });
-          });
-        }
-      } catch (err) {}
-
-      // 3. Busca da tabela profiles (Usuários do app)
+      // 2. Busca da tabela profiles (Usuários reais cadastrados no app)
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -244,11 +223,14 @@ export function useAllCustomerProfiles() {
         if (profiles) {
           profiles.forEach((p: any) => {
             const uid = p.user_id || p.id;
+            if (!uid || excludedIds.has(String(uid).toLowerCase())) return;
+
             const name = p.full_name || p.name || (p.email ? p.email.split("@")[0] : "");
             const email = p.email || p.user_email || p.contact_email || "";
             const phone = p.phone || p.whatsapp || "";
             const cpf = p.cpf || p.document || "";
-            if (name || email || phone || uid) {
+
+            if (name || email || phone) {
               addUniqueCustomer({
                 id: uid,
                 name: name || (email ? email.split("@")[0] : "Cliente Marketplace"),
@@ -263,46 +245,25 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 4. Busca da tabela deliveries (Cadastros de clientes em entregas)
+      // 3. Busca da tabela customers (Clientes autenticados do marketplace com user_id ou email)
       try {
-        const { data: deliveriesData } = await supabase
-          .from("deliveries")
-          .select("customer_id, customer_name, customer_phone, customer_cpf, delivery_address")
-          .not("customer_name", "is", null)
-          .order("created_at", { ascending: false })
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("*")
+          .or("user_id.not.is.null,email.not.is.null")
           .limit(1000);
+        if (customersData) {
+          customersData.forEach((c: any) => {
+            const uid = c.user_id || c.id;
+            if (uid && excludedIds.has(String(uid).toLowerCase())) return;
 
-        if (deliveriesData) {
-          deliveriesData.forEach((d: any) => {
-            if (d.customer_name && !isJunkName(d.customer_name)) {
-              addUniqueCustomer({
-                id: d.customer_id || "",
-                name: d.customer_name,
-                phone: d.customer_phone || "",
-                cpf: d.customer_cpf || "",
-                address: d.delivery_address || "",
-                source: "app_marketplace",
-              });
-            }
-          });
-        }
-      } catch (err) {}
-
-      // 5. Busca da tabela ride_requests (Passageiros de corridas)
-      try {
-        const { data: recentRides } = await supabase
-          .from("ride_requests")
-          .select("user_id, customer_name, customer_phone")
-          .not("customer_name", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(300);
-
-        if (recentRides) {
-          recentRides.forEach((r: any) => {
             addUniqueCustomer({
-              id: r.user_id || "",
-              name: r.customer_name,
-              phone: r.customer_phone || "",
+              id: uid,
+              name: c.name || "Cliente",
+              phone: c.phone || "",
+              email: c.email || "",
+              cpf: c.cpf || "",
+              address: c.address || "",
               source: "app_marketplace",
             });
           });
