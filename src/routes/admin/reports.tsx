@@ -1052,9 +1052,6 @@ function ReportsPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   2,0% dos créditos vendidos ({kpis.totalCreditsSold.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
                 </p>
-                <p className="text-xs font-bold text-primary mt-0.5">
-                  2.0% a pagar pela cliente
-                </p>
               </CardContent>
             </Card>
 
