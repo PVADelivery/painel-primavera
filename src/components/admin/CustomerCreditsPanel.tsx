@@ -192,8 +192,8 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       const uid = p.id || p.customer_id;
       const name = p.name || p.customer_name || p.full_name || "Cliente";
       const phone = p.phone || p.customer_phone || "";
-      const email = p.email || "";
-      const cpf = p.cpf || "";
+      const email = p.email || p.customer_email || "";
+      const cpf = p.cpf || p.customer_cpf || "";
       const address = p.address || "";
 
       const primaryKey = uid || phone.replace(/\D/g, "") || name.toLowerCase().trim();
@@ -205,14 +205,15 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       const balance = Number(creditRow?.balance || 0);
       const total_recharged = Number(creditRow?.total_recharged || 0);
       const total_spent = Number(creditRow?.total_spent || 0);
+      const rowEmail = email || creditRow?.customer_email || "";
 
       list.push({
         id: uid || primaryKey,
         customer_id: uid || primaryKey,
         name,
-        phone,
-        email,
-        cpf,
+        phone: phone || creditRow?.customer_phone || "",
+        email: rowEmail,
+        cpf: cpf || creditRow?.customer_cpf || "",
         address,
         balance,
         total_recharged,
@@ -222,22 +223,36 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       });
     });
 
-    // Se houver carteiras de crédito que não estavam na lista de perfis, adiciona
+    // Se houver carteiras de crédito que não estavam na lista de perfis, adiciona ou enriquece
     customerCredits.forEach((c) => {
       const uid = c.customer_id || c.id;
       const name = c.customer_name || "Cliente";
       const phone = c.customer_phone || "";
       const primaryKey = uid || phone.replace(/\D/g, "") || name.toLowerCase().trim();
 
-      if (!seen.has(primaryKey)) {
+      const existingIndex = list.findIndex(
+        (x) =>
+          (uid && (x.id === uid || x.customer_id === uid)) ||
+          (phone && x.phone && x.phone.replace(/\D/g, "") === phone.replace(/\D/g, "")) ||
+          (name && x.name && x.name.toLowerCase().trim() === name.toLowerCase().trim())
+      );
+
+      if (existingIndex >= 0) {
+        if (!list[existingIndex].email && c.customer_email) {
+          list[existingIndex].email = c.customer_email;
+        }
+        if (!list[existingIndex].phone && c.customer_phone) {
+          list[existingIndex].phone = c.customer_phone;
+        }
+      } else if (!seen.has(primaryKey)) {
         seen.add(primaryKey);
         list.push({
           id: uid || primaryKey,
           customer_id: uid || primaryKey,
           name,
           phone,
-          email: "",
-          cpf: "",
+          email: c.customer_email || "",
+          cpf: c.customer_cpf || "",
           address: "",
           balance: Number(c.balance || 0),
           total_recharged: Number(c.total_recharged || 0),

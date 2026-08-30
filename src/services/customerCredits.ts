@@ -194,7 +194,31 @@ export function useAllCustomerProfiles() {
         });
       };
 
-      // 1. Busca da tabela customer_credits (Carteiras de clientes com saldo e dados auditados)
+      // 1. Busca da tabela customers (Cadastro oficial com user_id e email)
+      try {
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("*")
+          .limit(1000);
+        if (customersData) {
+          customersData.forEach((c: any) => {
+            const uid = c.user_id || c.id;
+            if (uid && excludedIds.has(String(uid).toLowerCase())) return;
+
+            addUniqueCustomer({
+              id: uid,
+              name: c.name || "Cliente",
+              phone: c.phone || "",
+              email: c.email || "",
+              cpf: c.cpf || "",
+              address: c.address || "",
+              source: "app_marketplace",
+            });
+          });
+        }
+      } catch (err) {}
+
+      // 2. Busca da tabela customer_credits (Carteiras de clientes com saldo e dados auditados)
       try {
         const { data: creditAccounts } = await supabase
           .from("customer_credits")
@@ -214,7 +238,7 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 2. Busca da tabela profiles (Usuários reais cadastrados no app)
+      // 3. Busca da tabela profiles (Usuários autenticados no app)
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -245,27 +269,25 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 3. Busca da tabela customers (Clientes autenticados do marketplace com user_id ou email)
+      // 4. Busca complementar de emails em pedidos do marketplace (orders)
       try {
-        const { data: customersData } = await supabase
-          .from("customers")
-          .select("*")
-          .or("user_id.not.is.null,email.not.is.null")
-          .limit(1000);
-        if (customersData) {
-          customersData.forEach((c: any) => {
-            const uid = c.user_id || c.id;
-            if (uid && excludedIds.has(String(uid).toLowerCase())) return;
-
-            addUniqueCustomer({
-              id: uid,
-              name: c.name || "Cliente",
-              phone: c.phone || "",
-              email: c.email || "",
-              cpf: c.cpf || "",
-              address: c.address || "",
-              source: "app_marketplace",
-            });
+        const { data: ordersData } = await supabase
+          .from("orders")
+          .select("customer_id, customer_email, customer_phone, customer_name, customer_document")
+          .not("customer_email", "is", null)
+          .limit(500);
+        if (ordersData) {
+          ordersData.forEach((o: any) => {
+            if (o.customer_email && o.customer_email.includes("@")) {
+              addUniqueCustomer({
+                id: o.customer_id || "",
+                name: o.customer_name || "",
+                phone: o.customer_phone || "",
+                email: o.customer_email,
+                cpf: o.customer_document || "",
+                source: "app_marketplace",
+              });
+            }
           });
         }
       } catch (err) {}
