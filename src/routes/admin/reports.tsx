@@ -1040,25 +1040,21 @@ function ReportsPage() {
             </Card>
 
             {/* CARD: COMISSÃO DA PLATAFORMA (2% DOS CRÉDITOS VENDIDOS AOS LOJISTAS) */}
-            <Card className="rounded-3xl border-indigo-500/30 bg-gradient-to-br from-indigo-500/[0.08] via-purple-500/[0.03] to-transparent shadow-sm relative overflow-hidden">
+            <Card className="rounded-3xl border-border/80 shadow-sm relative overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-                  Comissão da Plataforma
-                </CardTitle>
-                <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                  <Percent className="h-4 w-4 font-black" />
-                </div>
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Comissão da Plataforma</CardTitle>
+                <Percent className="h-5 w-5 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                <div className="text-2xl font-black text-foreground">
                   {kpis.platformCommission.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
-                <p className="text-xs font-bold text-muted-foreground mt-1">
-                  2,0% de comissão sobre {kpis.totalCreditsSold.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em créditos vendidos
+                <p className="text-xs text-muted-foreground mt-1">
+                  2,0% dos créditos vendidos ({kpis.totalCreditsSold.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
                 </p>
-                <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-indigo-500" /> A Pagar pela Cliente
-                </div>
+                <p className="text-xs font-bold text-primary mt-0.5">
+                  2.0% a pagar pela cliente
+                </p>
               </CardContent>
             </Card>
 
