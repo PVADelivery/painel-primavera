@@ -59,12 +59,28 @@ function CompaniesPage() {
   };
 
   const handleDelete = async (companyId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta empresa?")) return;
+    if (!confirm("Tem certeza que deseja excluir permanentemente esta empresa e todos os seus registros associados?")) return;
+    
+    // Tenta primeiro via RPC delete_company_cascade para limpar todas as foreign keys
+    try {
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc("delete_company_cascade", { p_company_id: companyId });
+      if (!rpcErr && rpcRes && (rpcRes as any).success) {
+        toast.success("Empresa e registros associados excluídos com sucesso");
+        qc.invalidateQueries({ queryKey: ["companies"] });
+        return;
+      }
+      if ((rpcRes as any)?.error) {
+        toast.error("Erro ao excluir empresa: " + (rpcRes as any).error);
+        return;
+      }
+    } catch {}
+
+    // Fallback: exclusão direta
     const { error } = await supabase.from("companies").delete().eq("id", companyId);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Empresa excluída");
+      toast.success("Empresa excluída com sucesso");
       qc.invalidateQueries({ queryKey: ["companies"] });
     }
   };
