@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon } from "lucide-react";
-import { useState, useRef } from "react";
+import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -125,27 +125,38 @@ function DirectoryAdminPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Categoria do PPP</label>
-                    <Input required value={form.category || ""} onChange={e => set("category", e.target.value)} placeholder="Ex: Manutenção, Saúde, Beleza..." />
+                    <CategorySelector value={form.category || ""} onChange={cat => set("category", cat)} />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">WhatsApp (apenas números)</label>
-                    <Input value={form.whatsapp || ""} onChange={e => set("whatsapp", e.target.value)} />
+                    <Input value={form.whatsapp || ""} onChange={e => set("whatsapp", e.target.value)} placeholder="Ex: 66999998888" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Telefone Comum</label>
-                    <Input value={form.phone || ""} onChange={e => set("phone", e.target.value)} />
+                    <Input value={form.phone || ""} onChange={e => set("phone", e.target.value)} placeholder="Ex: 6634981122" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium mb-1 block">Endereço Completo</label>
-                    <Input value={form.address || ""} onChange={e => set("address", e.target.value)} />
+                    <Input value={form.address || ""} onChange={e => set("address", e.target.value)} placeholder="Ex: Av. Cuiabá, 123 - Centro" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Site ou Link</label>
-                    <Input value={form.website || ""} onChange={e => set("website", e.target.value)} />
+                    <Input value={form.website || ""} onChange={e => set("website", e.target.value)} placeholder="Ex: https://instagram.com/perfil" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Horário de Func.</label>
-                    <Input value={form.hours || ""} onChange={e => set("hours", e.target.value)} />
+                    <Input value={form.hours || ""} onChange={e => set("hours", e.target.value)} placeholder="Ex: Seg a Sex: 08h às 18h" />
+                  </div>
+                  <div className="flex items-center gap-3 pt-6">
+                    <label className="flex items-center gap-2 cursor-pointer border border-border p-2.5 rounded-xl hover:bg-muted/50 w-full">
+                      <input 
+                        type="checkbox" 
+                        checked={Boolean(form.featured)} 
+                        onChange={e => set("featured", e.target.checked)} 
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-semibold text-foreground">⭐ Marcar como Destaque no App PPP</span>
+                    </label>
                   </div>
                 </div>
 
@@ -334,5 +345,117 @@ function CategoryManager() {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CategorySelector({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  const { data: categories = [] } = useDirectoryCategories();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Lista de categorias filtradas pelo que o usuário digita
+  const filteredCategories = categories.filter(c => 
+    c.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Fecha o dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (categoryName: string) => {
+    onChange(categoryName);
+    setSearchTerm("");
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative space-y-2" ref={containerRef}>
+      <div className="relative">
+        <Input
+          value={isOpen ? searchTerm : (value || searchTerm)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => {
+            setSearchTerm("");
+            setIsOpen(true);
+          }}
+          placeholder="Buscar ou digitar categoria..."
+          className="pr-10 font-medium"
+        />
+        <div 
+          className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+          onClick={() => setIsOpen(prev => !prev)}
+        >
+          {isOpen ? <Search className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </div>
+      </div>
+
+      {/* Dropdown de busca com as categorias cadastradas */}
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-border">
+          {filteredCategories.length === 0 ? (
+            <div className="p-3 text-xs text-muted-foreground">
+              Nenhuma categoria encontrada com "{searchTerm}".
+              <button
+                type="button"
+                onClick={() => handleSelect(searchTerm)}
+                className="mt-1 block text-primary font-bold hover:underline"
+              >
+                + Usar "{searchTerm}" como nova categoria
+              </button>
+            </div>
+          ) : (
+            filteredCategories.map((cat) => {
+              const isSelected = value?.toLowerCase() === cat.toLowerCase();
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => handleSelect(cat)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-sm text-left hover:bg-muted/70 transition-colors ${
+                    isSelected ? "bg-primary/10 text-primary font-bold" : ""
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                    {cat}
+                  </span>
+                  {isSelected && <Check className="h-4 w-4 text-primary" />}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Chips de Categorias Rápidas */}
+      <div className="flex flex-wrap gap-1.5 pt-0.5">
+        {categories.slice(0, 6).map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => handleSelect(cat)}
+            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+              value === cat 
+                ? "bg-primary text-primary-foreground border-primary font-bold" 
+                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
