@@ -24,7 +24,7 @@ const items: NavItem[] = [
   { to: "/admin/companies", label: "Empresas", icon: Building2 },
   { to: "/admin/drivers", label: "Entregadores e Motoristas", icon: Bike },
   { to: "/admin/rides", label: "Táxi & Moto", icon: Car },
-  { to: "/admin/directory", label: "Agenda", icon: BookUser },
+  { to: "/admin/directory", label: "PPP (Prestadores)", icon: BookUser },
   { to: "/admin/bases", label: "Bases", icon: Globe },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
   { to: "/admin/pricing", label: "Tabelas de Preços", icon: TableIcon },

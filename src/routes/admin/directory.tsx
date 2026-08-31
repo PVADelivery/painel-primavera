@@ -48,7 +48,7 @@ function DirectoryAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este item da agenda?")) return;
+    if (!confirm("Tem certeza que deseja excluir este prestador / cartão do PPP?")) return;
     try {
       await remove.mutateAsync(id);
       toast.success("Excluído com sucesso");
@@ -83,9 +83,7 @@ function DirectoryAdminPage() {
       const fileName = `directory_${Math.random().toString(36).substring(2)}-${Date.now()}.${ext}`;
       const filePath = user?.id ? `${user.id}/${fileName}` : `${fileName}`;
 
-      // Requer um bucket chamado 'directory-assets' criado e público no Supabase
-      // Se nao existir, vamos tentar 'avatars' que j sabemos que existe
-      const bucketName = "avatars"; // Alterado para avatars para garantir que funciona imediatamente, o user no precisa criar.
+      const bucketName = "avatars";
       const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
       if (uploadError) throw uploadError;
 
@@ -107,27 +105,27 @@ function DirectoryAdminPage() {
     <AdminLayout>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Agenda da Cidade</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os cartões de visita virtuais do app cliente</p>
+          <h1 className="text-2xl font-bold tracking-tight">PPP — Prestadores de Serviços</h1>
+          <p className="text-sm text-muted-foreground">Painel Profissional de Prestadores de Serviços e Cartões de Visita do App Marketplace</p>
         </div>
         <div className="flex items-center gap-2">
           <CategoryManager />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Novo Cartão</Button>
+              <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Novo Prestador / Cartão</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
-              <DialogHeader><DialogTitle className="text-2xl font-black">{editingId ? "Editar Cartão" : "Novo Cartão"}</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle className="text-2xl font-black">{editingId ? "Editar Prestador / Cartão PPP" : "Novo Prestador / Cartão PPP"}</DialogTitle></DialogHeader>
               
               <form onSubmit={handleSave} className="space-y-4 mt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Nome da Empresa</label>
-                    <Input required value={form.name || ""} onChange={e => set("name", e.target.value)} />
+                    <label className="text-sm font-medium mb-1 block">Nome do Prestador / Empresa</label>
+                    <Input required value={form.name || ""} onChange={e => set("name", e.target.value)} placeholder="Ex: Eletricista Silva" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Categoria</label>
-                    <Input required value={form.category || ""} onChange={e => set("category", e.target.value)} />
+                    <label className="text-sm font-medium mb-1 block">Categoria do PPP</label>
+                    <Input required value={form.category || ""} onChange={e => set("category", e.target.value)} placeholder="Ex: Manutenção, Saúde, Beleza..." />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">WhatsApp (apenas números)</label>
@@ -216,9 +214,9 @@ function DirectoryAdminPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
-          <p className="text-muted-foreground">Carregando agenda...</p>
+          <p className="text-muted-foreground">Carregando prestadores do PPP...</p>
         ) : data.length === 0 ? (
-          <p className="text-muted-foreground">Nenhuma empresa na agenda.</p>
+          <p className="text-muted-foreground">Nenhum prestador ou empresa cadastrado no PPP.</p>
         ) : (
           data.map((c) => (
             <div key={c.id} className="rounded-2xl bg-card border border-border shadow-card overflow-hidden flex flex-col">
