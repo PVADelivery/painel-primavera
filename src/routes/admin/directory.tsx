@@ -353,8 +353,9 @@ function CategorySelector({ value, onChange }: { value: string; onChange: (val: 
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Lista de categorias filtradas pelo que o usuário digita
+  // Lista de categorias filtradas pelo que o usuário digita na busca
   const filteredCategories = categories.filter(c => 
     c.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -370,92 +371,95 @@ function CategorySelector({ value, onChange }: { value: string; onChange: (val: 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    } else {
+      setSearchTerm("");
+    }
+  }, [isOpen]);
+
   const handleSelect = (categoryName: string) => {
     onChange(categoryName);
-    setSearchTerm("");
     setIsOpen(false);
   };
 
   return (
-    <div className="relative space-y-2" ref={containerRef}>
-      <div className="relative">
-        <Input
-          value={isOpen ? searchTerm : (value || searchTerm)}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            onChange(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => {
-            setSearchTerm("");
-            setIsOpen(true);
-          }}
-          placeholder="Buscar ou digitar categoria..."
-          className="pr-10 font-medium"
-        />
-        <div 
-          className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-          onClick={() => setIsOpen(prev => !prev)}
-        >
-          {isOpen ? <Search className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </div>
-      </div>
+    <div className="relative" ref={containerRef}>
+      {/* Gatilho principal estilizado como Select limpo */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(prev => !prev)}
+        className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3.5 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all hover:bg-muted/30"
+      >
+        <span className={value ? "font-semibold text-foreground flex items-center gap-2" : "text-muted-foreground flex items-center gap-2"}>
+          <Tag className="h-4 w-4 text-primary" />
+          {value || "Selecione ou busque uma categoria..."}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
 
-      {/* Dropdown de busca com as categorias cadastradas */}
+      {/* Dropdown elegante que abre com campo de busca interna */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-border">
-          {filteredCategories.length === 0 ? (
-            <div className="p-3 text-xs text-muted-foreground">
-              Nenhuma categoria encontrada com "{searchTerm}".
-              <button
-                type="button"
-                onClick={() => handleSelect(searchTerm)}
-                className="mt-1 block text-primary font-bold hover:underline"
-              >
-                + Usar "{searchTerm}" como nova categoria
-              </button>
+        <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-popover text-popover-foreground border border-border/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+          {/* Campo de busca interno com ícone */}
+          <div className="p-2 border-b border-border/60 bg-muted/20">
+            <div className="relative flex items-center">
+              <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Filtrar ou cadastrar nova categoria..."
+                className="h-8.5 w-full bg-background border border-border rounded-lg pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+              />
             </div>
-          ) : (
-            filteredCategories.map((cat) => {
-              const isSelected = value?.toLowerCase() === cat.toLowerCase();
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => handleSelect(cat)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-sm text-left hover:bg-muted/70 transition-colors ${
-                    isSelected ? "bg-primary/10 text-primary font-bold" : ""
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                    {cat}
-                  </span>
-                  {isSelected && <Check className="h-4 w-4 text-primary" />}
-                </button>
-              );
-            })
-          )}
+          </div>
+
+          {/* Lista de Categorias com Scroll */}
+          <div className="max-h-56 overflow-y-auto py-1 divide-y divide-border/30">
+            {filteredCategories.length === 0 ? (
+              <div className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">Nenhuma categoria encontrada com "{searchTerm}".</p>
+                {searchTerm.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(searchTerm.trim())}
+                    className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:brightness-110 transition-all shadow-sm"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Usar "{searchTerm.trim()}"
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredCategories.map((cat) => {
+                const isSelected = value?.toLowerCase() === cat.toLowerCase();
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleSelect(cat)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs text-left transition-colors ${
+                      isSelected 
+                        ? "bg-primary/15 text-primary font-bold" 
+                        : "hover:bg-muted/80 text-foreground"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                      {cat}
+                    </span>
+                    {isSelected && <Check className="h-4 w-4 text-primary font-bold" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
-
-      {/* Chips de Categorias Rápidas */}
-      <div className="flex flex-wrap gap-1.5 pt-0.5">
-        {categories.slice(0, 6).map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => handleSelect(cat)}
-            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-              value === cat 
-                ? "bg-primary text-primary-foreground border-primary font-bold" 
-                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
