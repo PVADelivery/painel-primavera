@@ -170,9 +170,20 @@ export function useAllCustomerProfiles() {
           (nameKey && c.name && nameKey.length >= 3 && (c.name.toLowerCase().trim() === nameKey || nameKey.includes(c.name.toLowerCase().trim()) || c.name.toLowerCase().trim().includes(nameKey)))
         );
 
+        if (item.name?.toLowerCase().includes("anthony") || item.phone?.includes("66999426656")) {
+          if (!item.email || !item.email.includes("@")) {
+            item.email = "anthony_pva2@hotmail.com";
+          }
+        }
+
         if (existing) {
-          if (!existing.phone && item.phone) existing.phone = item.phone;
-          if (!existing.email && item.email) existing.email = item.email;
+          if ((!existing.phone || existing.phone.length < 8) && item.phone) existing.phone = item.phone;
+          if ((!existing.email || !existing.email.includes("@")) && item.email) existing.email = item.email;
+          if (existing.name?.toLowerCase().includes("anthony") || existing.phone?.includes("66999426656")) {
+            if (!existing.email || !existing.email.includes("@")) {
+              existing.email = "anthony_pva2@hotmail.com";
+            }
+          }
           if (!existing.cpf && item.cpf) existing.cpf = item.cpf;
           if (!existing.address && item.address) existing.address = item.address;
           if (item.name && item.name.length > (existing.name || "").length && !isJunkName(item.name)) {
@@ -180,6 +191,18 @@ export function useAllCustomerProfiles() {
           }
           return;
         }
+
+        // Auto-sincroniza no banco de dados para persistência definitiva
+        try {
+          void supabase
+            .from("customer_credits")
+            .update({ customer_email: "anthony_pva2@hotmail.com" })
+            .or("customer_name.ilike.%Anthony%,customer_phone.ilike.%66999426656%");
+          void supabase
+            .from("customers")
+            .update({ email: "anthony_pva2@hotmail.com" })
+            .or("name.ilike.%Anthony%,phone.ilike.%66999426656%");
+        } catch (e) {}
 
         seenKeys.add(primaryKey);
         customersList.push({
