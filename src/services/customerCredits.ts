@@ -292,29 +292,6 @@ export function useAllCustomerProfiles() {
         }
       } catch (err) {}
 
-      // 4. Busca complementar de emails em pedidos do marketplace (orders)
-      try {
-        const { data: ordersData } = await supabase
-          .from("orders")
-          .select("customer_id, customer_email, customer_phone, customer_name, customer_document")
-          .not("customer_email", "is", null)
-          .limit(500);
-        if (ordersData) {
-          ordersData.forEach((o: any) => {
-            if (o.customer_email && o.customer_email.includes("@")) {
-              addUniqueCustomer({
-                id: o.customer_id || "",
-                name: o.customer_name || "",
-                phone: o.customer_phone || "",
-                email: o.customer_email,
-                cpf: o.customer_document || "",
-                source: "app_marketplace",
-              });
-            }
-          });
-        }
-      } catch (err) {}
-
       // Ordena alfabeticamente
       return customersList.sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", "pt-BR")
