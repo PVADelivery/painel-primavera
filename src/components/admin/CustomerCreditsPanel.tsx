@@ -34,23 +34,39 @@ const brl = (n: number) =>
 const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão crédito", "Débito", "Transferência", "A prazo"];
 const QUICK_AMOUNTS = [50, 100, 200, 300, 500, 1000];
 
-const now = new Date();
-const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+const getPeriodDates = (periodKey: string, customFrom?: string, customTo?: string) => {
+  const n = new Date();
+  let from = new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0);
+  let to = new Date(n.getFullYear(), n.getMonth() + 1, 0, 23, 59, 59, 999);
 
-function getMonthKey(dateStr: string | Date) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+  if (periodKey === "today") {
+    from = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "yesterday") {
+    const y = new Date(n);
+    y.setDate(y.getDate() - 1);
+    from = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0);
+    to = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "7d") {
+    const d7 = new Date(n);
+    d7.setDate(d7.getDate() - 6);
+    from = new Date(d7.getFullYear(), d7.getMonth(), d7.getDate(), 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "month") {
+    from = new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth() + 1, 0, 23, 59, 59, 999);
+  } else if (periodKey === "last_month") {
+    from = new Date(n.getFullYear(), n.getMonth() - 1, 1, 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), 0, 23, 59, 59, 999);
+  } else if (periodKey === "custom") {
+    if (customFrom) from = new Date(`${customFrom}T00:00:00`);
+    if (customTo) to = new Date(`${customTo}T23:59:59.999`);
+  }
 
-function formatMonthName(monthKey: string) {
-  if (!monthKey || monthKey === "all") return "Todos os períodos";
-  const [year, month] = monthKey.split("-").map(Number);
-  const d = new Date(year, month - 1, 1);
-  const name = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
+  const fromStr = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}-${String(from.getDate()).padStart(2, "0")}`;
+  const toStr = `${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, "0")}-${String(to.getDate()).padStart(2, "0")}`;
+  return { from, to, fromStr, toStr };
+};
 
 interface CustomerCreditsPanelProps {
   onCreditRecharged?: () => void;
@@ -64,35 +80,45 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const updateContactMutation = useUpdateCustomerContact();
   const revokeCreditsMutation = useRevokeCustomerCredits();
 
-  // Filtro de Mês Selecionado (Padrão: Mês Atual - reinicia dia 01)
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey);
+  // Estados de Filtros Avançados (Padrão: Este Mês)
+  const initialDates = getPeriodDates("month");
+  const [period, setPeriod] = useState("month");
+  const [dateFrom, setDateFrom] = useState(initialDates.fromStr);
+  const [dateTo, setDateTo] = useState(initialDates.toStr);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
+
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriod(newPeriod);
+    if (newPeriod !== "custom") {
+      const dates = getPeriodDates(newPeriod);
+      setDateFrom(dates.fromStr);
+      setDateTo(dates.toStr);
+    }
+  };
+
+  const handleClearFilters = () => {
+    const dates = getPeriodDates("month");
+    setPeriod("month");
+    setDateFrom(dates.fromStr);
+    setDateTo(dates.toStr);
+    setSearchTerm("");
+    setSelectedCustomerId("all");
+    setSelectedPayment("all");
+    setSelectedType("all");
+    setMinValue("");
+    setMaxValue("");
+  };
 
   // Modo de visualização: "overview" (painel padrão) ou "workspace" (janela dedicada no sistema)
   const [viewMode, setViewMode] = useState<"overview" | "workspace">("overview");
 
   const [customerTab, setCustomerTab] = useState<"all_clients" | "with_balance">("all_clients");
   const [search, setSearch] = useState("");
-  const [txSearch, setTxSearch] = useState("");
-  const [txTypeFilter, setTxTypeFilter] = useState("all");
-
-  // Lista dinâmica de meses disponíveis a partir das transações
-  const availableMonths = useMemo(() => {
-    const set = new Set<string>();
-    set.add(currentMonthKey);
-    transactions.forEach((t) => {
-      if (t.created_at) {
-        const k = getMonthKey(t.created_at);
-        if (k) set.add(k);
-      }
-    });
-    return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [transactions]);
-
-  // Transações filtradas pelo mês selecionado
-  const monthFilteredTransactions = useMemo(() => {
-    if (selectedMonth === "all") return transactions;
-    return transactions.filter((t) => t.created_at && getMonthKey(t.created_at) === selectedMonth);
-  }, [transactions, selectedMonth]);
 
   // Estados do Workspace Dedicado
   const [modalSearchQuery, setModalSearchQuery] = useState("");
@@ -378,20 +404,44 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     });
   }, [transactions, selectedCustomer]);
 
-  // Lista filtrada geral de transações
+  // Lista filtrada geral de transações com Filtros Avançados
   const filteredTransactions = useMemo(() => {
-    const q = txSearch.trim().toLowerCase();
-    return monthFilteredTransactions.filter((tx) => {
-      const matchType = txTypeFilter === "all" || tx.type === txTypeFilter;
-      const matchSearch =
-        !q ||
-        tx.customer_name?.toLowerCase().includes(q) ||
-        tx.customer_phone?.toLowerCase().includes(q) ||
-        tx.description?.toLowerCase().includes(q) ||
-        tx.reference_id?.toLowerCase().includes(q);
-      return matchType && matchSearch;
+    const { from, to } = getPeriodDates(period, dateFrom, dateTo);
+    const q = searchTerm.trim().toLowerCase();
+    const min = minValue ? parseFloat(minValue) : null;
+    const max = maxValue ? parseFloat(maxValue) : null;
+
+    return transactions.filter((tx) => {
+      if (!tx.created_at) return false;
+      const dt = new Date(tx.created_at);
+      if (dt < from || dt > to) return false;
+
+      if (selectedCustomerId !== "all" && tx.customer_id !== selectedCustomerId) return false;
+      if (selectedPayment !== "all" && tx.payment_method !== selectedPayment) return false;
+
+      if (selectedType === "recharge" && tx.type !== "recharge") return false;
+      if (selectedType === "bonus" && tx.type !== "bonus") return false;
+      if (selectedType === "payment" && !(tx.type === "payment" || tx.type === "order_payment" || tx.type === "ride_payment" || tx.type === "delivery_payment" || (Number(tx.amount || 0) < 0 && tx.type !== "revoke"))) return false;
+      if (selectedType === "revoke" && tx.type !== "revoke") return false;
+
+      const absAmount = Math.abs(Number(tx.amount || 0));
+      if (min !== null && !isNaN(min) && absAmount < min) return false;
+      if (max !== null && !isNaN(max) && absAmount > max) return false;
+
+      if (q) {
+        const name = tx.customer_name?.toLowerCase() || "";
+        const phone = tx.customer_phone?.toLowerCase() || "";
+        const desc = tx.description?.toLowerCase() || "";
+        const ref = tx.reference_id?.toLowerCase() || "";
+        const id = tx.id?.toLowerCase() || "";
+        if (!name.includes(q) && !phone.includes(q) && !desc.includes(q) && !ref.includes(q) && !id.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [monthFilteredTransactions, txSearch, txTypeFilter]);
+  }, [transactions, period, dateFrom, dateTo, selectedCustomerId, selectedPayment, selectedType, minValue, maxValue, searchTerm]);
 
   // Abre a Central / Workspace Dedicado para um cliente específico
   const handleOpenWorkspaceFor = (customer?: any) => {
@@ -1007,54 +1057,166 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       </div>
       ) : (
         <div className="space-y-6">
-          {/* ── BARRA SUPERIOR: FILTRO DE MÊS & PERÍODO ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-border shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-foreground flex items-center justify-center font-black shrink-0">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-foreground flex items-center gap-2">
-                  Gestão & Créditos de Clientes (+10% Bônus)
-                </h2>
-                <p className="text-xs text-muted-foreground font-medium">
-                  Período selecionado: <strong className="text-foreground">{formatMonthName(selectedMonth)}</strong>
-                  {selectedMonth === currentMonthKey && " (Mês Atual • Reinicia dia 01)"}
-                </p>
-              </div>
-            </div>
-
-            {/* Seletor de Mês Dinâmico */}
-            <div className="flex items-center gap-2">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="h-10 min-w-[200px] text-xs font-bold rounded-xl bg-background border-2 border-border">
-                  <SelectValue placeholder="Selecione o mês" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableMonths.map((m) => (
-                    <SelectItem key={m} value={m} className="text-xs font-semibold">
-                      {formatMonthName(m)} {m === currentMonthKey ? "★ (Mês Atual)" : ""}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="all" className="text-xs font-semibold text-primary">
-                    📊 Todos os Meses (Histórico Completo)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {selectedMonth !== currentMonthKey && (
+          {/* ── CARD FILTROS AVANÇADOS ── */}
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-amber-500" />
+                  Filtros Avançados
+                </CardTitle>
                 <Button
-                  type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedMonth(currentMonthKey)}
-                  className="h-10 text-xs font-bold rounded-xl border-primary/40 bg-primary/10 hover:bg-primary text-black cursor-pointer"
+                  onClick={handleClearFilters}
+                  className="font-bold rounded-xl text-xs h-8 hover:bg-muted"
                 >
-                  Voltar ao Mês Atual
+                  Limpar Filtros
                 </Button>
-              )}
-            </div>
-          </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-5 space-y-5">
+              {/* Período Rápido */}
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">
+                  PERÍODO RÁPIDO:
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "today", label: "Hoje" },
+                    { value: "yesterday", label: "Ontem" },
+                    { value: "7d", label: "Últimos 7 Dias" },
+                    { value: "month", label: "Este Mês" },
+                    { value: "last_month", label: "Mês Passado" },
+                    { value: "custom", label: "Personalizado" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => handlePeriodChange(p.value)}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        period === p.value
+                          ? "bg-amber-400 text-black border-amber-400 shadow-sm font-black"
+                          : "bg-background text-muted-foreground border-border hover:border-amber-400 hover:text-foreground"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Busca Geral */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por cliente, WhatsApp, email, CPF, ID ou descrição..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 font-medium h-10 text-xs rounded-xl"
+                />
+              </div>
+
+              {/* Grid de Filtros */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Cliente</Label>
+                  <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                    <SelectTrigger className="h-10 text-xs rounded-xl">
+                      <SelectValue placeholder="Todos os Clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Clientes</SelectItem>
+                      {allSystemCustomers.map((c) => (
+                        <SelectItem key={c.id || c.customer_id} value={c.customer_id || c.id}>
+                          {c.name || "Cliente"} {c.phone ? `(${c.phone})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Forma de Pagamento</Label>
+                  <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+                    <SelectTrigger className="h-10 text-xs rounded-xl">
+                      <SelectValue placeholder="Todas as Formas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as Formas</SelectItem>
+                      {PAYMENT_METHODS.map((pm) => (
+                        <SelectItem key={pm} value={pm}>{pm}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Data Início</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => {
+                      setPeriod("custom");
+                      setDateFrom(e.target.value);
+                    }}
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Data Fim</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => {
+                      setPeriod("custom");
+                      setDateTo(e.target.value);
+                    }}
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Tipo de Movimentação</Label>
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="h-10 text-xs rounded-xl">
+                      <SelectValue placeholder="Todos os Tipos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Tipos</SelectItem>
+                      <SelectItem value="recharge">Recargas (+)</SelectItem>
+                      <SelectItem value="bonus">Bônus (+10%)</SelectItem>
+                      <SelectItem value="payment">Consumos / Pedidos / Corridas (-)</SelectItem>
+                      <SelectItem value="revoke">Revogações / Estornos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Valor Mínimo (R$)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={minValue}
+                    onChange={(e) => setMinValue(e.target.value)}
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Valor Máximo (R$)</Label>
+                  <Input
+                    type="number"
+                    placeholder="999.00"
+                    value={maxValue}
+                    onChange={(e) => setMaxValue(e.target.value)}
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* ── TOP KPI CARDS ── */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -1089,7 +1251,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   {brl(totals.totalRecharged)}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-                  Recebido em {formatMonthName(selectedMonth)}
+                  Recebido no período filtrado
                 </p>
               </CardContent>
             </Card>
@@ -1107,7 +1269,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   {brl(totals.totalBonus)}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-                  +10% gerados em {formatMonthName(selectedMonth)}
+                  +10% gerados no período filtrado
                 </p>
               </CardContent>
             </Card>
@@ -1125,7 +1287,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   {brl(totals.totalSpent)}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-                  Gasto pelos clientes em {formatMonthName(selectedMonth)}
+                  Gasto pelos clientes no período filtrado
                 </p>
               </CardContent>
             </Card>
@@ -1268,45 +1430,16 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <History className="w-4 h-4 text-primary" /> Extrato Geral de Créditos — {formatMonthName(selectedMonth)}
+                      <History className="w-4 h-4 text-primary" /> Extrato Geral de Créditos
                     </CardTitle>
                     <span className="text-xs bg-primary/15 text-foreground font-bold px-2.5 py-0.5 rounded-full border border-primary/30">
                       {filteredTransactions.length} movimentações
                     </span>
                   </div>
                   <CardDescription className="text-xs mt-0.5">
-                    Exibindo movimentações de <strong>{formatMonthName(selectedMonth)}</strong>
+                    Movimentações consolidadas de recargas, bônus e pagamentos no período filtrado
                   </CardDescription>
                 </div>
-              </div>
-
-              {/* Filtros do Extrato */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por cliente, pedido, corrida ou descrição..."
-                    value={txSearch}
-                    onChange={(e) => setTxSearch(e.target.value)}
-                    className="pl-9 h-9 text-xs rounded-xl"
-                  />
-                </div>
-
-                <Select value={txTypeFilter} onValueChange={setTxTypeFilter}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl">
-                    <SelectValue placeholder="Filtrar tipo de movimentação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as Movimentações</SelectItem>
-                    <SelectItem value="recharge">Recargas (+)</SelectItem>
-                    <SelectItem value="bonus">Bônus Concedidos (+)</SelectItem>
-                    <SelectItem value="revoke">Revogações / Estornos (-)</SelectItem>
-                    <SelectItem value="payment_order">Pagamentos de Pedidos (-)</SelectItem>
-                    <SelectItem value="payment_ride">Corridas Táxi / Moto (-)</SelectItem>
-                    <SelectItem value="payment_errand">Entregas / Motoboy (-)</SelectItem>
-                    <SelectItem value="refund">Outros Estornos (+)</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </CardHeader>
 

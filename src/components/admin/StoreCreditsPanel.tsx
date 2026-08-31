@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, AlertTriangle, Plus, Search, Building2,
-  ArrowUpCircle, ArrowDownCircle, Minus, History,
+  ArrowUpCircle, ArrowDownCircle, Minus, History, Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,8 +28,6 @@ import {
   useCreditPurchaseRequestsAdmin, useApproveCreditPurchaseRequest, useRejectCreditPurchaseRequest,
 } from "@/services/companyCredits";
 
-import { supabase } from "@/integrations/supabase/client";
-
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -37,23 +35,39 @@ const LOW_BALANCE = 30;
 
 const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão crédito", "Débito", "Transferência", "A prazo"];
 
-const now = new Date();
-const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+const getPeriodDates = (periodKey: string, customFrom?: string, customTo?: string) => {
+  const n = new Date();
+  let from = new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0);
+  let to = new Date(n.getFullYear(), n.getMonth() + 1, 0, 23, 59, 59, 999);
 
-function getMonthKey(dateStr: string | Date) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+  if (periodKey === "today") {
+    from = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "yesterday") {
+    const y = new Date(n);
+    y.setDate(y.getDate() - 1);
+    from = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0);
+    to = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "7d") {
+    const d7 = new Date(n);
+    d7.setDate(d7.getDate() - 6);
+    from = new Date(d7.getFullYear(), d7.getMonth(), d7.getDate(), 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59, 999);
+  } else if (periodKey === "month") {
+    from = new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth() + 1, 0, 23, 59, 59, 999);
+  } else if (periodKey === "last_month") {
+    from = new Date(n.getFullYear(), n.getMonth() - 1, 1, 0, 0, 0);
+    to = new Date(n.getFullYear(), n.getMonth(), 0, 23, 59, 59, 999);
+  } else if (periodKey === "custom") {
+    if (customFrom) from = new Date(`${customFrom}T00:00:00`);
+    if (customTo) to = new Date(`${customTo}T23:59:59.999`);
+  }
 
-function formatMonthName(monthKey: string) {
-  if (!monthKey || monthKey === "all") return "Todos os períodos";
-  const [year, month] = monthKey.split("-").map(Number);
-  const d = new Date(year, month - 1, 1);
-  const name = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
+  const fromStr = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}-${String(from.getDate()).padStart(2, "0")}`;
+  const toStr = `${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, "0")}-${String(to.getDate()).padStart(2, "0")}`;
+  return { from, to, fromStr, toStr };
+};
 
 interface StoreCreditsPanelProps {
   onCreditPurchased?: () => void;
@@ -65,33 +79,43 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
   const { data: txs = [], isLoading: loadingTxs } = useCreditTransactions();
   const addCredits = useAddCompanyCredits();
 
-  // Filtro de Mês Selecionado (Padrão: Mês Atual - reinicia dia 01)
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey);
-  const [search, setSearch] = useState("");
-  const [txSearchText, setTxSearchText] = useState("");
+  // Estados de Filtros Avançados (Padrão: Este Mês)
+  const initialDates = getPeriodDates("month");
+  const [period, setPeriod] = useState("month");
+  const [dateFrom, setDateFrom] = useState(initialDates.fromStr);
+  const [dateTo, setDateTo] = useState(initialDates.toStr);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
+
   const [dialogCompany, setDialogCompany] = useState<any>(null);
   const [mode, setMode] = useState<"purchase" | "debit">("purchase");
   const [form, setForm] = useState({ amount: "", payment_method: "Pix", description: "" });
-  const [historyFilter, setHistoryFilter] = useState("all");
 
-  // Lista dinâmica de meses disponíveis
-  const availableMonths = useMemo(() => {
-    const set = new Set<string>();
-    set.add(currentMonthKey);
-    txs.forEach((t) => {
-      if (t.created_at) {
-        const k = getMonthKey(t.created_at);
-        if (k) set.add(k);
-      }
-    });
-    return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [txs]);
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriod(newPeriod);
+    if (newPeriod !== "custom") {
+      const dates = getPeriodDates(newPeriod);
+      setDateFrom(dates.fromStr);
+      setDateTo(dates.toStr);
+    }
+  };
 
-  // Transações filtradas pelo mês selecionado
-  const monthTxs = useMemo(() => {
-    if (selectedMonth === "all") return txs;
-    return txs.filter((t) => t.created_at && getMonthKey(t.created_at) === selectedMonth);
-  }, [txs, selectedMonth]);
+  const handleClearFilters = () => {
+    const dates = getPeriodDates("month");
+    setPeriod("month");
+    setDateFrom(dates.fromStr);
+    setDateTo(dates.toStr);
+    setSearchTerm("");
+    setSelectedCompany("all");
+    setSelectedPayment("all");
+    setSelectedType("all");
+    setMinValue("");
+    setMaxValue("");
+  };
 
   const creditsByCompany = useMemo(() => {
     const m = new Map<string, any>();
@@ -105,29 +129,65 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     return m;
   }, [companies]);
 
-  // Vendas e Consumos do período selecionado por loja
+  // Transações filtradas pelos Filtros Avançados
+  const filteredTxs = useMemo(() => {
+    const { from, to } = getPeriodDates(period, dateFrom, dateTo);
+    const q = searchTerm.trim().toLowerCase();
+    const min = minValue ? parseFloat(minValue) : null;
+    const max = maxValue ? parseFloat(maxValue) : null;
+
+    return txs.filter((t) => {
+      if (!t.created_at) return false;
+      const dt = new Date(t.created_at);
+      if (dt < from || dt > to) return false;
+
+      if (selectedCompany !== "all" && t.company_id !== selectedCompany) return false;
+      if (selectedPayment !== "all" && t.payment_method !== selectedPayment) return false;
+
+      if (selectedType === "purchase" && Number(t.amount) <= 0) return false;
+      if (selectedType === "debit" && Number(t.amount) >= 0) return false;
+
+      const absAmount = Math.abs(Number(t.amount || 0));
+      if (min !== null && !isNaN(min) && absAmount < min) return false;
+      if (max !== null && !isNaN(max) && absAmount > max) return false;
+
+      if (q) {
+        const compName = companyById.get(t.company_id)?.name?.toLowerCase() || "";
+        const desc = t.description?.toLowerCase() || "";
+        const method = t.payment_method?.toLowerCase() || "";
+        const id = t.id?.toLowerCase() || "";
+        if (!compName.includes(q) && !desc.includes(q) && !method.includes(q) && !id.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [txs, period, dateFrom, dateTo, selectedCompany, selectedPayment, selectedType, minValue, maxValue, searchTerm, companyById]);
+
+  // Vendas e Consumos por loja no período filtrado
   const storePurchasedInPeriod = useMemo(() => {
     const map = new Map<string, number>();
-    monthTxs.forEach((t) => {
+    filteredTxs.forEach((t) => {
       if (Number(t.amount) > 0) {
         map.set(t.company_id, (map.get(t.company_id) || 0) + Number(t.amount));
       }
     });
     return map;
-  }, [monthTxs]);
+  }, [filteredTxs]);
 
   const storeConsumedInPeriod = useMemo(() => {
     const map = new Map<string, number>();
-    monthTxs.forEach((t) => {
+    filteredTxs.forEach((t) => {
       if (Number(t.amount) < 0) {
         map.set(t.company_id, (map.get(t.company_id) || 0) + Math.abs(Number(t.amount)));
       }
     });
     return map;
-  }, [monthTxs]);
+  }, [filteredTxs]);
 
   const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return companies
       .map((c) => {
         const cr = creditsByCompany.get(c.id);
@@ -136,11 +196,12 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         return {
           ...c,
           balance: Number(cr?.balance ?? 0),
-          total_purchased: selectedMonth === "all" ? Number(cr?.total_purchased ?? 0) : purchasedInPeriod,
-          total_consumed: selectedMonth === "all" ? Number(cr?.total_consumed ?? 0) : consumedInPeriod,
+          total_purchased: purchasedInPeriod,
+          total_consumed: consumedInPeriod,
         };
       })
       .filter((c) => {
+        if (selectedCompany !== "all" && c.id !== selectedCompany) return false;
         if (!q) return true;
         return (
           c.name?.toLowerCase().includes(q) ||
@@ -149,47 +210,31 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         );
       })
       .sort((a, b) => b.balance - a.balance);
-  }, [companies, creditsByCompany, search, storePurchasedInPeriod, storeConsumedInPeriod, selectedMonth]);
+  }, [companies, creditsByCompany, searchTerm, selectedCompany, storePurchasedInPeriod, storeConsumedInPeriod]);
 
   // Métricas do período selecionado
   const totals = useMemo(() => {
-    const balance = rows.reduce((s, r) => s + r.balance, 0);
-    const purchased = monthTxs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
-    const consumed = monthTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
-    const low = rows.filter((r) => r.balance < LOW_BALANCE).length;
+    const balance = credits.reduce((s, c) => s + Number(c.balance || 0), 0);
+    const purchased = filteredTxs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
+    const consumed = filteredTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+    const low = companies.filter((c) => (creditsByCompany.get(c.id)?.balance || 0) < LOW_BALANCE).length;
     return { balance, purchased, consumed, low };
-  }, [rows, monthTxs]);
+  }, [credits, filteredTxs, companies, creditsByCompany]);
 
-  // Gráfico de vendas exibindo exclusivamente os dias do mês selecionado (dia 01 ao fim do mês)
+  // Gráfico de vendas dia a dia no período filtrado
   const salesTrend = useMemo(() => {
-    if (selectedMonth === "all") {
-      const map = new Map<string, { date: string; value: number }>();
-      txs.forEach((t) => {
-        if (Number(t.amount) <= 0 || !t.created_at) return;
-        const key = getMonthKey(t.created_at);
-        const label = formatMonthName(key);
-        if (!map.has(key)) map.set(key, { date: label, value: 0 });
-        map.get(key)!.value += Number(t.amount);
-      });
-      return Array.from(map.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, v]) => v);
-    }
-
-    const [year, month] = selectedMonth.split("-").map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const { from, to } = getPeriodDates(period, dateFrom, dateTo);
     const map = new Map<string, { date: string; value: number }>();
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayStr = String(day).padStart(2, "0");
-      const key = `${year}-${String(month).padStart(2, "0")}-${dayStr}`;
-      map.set(key, {
-        date: `${dayStr}/${String(month).padStart(2, "0")}`,
-        value: 0,
-      });
+    const cur = new Date(from);
+    while (cur <= to) {
+      const key = cur.toISOString().split("T")[0];
+      const label = cur.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      map.set(key, { date: label, value: 0 });
+      cur.setDate(cur.getDate() + 1);
     }
 
-    monthTxs.forEach((t) => {
+    filteredTxs.forEach((t) => {
       if (Number(t.amount) <= 0 || !t.created_at) return;
       const key = t.created_at.split("T")[0];
       if (map.has(key)) {
@@ -198,25 +243,12 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     });
 
     return Array.from(map.values());
-  }, [monthTxs, selectedMonth, txs]);
+  }, [filteredTxs, period, dateFrom, dateTo]);
 
   const topStores = useMemo(
     () => rows.filter((r) => r.balance > 0).slice(0, 8).map((r) => ({ name: r.name, saldo: r.balance })),
     [rows],
   );
-
-  // Extrato filtrado por mês, loja selecionada e texto de busca
-  const filteredTxs = useMemo(() => {
-    const q = txSearchText.trim().toLowerCase();
-    return monthTxs.filter((t) => {
-      const matchCompany = historyFilter === "all" || t.company_id === historyFilter;
-      const compName = companyById.get(t.company_id)?.name?.toLowerCase() || "";
-      const desc = t.description?.toLowerCase() || "";
-      const method = t.payment_method?.toLowerCase() || "";
-      const matchText = !q || compName.includes(q) || desc.includes(q) || method.includes(q);
-      return matchCompany && matchText;
-    });
-  }, [monthTxs, historyFilter, txSearchText, companyById]);
 
   const openDialog = (company: any, m: "purchase" | "debit") => {
     setDialogCompany(company);
@@ -366,54 +398,162 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         </Card>
       )}
 
-      {/* ── BARRA SUPERIOR: FILTRO DE MÊS & PERÍODO ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-border shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary/20 text-foreground flex items-center justify-center font-black shrink-0">
-            <History className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-base font-black text-foreground flex items-center gap-2">
-              Gestão de Créditos de Lojas & Lojistas
-            </h2>
-            <p className="text-xs text-muted-foreground font-medium">
-              Período selecionado: <strong className="text-foreground">{formatMonthName(selectedMonth)}</strong>
-              {selectedMonth === currentMonthKey && " (Mês Atual • Reinicia dia 01)"}
-            </p>
-          </div>
-        </div>
-
-        {/* Seletor de Mês Dinâmico */}
-        <div className="flex items-center gap-2">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="h-10 min-w-[200px] text-xs font-bold rounded-xl bg-background border-2 border-border">
-              <SelectValue placeholder="Selecione o mês" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableMonths.map((m) => (
-                <SelectItem key={m} value={m} className="text-xs font-semibold">
-                  {formatMonthName(m)} {m === currentMonthKey ? "★ (Mês Atual)" : ""}
-                </SelectItem>
-              ))}
-              <SelectItem value="all" className="text-xs font-semibold text-primary">
-                📊 Todos os Meses (Histórico Completo)
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {selectedMonth !== currentMonthKey && (
+      {/* ── CARD FILTROS AVANÇADOS ── */}
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Filter className="h-5 w-5 text-amber-500" />
+              Filtros Avançados
+            </CardTitle>
             <Button
-              type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => setSelectedMonth(currentMonthKey)}
-              className="h-10 text-xs font-bold rounded-xl border-primary/40 bg-primary/10 hover:bg-primary text-black cursor-pointer"
+              onClick={handleClearFilters}
+              className="font-bold rounded-xl text-xs h-8 hover:bg-muted"
             >
-              Voltar ao Mês Atual
+              Limpar Filtros
             </Button>
-          )}
-        </div>
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-5 space-y-5">
+          {/* Período Rápido */}
+          <div>
+            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">
+              PERÍODO RÁPIDO:
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "today", label: "Hoje" },
+                { value: "yesterday", label: "Ontem" },
+                { value: "7d", label: "Últimos 7 Dias" },
+                { value: "month", label: "Este Mês" },
+                { value: "last_month", label: "Mês Passado" },
+                { value: "custom", label: "Personalizado" },
+              ].map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => handlePeriodChange(p.value)}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    period === p.value
+                      ? "bg-amber-400 text-black border-amber-400 shadow-sm font-black"
+                      : "bg-background text-muted-foreground border-border hover:border-amber-400 hover:text-foreground"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Busca Geral */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por loja, telefone, WhatsApp, descrição, ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 font-medium h-10 text-xs rounded-xl"
+            />
+          </div>
+
+          {/* Grid de Filtros */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Empresa / Loja</Label>
+              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                <SelectTrigger className="h-10 text-xs rounded-xl">
+                  <SelectValue placeholder="Todas as Empresas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Empresas</SelectItem>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Forma de Pagamento</Label>
+              <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+                <SelectTrigger className="h-10 text-xs rounded-xl">
+                  <SelectValue placeholder="Todas as Formas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Formas</SelectItem>
+                  {PAYMENT_METHODS.map((pm) => (
+                    <SelectItem key={pm} value={pm}>{pm}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Data Início</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setPeriod("custom");
+                  setDateFrom(e.target.value);
+                }}
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Data Fim</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setPeriod("custom");
+                  setDateTo(e.target.value);
+                }}
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Tipo de Movimentação</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="h-10 text-xs rounded-xl">
+                  <SelectValue placeholder="Todos os Tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  <SelectItem value="purchase">Compras / Recargas (+)</SelectItem>
+                  <SelectItem value="debit">Consumos / Entregas (-)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Valor Mínimo (R$)</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={minValue}
+                onChange={(e) => setMinValue(e.target.value)}
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Valor Máximo (R$)</Label>
+              <Input
+                type="number"
+                placeholder="999.00"
+                value={maxValue}
+                onChange={(e) => setMaxValue(e.target.value)}
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -427,14 +567,14 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <StatsCard
           title="Créditos vendidos"
           value={brl(totals.purchased)}
-          sub={`Período: ${formatMonthName(selectedMonth)}`}
+          sub={`${filteredTxs.filter(t => Number(t.amount) > 0).length} compras no período`}
           icon={TrendingUp}
           color="success"
         />
         <StatsCard
           title="Créditos consumidos"
           value={brl(totals.consumed)}
-          sub={`Entregas em ${formatMonthName(selectedMonth)}`}
+          sub={`${filteredTxs.filter(t => Number(t.amount) < 0).length} entregas / débitos`}
           icon={TrendingDown}
           color="info"
         />
@@ -452,10 +592,10 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <Card className="lg:col-span-2 shadow-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold">
-              Vendas de créditos — {formatMonthName(selectedMonth)}
+              Vendas de créditos no período ({salesTrend.length} dias)
             </CardTitle>
             <CardDescription className="text-xs">
-              {selectedMonth === "all" ? "Valores consolidados por mês" : "Valores recebidos por dia do mês selecionado"}
+              Valores diários recebidos de recargas de lojas
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -511,12 +651,8 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
           <div>
             <CardTitle className="text-base font-bold">Carteira das lojas</CardTitle>
             <CardDescription className="text-xs">
-              Exibindo compras e consumos de <strong>{formatMonthName(selectedMonth)}</strong>
+              Saldos atuais e movimentações filtradas no período
             </CardDescription>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9 text-xs" placeholder="Buscar por loja, WhatsApp..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -533,8 +669,8 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
                   <tr className="border-y border-border bg-muted/40">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Loja</th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo Atual</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Comprado ({formatMonthName(selectedMonth)})</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Consumido ({formatMonthName(selectedMonth)})</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Comprado (no período)</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Consumido (no período)</th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
@@ -583,33 +719,11 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <History className="h-4 w-4" /> Extrato de créditos — {formatMonthName(selectedMonth)}
+              <History className="h-4 w-4" /> Extrato de créditos
             </CardTitle>
             <CardDescription className="text-xs">
-              {filteredTxs.length} movimentações no período selecionado
+              {filteredTxs.length} movimentações encontradas com os filtros aplicados
             </CardDescription>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            {/* Campo de Busca Textual no Extrato */}
-            <div className="relative w-full sm:w-60">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar no extrato..."
-                value={txSearchText}
-                onChange={(e) => setTxSearchText(e.target.value)}
-                className="pl-9 h-9 text-xs"
-              />
-            </div>
-
-            {/* Filtro por Loja */}
-            <Select value={historyFilter} onValueChange={setHistoryFilter}>
-              <SelectTrigger className="w-full sm:w-48 h-9 text-xs"><SelectValue placeholder="Todas as lojas" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as lojas</SelectItem>
-                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -617,7 +731,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
             <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
           ) : filteredTxs.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed p-12 text-center text-sm text-muted-foreground">
-              Nenhuma movimentação registrada
+              Nenhuma movimentação encontrada para os filtros selecionados
             </div>
           ) : (
             <div className="space-y-2">
