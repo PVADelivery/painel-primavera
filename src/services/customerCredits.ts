@@ -230,10 +230,10 @@ export function useAllCustomerProfiles() {
 
             addUniqueCustomer({
               id: uid,
-              name: c.name || "Cliente",
-              phone: c.phone || "",
-              email: c.email || "",
-              cpf: c.cpf || "",
+              name: c.name || c.full_name || "Cliente",
+              phone: c.phone || c.whatsapp || c.telephone || "",
+              email: c.email || c.customer_email || "",
+              cpf: c.cpf || c.document || "",
               address: c.address || "",
               source: "app_marketplace",
             });
@@ -252,9 +252,9 @@ export function useAllCustomerProfiles() {
             addUniqueCustomer({
               id: c.customer_id || c.id,
               name: c.customer_name || "Cliente",
-              phone: c.customer_phone || "",
-              email: c.customer_email || "",
-              cpf: c.customer_cpf || "",
+              phone: c.customer_phone || c.phone || "",
+              email: c.customer_email || c.email || "",
+              cpf: c.customer_cpf || c.cpf || "",
               source: "app_marketplace",
             });
           });
@@ -274,7 +274,7 @@ export function useAllCustomerProfiles() {
 
             const name = p.full_name || p.name || (p.email ? p.email.split("@")[0] : "");
             const email = p.email || p.user_email || p.contact_email || "";
-            const phone = p.phone || p.whatsapp || "";
+            const phone = p.phone || p.whatsapp || p.telephone || "";
             const cpf = p.cpf || p.document || "";
 
             if (name || email || phone) {
