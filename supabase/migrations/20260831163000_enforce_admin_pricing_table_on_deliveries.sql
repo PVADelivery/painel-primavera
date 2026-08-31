@@ -4,6 +4,10 @@
 -- e NUNCA do valor que a loja cobra do cliente final.
 -- =========================================================================
 
+-- 0. Garantir colunas na tabela deliveries
+ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS delivery_fee NUMERIC(10,2);
+ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS value NUMERIC(10,2);
+
 -- 1. Função definitiva de cálculo de taxa de entrega da tabela do Admin
 CREATE OR REPLACE FUNCTION public.calculate_delivery_fee_for_company(
   p_company_id UUID,
@@ -190,13 +194,13 @@ BEGIN
         address, dropoff_address, delivery_address,
         delivery_latitude, delivery_longitude,
         pickup_address, pickup_latitude, pickup_longitude,
-        value, price, delivery_fee, region_id, status, created_at, updated_at
+        value, delivery_fee, region_id, status, created_at, updated_at
     ) VALUES (
         NEW.company_id, NEW.id, v_customer_name, v_customer_phone,
         v_address, v_address, v_address,
         NEW.delivery_latitude, NEW.delivery_longitude,
         COALESCE(v_company.address, ''), v_company.latitude, v_company.longitude,
-        v_admin_fee, v_admin_fee, v_admin_fee, v_region_id,
+        v_admin_fee, v_admin_fee, v_region_id,
         'pending', now(), now()
     ) RETURNING id INTO v_delivery_id;
 
@@ -230,10 +234,6 @@ BEGIN
     NEW.delivery_fee := NEW.value;
   END IF;
 
-  IF NEW.value IS NOT NULL AND (NEW.price IS NULL OR NEW.price <= 0) THEN
-    NEW.price := NEW.value;
-  END IF;
-
   RETURN NEW;
 END;
 $function$;
@@ -247,8 +247,7 @@ CREATE TRIGGER trg_enforce_admin_pricing
 -- 4. Corrigir entregas recentes com status pendente/aberto que foram criadas com valor incorreto
 UPDATE public.deliveries d
    SET value = public.calculate_delivery_fee_for_company(d.company_id, d.address, d.region_id, COALESCE(d.vehicle_type, 'moto')),
-       delivery_fee = public.calculate_delivery_fee_for_company(d.company_id, d.address, d.region_id, COALESCE(d.vehicle_type, 'moto')),
-       price = public.calculate_delivery_fee_for_company(d.company_id, d.address, d.region_id, COALESCE(d.vehicle_type, 'moto'))
+       delivery_fee = public.calculate_delivery_fee_for_company(d.company_id, d.address, d.region_id, COALESCE(d.vehicle_type, 'moto'))
  WHERE d.company_id IS NOT NULL
    AND d.created_at > now() - interval '24 hours'
    AND d.status::text NOT IN ('cancelled', 'completed');
