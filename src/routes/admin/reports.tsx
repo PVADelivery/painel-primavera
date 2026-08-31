@@ -1039,22 +1039,6 @@ function ReportsPage() {
               </CardContent>
             </Card>
 
-            {/* CARD: COMISSÃO DA PLATAFORMA (2% DOS CRÉDITOS VENDIDOS AOS LOJISTAS) */}
-            <Card className="rounded-3xl border-border/80 shadow-sm relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Comissão da Plataforma</CardTitle>
-                <Percent className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-foreground">
-                  {kpis.platformCommission.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  2,0% dos créditos vendidos ({kpis.totalCreditsSold.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
-                </p>
-              </CardContent>
-            </Card>
-
             <Card className="rounded-3xl border-border/80 shadow-sm relative overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ticket Médio</CardTitle>

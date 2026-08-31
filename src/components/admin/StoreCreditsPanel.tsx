@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, AlertTriangle, Plus, Search, Building2,
-  ArrowUpCircle, ArrowDownCircle, Minus, History, Filter,
+  ArrowUpCircle, ArrowDownCircle, Minus, History, Filter, Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -218,7 +218,8 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     const purchased = filteredTxs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
     const consumed = filteredTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
     const low = companies.filter((c) => (creditsByCompany.get(c.id)?.balance || 0) < LOW_BALANCE).length;
-    return { balance, purchased, consumed, low };
+    const platformCommission = purchased * 0.02;
+    return { balance, purchased, consumed, low, platformCommission };
   }, [credits, filteredTxs, companies, creditsByCompany]);
 
   // Gráfico de vendas dia a dia no período filtrado
@@ -556,7 +557,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatsCard
           title="Créditos em circulação"
           value={brl(totals.balance)}
@@ -577,6 +578,13 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
           sub={`${filteredTxs.filter(t => Number(t.amount) < 0).length} entregas / débitos`}
           icon={TrendingDown}
           color="info"
+        />
+        <StatsCard
+          title="Comissão da Plataforma"
+          value={brl(totals.platformCommission)}
+          sub={`2,0% dos créditos vendidos (${brl(totals.purchased)})`}
+          icon={Percent}
+          color="primary"
         />
         <StatsCard
           title="Lojas com saldo baixo"
