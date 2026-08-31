@@ -1062,14 +1062,14 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-amber-500" />
+                  <Filter className="h-5 w-5 text-primary" />
                   Filtros Avançados
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="font-bold rounded-xl text-xs h-8 hover:bg-muted"
+                  className="font-bold rounded-xl text-xs h-8"
                 >
                   Limpar Filtros
                 </Button>
@@ -1079,7 +1079,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
               {/* Período Rápido */}
               <div>
                 <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">
-                  PERÍODO RÁPIDO:
+                  Período Rápido:
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -1094,10 +1094,10 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                       key={p.value}
                       type="button"
                       onClick={() => handlePeriodChange(p.value)}
-                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                         period === p.value
-                          ? "bg-amber-400 text-black border-amber-400 shadow-sm font-black"
-                          : "bg-background text-muted-foreground border-border hover:border-amber-400 hover:text-foreground"
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
                       }`}
                     >
                       {p.label}
