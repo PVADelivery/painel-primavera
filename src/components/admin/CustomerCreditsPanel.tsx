@@ -34,6 +34,24 @@ const brl = (n: number) =>
 const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão crédito", "Débito", "Transferência", "A prazo"];
 const QUICK_AMOUNTS = [50, 100, 200, 300, 500, 1000];
 
+const now = new Date();
+const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+function getMonthKey(dateStr: string | Date) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthName(monthKey: string) {
+  if (!monthKey || monthKey === "all") return "Todos os períodos";
+  const [year, month] = monthKey.split("-").map(Number);
+  const d = new Date(year, month - 1, 1);
+  const name = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 interface CustomerCreditsPanelProps {
   onCreditRecharged?: () => void;
 }
@@ -46,6 +64,9 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const updateContactMutation = useUpdateCustomerContact();
   const revokeCreditsMutation = useRevokeCustomerCredits();
 
+  // Filtro de Mês Selecionado (Padrão: Mês Atual - reinicia dia 01)
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey);
+
   // Modo de visualização: "overview" (painel padrão) ou "workspace" (janela dedicada no sistema)
   const [viewMode, setViewMode] = useState<"overview" | "workspace">("overview");
 
@@ -53,6 +74,25 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   const [search, setSearch] = useState("");
   const [txSearch, setTxSearch] = useState("");
   const [txTypeFilter, setTxTypeFilter] = useState("all");
+
+  // Lista dinâmica de meses disponíveis a partir das transações
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    set.add(currentMonthKey);
+    transactions.forEach((t) => {
+      if (t.created_at) {
+        const k = getMonthKey(t.created_at);
+        if (k) set.add(k);
+      }
+    });
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [transactions]);
+
+  // Transações filtradas pelo mês selecionado
+  const monthFilteredTransactions = useMemo(() => {
+    if (selectedMonth === "all") return transactions;
+    return transactions.filter((t) => t.created_at && getMonthKey(t.created_at) === selectedMonth);
+  }, [transactions, selectedMonth]);
 
   // Estados do Workspace Dedicado
   const [modalSearchQuery, setModalSearchQuery] = useState("");
@@ -162,14 +202,27 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     registerCashFlow: true,
   });
 
-  // Estatísticas Globais
+  // Estatísticas Filtradas pelo Mês Selecionado
   const totals = useMemo(() => {
     const totalBalance = customerCredits.reduce((acc, c) => acc + Number(c.balance || 0), 0);
-    const totalRecharged = customerCredits.reduce((acc, c) => acc + Number(c.total_recharged || 0), 0);
-    const totalBonus = customerCredits.reduce((acc, c) => acc + Number(c.total_bonus || 0), 0);
-    const totalSpent = customerCredits.reduce((acc, c) => acc + Number(c.total_spent || 0), 0);
+    
+    // Total Real Pago no período selecionado
+    const totalRecharged = monthFilteredTransactions
+      .filter((t) => t.type === "recharge")
+      .reduce((acc, t) => acc + Number(t.paid_amount || (Number(t.amount) - Number(t.bonus_amount || 0)) || 0), 0);
+
+    // Total de Bônus 10% concedidos no período selecionado
+    const totalBonus = monthFilteredTransactions
+      .filter((t) => t.type === "recharge" && Number(t.bonus_amount || 0) > 0)
+      .reduce((acc, t) => acc + Number(t.bonus_amount || 0), 0);
+
+    // Total Consumido no período selecionado
+    const totalSpent = monthFilteredTransactions
+      .filter((t) => t.type === "spend" || t.type === "payment_order" || t.type === "payment_ride" || t.type === "payment_errand" || (t.type !== "recharge" && Number(t.amount) < 0))
+      .reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
+
     return { totalBalance, totalRecharged, totalBonus, totalSpent };
-  }, [customerCredits]);
+  }, [customerCredits, monthFilteredTransactions]);
 
   // Mapa de saldo de créditos por chave / ID de cliente
   const creditsMap = useMemo(() => {
@@ -328,7 +381,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
   // Lista filtrada geral de transações
   const filteredTransactions = useMemo(() => {
     const q = txSearch.trim().toLowerCase();
-    return transactions.filter((tx) => {
+    return monthFilteredTransactions.filter((tx) => {
       const matchType = txTypeFilter === "all" || tx.type === txTypeFilter;
       const matchSearch =
         !q ||
@@ -338,7 +391,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
         tx.reference_id?.toLowerCase().includes(q);
       return matchType && matchSearch;
     });
-  }, [transactions, txSearch, txTypeFilter]);
+  }, [monthFilteredTransactions, txSearch, txTypeFilter]);
 
   // Abre a Central / Workspace Dedicado para um cliente específico
   const handleOpenWorkspaceFor = (customer?: any) => {
@@ -954,6 +1007,55 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       </div>
       ) : (
         <div className="space-y-6">
+          {/* ── BARRA SUPERIOR: FILTRO DE MÊS & PERÍODO ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-border shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-foreground flex items-center justify-center font-black shrink-0">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-foreground flex items-center gap-2">
+                  Gestão & Créditos de Clientes (+10% Bônus)
+                </h2>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Período selecionado: <strong className="text-foreground">{formatMonthName(selectedMonth)}</strong>
+                  {selectedMonth === currentMonthKey && " (Mês Atual • Reinicia dia 01)"}
+                </p>
+              </div>
+            </div>
+
+            {/* Seletor de Mês Dinâmico */}
+            <div className="flex items-center gap-2">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="h-10 min-w-[200px] text-xs font-bold rounded-xl bg-background border-2 border-border">
+                  <SelectValue placeholder="Selecione o mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.map((m) => (
+                    <SelectItem key={m} value={m} className="text-xs font-semibold">
+                      {formatMonthName(m)} {m === currentMonthKey ? "★ (Mês Atual)" : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="all" className="text-xs font-semibold text-primary">
+                    📊 Todos os Meses (Histórico Completo)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {selectedMonth !== currentMonthKey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedMonth(currentMonthKey)}
+                  className="h-10 text-xs font-bold rounded-xl border-primary/40 bg-primary/10 hover:bg-primary text-black cursor-pointer"
+                >
+                  Voltar ao Mês Atual
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* ── TOP KPI CARDS ── */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* 1. Saldo em Circulação */}
@@ -964,70 +1066,70 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                 </CardTitle>
                 <Wallet className="h-4 w-4 text-primary" />
               </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-foreground">
-              {brl(totals.totalBalance)}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-              Total disponível nas contas dos clientes
-            </p>
-          </CardContent>
-        </Card>
+              <CardContent>
+                <div className="text-2xl font-black text-foreground">
+                  {brl(totals.totalBalance)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
+                  Total disponível nas contas dos clientes
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* 2. Total Real Pago */}
-        <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Total Real Pago (R$)
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {brl(totals.totalRecharged)}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-              Valor bruto recebido pelo Admin em Pix/Dinheiro
-            </p>
-          </CardContent>
-        </Card>
+            {/* 2. Total Real Pago */}
+            <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Total Real Pago (R$)
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  {brl(totals.totalRecharged)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
+                  Recebido em {formatMonthName(selectedMonth)}
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* 3. Total de Bônus 10% */}
-        <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <span>Bônus Concedidos</span> <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            </CardTitle>
-            <Plus className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
-              {brl(totals.totalBonus)}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-              +10% de créditos extras gerados aos clientes
-            </p>
-          </CardContent>
-        </Card>
+            {/* 3. Total de Bônus 10% */}
+            <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <span>Bônus Concedidos</span> <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                </CardTitle>
+                <Plus className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                  {brl(totals.totalBonus)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
+                  +10% gerados em {formatMonthName(selectedMonth)}
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* 4. Total Consumido */}
-        <Card className="border-blue-500/30 bg-blue-500/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-              Total Consumido
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-              {brl(totals.totalSpent)}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
-              Gasto em pedidos, táxi, motoboy e serviços
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            {/* 4. Total Consumido */}
+            <Card className="border-blue-500/30 bg-blue-500/5 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                  Total Consumido
+                </CardTitle>
+                <TrendingDown className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                  {brl(totals.totalSpent)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 font-semibold">
+                  Gasto pelos clientes em {formatMonthName(selectedMonth)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
       {/* ── PAINEL PRINCIPAL COM TABELAS E BOTÃO DE ABERTURA DA CENTRAL ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1166,14 +1268,14 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <History className="w-4 h-4 text-primary" /> Extrato Geral de Créditos
+                      <History className="w-4 h-4 text-primary" /> Extrato Geral de Créditos — {formatMonthName(selectedMonth)}
                     </CardTitle>
                     <span className="text-xs bg-primary/15 text-foreground font-bold px-2.5 py-0.5 rounded-full border border-primary/30">
                       {filteredTransactions.length} movimentações
                     </span>
                   </div>
                   <CardDescription className="text-xs mt-0.5">
-                    Histórico consolidado de recargas, bônus e pagamentos realizados na plataforma
+                    Exibindo movimentações de <strong>{formatMonthName(selectedMonth)}</strong>
                   </CardDescription>
                 </div>
               </div>

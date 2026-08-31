@@ -37,6 +37,24 @@ const LOW_BALANCE = 30;
 
 const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão crédito", "Débito", "Transferência", "A prazo"];
 
+const now = new Date();
+const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+function getMonthKey(dateStr: string | Date) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthName(monthKey: string) {
+  if (!monthKey || monthKey === "all") return "Todos os períodos";
+  const [year, month] = monthKey.split("-").map(Number);
+  const d = new Date(year, month - 1, 1);
+  const name = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 interface StoreCreditsPanelProps {
   onCreditPurchased?: () => void;
 }
@@ -47,11 +65,33 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
   const { data: txs = [], isLoading: loadingTxs } = useCreditTransactions();
   const addCredits = useAddCompanyCredits();
 
+  // Filtro de Mês Selecionado (Padrão: Mês Atual - reinicia dia 01)
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey);
   const [search, setSearch] = useState("");
+  const [txSearchText, setTxSearchText] = useState("");
   const [dialogCompany, setDialogCompany] = useState<any>(null);
   const [mode, setMode] = useState<"purchase" | "debit">("purchase");
   const [form, setForm] = useState({ amount: "", payment_method: "Pix", description: "" });
   const [historyFilter, setHistoryFilter] = useState("all");
+
+  // Lista dinâmica de meses disponíveis
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    set.add(currentMonthKey);
+    txs.forEach((t) => {
+      if (t.created_at) {
+        const k = getMonthKey(t.created_at);
+        if (k) set.add(k);
+      }
+    });
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [txs]);
+
+  // Transações filtradas pelo mês selecionado
+  const monthTxs = useMemo(() => {
+    if (selectedMonth === "all") return txs;
+    return txs.filter((t) => t.created_at && getMonthKey(t.created_at) === selectedMonth);
+  }, [txs, selectedMonth]);
 
   const creditsByCompany = useMemo(() => {
     const m = new Map<string, any>();
@@ -65,57 +105,118 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
     return m;
   }, [companies]);
 
+  // Vendas e Consumos do período selecionado por loja
+  const storePurchasedInPeriod = useMemo(() => {
+    const map = new Map<string, number>();
+    monthTxs.forEach((t) => {
+      if (Number(t.amount) > 0) {
+        map.set(t.company_id, (map.get(t.company_id) || 0) + Number(t.amount));
+      }
+    });
+    return map;
+  }, [monthTxs]);
+
+  const storeConsumedInPeriod = useMemo(() => {
+    const map = new Map<string, number>();
+    monthTxs.forEach((t) => {
+      if (Number(t.amount) < 0) {
+        map.set(t.company_id, (map.get(t.company_id) || 0) + Math.abs(Number(t.amount)));
+      }
+    });
+    return map;
+  }, [monthTxs]);
+
   const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return companies
       .map((c) => {
         const cr = creditsByCompany.get(c.id);
+        const purchasedInPeriod = storePurchasedInPeriod.get(c.id) || 0;
+        const consumedInPeriod = storeConsumedInPeriod.get(c.id) || 0;
         return {
           ...c,
           balance: Number(cr?.balance ?? 0),
-          total_purchased: Number(cr?.total_purchased ?? 0),
-          total_consumed: Number(cr?.total_consumed ?? 0),
+          total_purchased: selectedMonth === "all" ? Number(cr?.total_purchased ?? 0) : purchasedInPeriod,
+          total_consumed: selectedMonth === "all" ? Number(cr?.total_consumed ?? 0) : consumedInPeriod,
         };
       })
-      .filter((c) => c.name?.toLowerCase().includes(search.toLowerCase()))
+      .filter((c) => {
+        if (!q) return true;
+        return (
+          c.name?.toLowerCase().includes(q) ||
+          c.phone?.toLowerCase().includes(q) ||
+          c.email?.toLowerCase().includes(q)
+        );
+      })
       .sort((a, b) => b.balance - a.balance);
-  }, [companies, creditsByCompany, search]);
+  }, [companies, creditsByCompany, search, storePurchasedInPeriod, storeConsumedInPeriod, selectedMonth]);
 
+  // Métricas do período selecionado
   const totals = useMemo(() => {
     const balance = rows.reduce((s, r) => s + r.balance, 0);
-    const purchased = rows.reduce((s, r) => s + r.total_purchased, 0);
-    const consumed = rows.reduce((s, r) => s + r.total_consumed, 0);
+    const purchased = monthTxs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
+    const consumed = monthTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
     const low = rows.filter((r) => r.balance < LOW_BALANCE).length;
     return { balance, purchased, consumed, low };
-  }, [rows]);
+  }, [rows, monthTxs]);
 
+  // Gráfico de vendas exibindo exclusivamente os dias do mês selecionado (dia 01 ao fim do mês)
   const salesTrend = useMemo(() => {
+    if (selectedMonth === "all") {
+      const map = new Map<string, { date: string; value: number }>();
+      txs.forEach((t) => {
+        if (Number(t.amount) <= 0 || !t.created_at) return;
+        const key = getMonthKey(t.created_at);
+        const label = formatMonthName(key);
+        if (!map.has(key)) map.set(key, { date: label, value: 0 });
+        map.get(key)!.value += Number(t.amount);
+      });
+      return Array.from(map.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, v]) => v);
+    }
+
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
     const map = new Map<string, { date: string; value: number }>();
-    const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      map.set(d.toISOString().split("T")[0], {
-        date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayStr = String(day).padStart(2, "0");
+      const key = `${year}-${String(month).padStart(2, "0")}-${dayStr}`;
+      map.set(key, {
+        date: `${dayStr}/${String(month).padStart(2, "0")}`,
         value: 0,
       });
     }
-    txs.forEach((t) => {
-      if (Number(t.amount) <= 0) return;
-      const key = t.created_at?.split("T")[0];
-      if (key && map.has(key)) map.get(key)!.value += Number(t.amount);
+
+    monthTxs.forEach((t) => {
+      if (Number(t.amount) <= 0 || !t.created_at) return;
+      const key = t.created_at.split("T")[0];
+      if (map.has(key)) {
+        map.get(key)!.value += Number(t.amount);
+      }
     });
+
     return Array.from(map.values());
-  }, [txs]);
+  }, [monthTxs, selectedMonth, txs]);
 
   const topStores = useMemo(
     () => rows.filter((r) => r.balance > 0).slice(0, 8).map((r) => ({ name: r.name, saldo: r.balance })),
     [rows],
   );
 
-  const filteredTxs = useMemo(
-    () => (historyFilter === "all" ? txs : txs.filter((t) => t.company_id === historyFilter)),
-    [txs, historyFilter],
-  );
+  // Extrato filtrado por mês, loja selecionada e texto de busca
+  const filteredTxs = useMemo(() => {
+    const q = txSearchText.trim().toLowerCase();
+    return monthTxs.filter((t) => {
+      const matchCompany = historyFilter === "all" || t.company_id === historyFilter;
+      const compName = companyById.get(t.company_id)?.name?.toLowerCase() || "";
+      const desc = t.description?.toLowerCase() || "";
+      const method = t.payment_method?.toLowerCase() || "";
+      const matchText = !q || compName.includes(q) || desc.includes(q) || method.includes(q);
+      return matchCompany && matchText;
+    });
+  }, [monthTxs, historyFilter, txSearchText, companyById]);
 
   const openDialog = (company: any, m: "purchase" | "debit") => {
     setDialogCompany(company);
@@ -265,20 +366,97 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         </Card>
       )}
 
+      {/* ── BARRA SUPERIOR: FILTRO DE MÊS & PERÍODO ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-card border-2 border-border shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-primary/20 text-foreground flex items-center justify-center font-black shrink-0">
+            <History className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-foreground flex items-center gap-2">
+              Gestão de Créditos de Lojas & Lojistas
+            </h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              Período selecionado: <strong className="text-foreground">{formatMonthName(selectedMonth)}</strong>
+              {selectedMonth === currentMonthKey && " (Mês Atual • Reinicia dia 01)"}
+            </p>
+          </div>
+        </div>
+
+        {/* Seletor de Mês Dinâmico */}
+        <div className="flex items-center gap-2">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="h-10 min-w-[200px] text-xs font-bold rounded-xl bg-background border-2 border-border">
+              <SelectValue placeholder="Selecione o mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMonths.map((m) => (
+                <SelectItem key={m} value={m} className="text-xs font-semibold">
+                  {formatMonthName(m)} {m === currentMonthKey ? "★ (Mês Atual)" : ""}
+                </SelectItem>
+              ))}
+              <SelectItem value="all" className="text-xs font-semibold text-primary">
+                📊 Todos os Meses (Histórico Completo)
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {selectedMonth !== currentMonthKey && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedMonth(currentMonthKey)}
+              className="h-10 text-xs font-bold rounded-xl border-primary/40 bg-primary/10 hover:bg-primary text-black cursor-pointer"
+            >
+              Voltar ao Mês Atual
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Créditos em circulação" value={brl(totals.balance)} sub={`${rows.length} lojas`} icon={Wallet} color="primary" />
-        <StatsCard title="Créditos vendidos" value={brl(totals.purchased)} sub="Total histórico" icon={TrendingUp} color="success" />
-        <StatsCard title="Créditos consumidos" value={brl(totals.consumed)} sub="Entregas e ajustes" icon={TrendingDown} color="info" />
-        <StatsCard title="Lojas com saldo baixo" value={totals.low} sub={`Abaixo de ${brl(LOW_BALANCE)}`} icon={AlertTriangle} color="warning" />
+        <StatsCard
+          title="Créditos em circulação"
+          value={brl(totals.balance)}
+          sub={`${rows.length} lojas no sistema`}
+          icon={Wallet}
+          color="primary"
+        />
+        <StatsCard
+          title="Créditos vendidos"
+          value={brl(totals.purchased)}
+          sub={`Período: ${formatMonthName(selectedMonth)}`}
+          icon={TrendingUp}
+          color="success"
+        />
+        <StatsCard
+          title="Créditos consumidos"
+          value={brl(totals.consumed)}
+          sub={`Entregas em ${formatMonthName(selectedMonth)}`}
+          icon={TrendingDown}
+          color="info"
+        />
+        <StatsCard
+          title="Lojas com saldo baixo"
+          value={totals.low}
+          sub={`Abaixo de ${brl(LOW_BALANCE)}`}
+          icon={AlertTriangle}
+          color="warning"
+        />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 shadow-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold">Vendas de créditos (30 dias)</CardTitle>
-            <CardDescription className="text-xs">Valores recebidos das lojas por dia</CardDescription>
+            <CardTitle className="text-sm font-bold">
+              Vendas de créditos — {formatMonthName(selectedMonth)}
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {selectedMonth === "all" ? "Valores consolidados por mês" : "Valores recebidos por dia do mês selecionado"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
@@ -290,7 +468,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval={3} />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${v}`} />
                 <Tooltip formatter={(v: number) => [brl(v), "Créditos"]} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#creditGrad)" />
@@ -302,7 +480,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <Card className="shadow-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold">Saldo por loja</CardTitle>
-            <CardDescription className="text-xs">Maiores saldos ativos</CardDescription>
+            <CardDescription className="text-xs">Maiores saldos ativos em carteira</CardDescription>
           </CardHeader>
           <CardContent>
             {topStores.length === 0 ? (
@@ -332,11 +510,13 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base font-bold">Carteira das lojas</CardTitle>
-            <CardDescription className="text-xs">Adicione créditos após a confirmação do pagamento</CardDescription>
+            <CardDescription className="text-xs">
+              Exibindo compras e consumos de <strong>{formatMonthName(selectedMonth)}</strong>
+            </CardDescription>
           </div>
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar loja..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input className="pl-9 text-xs" placeholder="Buscar por loja, WhatsApp..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -352,9 +532,9 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
                 <thead>
                   <tr className="border-y border-border bg-muted/40">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Loja</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Comprado</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Consumido</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo Atual</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Comprado ({formatMonthName(selectedMonth)})</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Consumido ({formatMonthName(selectedMonth)})</th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
@@ -403,17 +583,34 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <History className="h-4 w-4" /> Extrato de créditos
+              <History className="h-4 w-4" /> Extrato de créditos — {formatMonthName(selectedMonth)}
             </CardTitle>
-            <CardDescription className="text-xs">Todas as movimentações registradas</CardDescription>
+            <CardDescription className="text-xs">
+              {filteredTxs.length} movimentações no período selecionado
+            </CardDescription>
           </div>
-          <Select value={historyFilter} onValueChange={setHistoryFilter}>
-            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Todas as lojas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as lojas</SelectItem>
-              {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            {/* Campo de Busca Textual no Extrato */}
+            <div className="relative w-full sm:w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar no extrato..."
+                value={txSearchText}
+                onChange={(e) => setTxSearchText(e.target.value)}
+                className="pl-9 h-9 text-xs"
+              />
+            </div>
+
+            {/* Filtro por Loja */}
+            <Select value={historyFilter} onValueChange={setHistoryFilter}>
+              <SelectTrigger className="w-full sm:w-48 h-9 text-xs"><SelectValue placeholder="Todas as lojas" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as lojas</SelectItem>
+                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingTxs ? (
