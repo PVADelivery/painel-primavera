@@ -228,28 +228,6 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
     registerCashFlow: true,
   });
 
-  // Estatísticas Filtradas pelo Mês Selecionado
-  const totals = useMemo(() => {
-    const totalBalance = customerCredits.reduce((acc, c) => acc + Number(c.balance || 0), 0);
-    
-    // Total Real Pago no período selecionado
-    const totalRecharged = monthFilteredTransactions
-      .filter((t) => t.type === "recharge")
-      .reduce((acc, t) => acc + Number(t.paid_amount || (Number(t.amount) - Number(t.bonus_amount || 0)) || 0), 0);
-
-    // Total de Bônus 10% concedidos no período selecionado
-    const totalBonus = monthFilteredTransactions
-      .filter((t) => t.type === "recharge" && Number(t.bonus_amount || 0) > 0)
-      .reduce((acc, t) => acc + Number(t.bonus_amount || 0), 0);
-
-    // Total Consumido no período selecionado
-    const totalSpent = monthFilteredTransactions
-      .filter((t) => t.type === "spend" || t.type === "payment_order" || t.type === "payment_ride" || t.type === "payment_errand" || (t.type !== "recharge" && Number(t.amount) < 0))
-      .reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
-
-    return { totalBalance, totalRecharged, totalBonus, totalSpent };
-  }, [customerCredits, monthFilteredTransactions]);
-
   // Mapa de saldo de créditos por chave / ID de cliente
   const creditsMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -442,6 +420,28 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
       return true;
     });
   }, [transactions, period, dateFrom, dateTo, selectedCustomerId, selectedPayment, selectedType, minValue, maxValue, searchTerm]);
+
+  // Estatísticas Filtradas pelo Período e Filtros Avançados
+  const totals = useMemo(() => {
+    const totalBalance = customerCredits.reduce((acc, c) => acc + Number(c.balance || 0), 0);
+    
+    // Total Real Pago no período selecionado
+    const totalRecharged = filteredTransactions
+      .filter((t) => t.type === "recharge")
+      .reduce((acc, t) => acc + Number(t.paid_amount || (Number(t.amount) - Number(t.bonus_amount || 0)) || 0), 0);
+
+    // Total de Bônus 10% concedidos no período selecionado
+    const totalBonus = filteredTransactions
+      .filter((t) => t.type === "recharge" && Number(t.bonus_amount || 0) > 0)
+      .reduce((acc, t) => acc + Number(t.bonus_amount || 0), 0);
+
+    // Total Consumido no período selecionado
+    const totalSpent = filteredTransactions
+      .filter((t) => t.type === "spend" || t.type === "payment_order" || t.type === "payment_ride" || t.type === "payment_errand" || (t.type !== "recharge" && Number(t.amount) < 0))
+      .reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
+
+    return { totalBalance, totalRecharged, totalBonus, totalSpent };
+  }, [customerCredits, filteredTransactions]);
 
   // Abre a Central / Workspace Dedicado para um cliente específico
   const handleOpenWorkspaceFor = (customer?: any) => {
