@@ -80,7 +80,21 @@ export function useDirectoryCategories() {
 
       if (error) throw error;
       
-      const defaultCategories = ["Tudo", "Restaurante", "Hamburgueria", "Mercado", "Farmácia", "Padaria", "Pet Shop", "Beleza", "Saúde", "Automotivo"];
+      const defaultCategories = [
+        "Tudo",
+        "Automotivo",
+        "Beleza",
+        "Construção",
+        "Dentistas",
+        "Farmácia",
+        "Hamburgueria",
+        "Mercado",
+        "Padaria",
+        "Pet Shop",
+        "Restaurante",
+        "Saúde",
+        "Serviços"
+      ];
       if (!data || !data.value) return defaultCategories;
       
       return data.value as string[];

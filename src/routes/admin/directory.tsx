@@ -305,8 +305,22 @@ const QUICK_EMOJIS = ["🦷", "🍽️", "🍔", "🛒", "💊", "🥖", "🐶",
 
 const EMOJI_REGEX = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u;
 
+const sortCategoriesAlphabetically = (list: string[]) => {
+  const isTudo = (c: string) => c.replace(EMOJI_REGEX, "").trim().toLowerCase() === "tudo";
+  const tudo = list.filter(isTudo);
+  const rest = list
+    .filter(c => !isTudo(c))
+    .sort((a, b) => {
+      const aClean = a.replace(EMOJI_REGEX, "").trim();
+      const bClean = b.replace(EMOJI_REGEX, "").trim();
+      return aClean.localeCompare(bClean, "pt-BR", { sensitivity: "base" });
+    });
+  return [...tudo, ...rest];
+};
+
 function CategoryManager() {
-  const { data: categories = [], isLoading } = useDirectoryCategories();
+  const { data: rawCategories = [], isLoading } = useDirectoryCategories();
+  const categories = useMemo(() => sortCategoriesAlphabetically(rawCategories), [rawCategories]);
   const update = useUpdateDirectoryCategories();
   const [open, setOpen] = useState(false);
   const [newCat, setNewCat] = useState("");
@@ -347,7 +361,7 @@ function CategoryManager() {
       return;
     }
 
-    const updated = [...categories, fullCat];
+    const updated = sortCategoriesAlphabetically([...categories, fullCat]);
     try {
       await update.mutateAsync(updated);
       setNewCat("");
@@ -376,8 +390,7 @@ function CategoryManager() {
       return;
     }
     const fullCat = editEmoji ? `${editEmoji} ${cleanName}` : cleanName;
-    const updated = [...categories];
-    updated[index] = fullCat;
+    const updated = sortCategoriesAlphabetically(categories.map((c, i) => i === index ? fullCat : c));
     try {
       await update.mutateAsync(updated);
       setEditingIndex(null);
@@ -667,8 +680,10 @@ function CategorySelector({ value, onChange }: { value: string; onChange: (val: 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const sortedCategories = useMemo(() => sortCategoriesAlphabetically(categories), [categories]);
+
   // Lista de categorias filtradas pelo que o usuário digita na busca
-  const filteredCategories = categories.filter(c => 
+  const filteredCategories = sortedCategories.filter(c => 
     c.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
