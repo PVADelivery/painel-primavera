@@ -92,15 +92,35 @@ export function useUpdateDirectoryCategories() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (categories: string[]) => {
-      // Upsert into platform_settings
-      const { error } = await supabase
+      // Busca registro existente por key para evitar erro de constraint no onConflict
+      const { data: existing } = await supabase
         .from("platform_settings")
-        .upsert({ 
-          key: "directory_categories", 
-          value: categories 
-        }, { onConflict: "key" });
-      
-      if (error) throw error;
+        .select("id")
+        .eq("key", "directory_categories")
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("platform_settings")
+          .update({
+            value: categories,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("platform_settings")
+          .insert({
+            key: "directory_categories",
+            value: categories,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
       return categories;
     },
     onSuccess: () => {
