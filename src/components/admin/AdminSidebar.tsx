@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
   MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon,
   Globe, ShoppingBag, Car, BookUser, Table as TableIcon,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Store
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -25,6 +25,7 @@ const items: NavItem[] = [
   { to: "/admin/drivers", label: "Entregadores e Motoristas", icon: Bike },
   { to: "/admin/rides", label: "Táxi & Moto", icon: Car },
   { to: "/admin/directory", label: "PPP (Prestadores)", icon: BookUser },
+  { to: "/admin/business", label: "Central de Negócios", icon: Store },
   { to: "/admin/bases", label: "Bases", icon: Globe },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
   { to: "/admin/pricing", label: "Tabelas de Preços", icon: TableIcon },
