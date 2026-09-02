@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, Sparkles, X, Pencil } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -273,25 +274,114 @@ function DirectoryAdminPage() {
   );
 }
 
+const EMOJI_GROUPS = [
+  {
+    label: "Profissões & Serviços",
+    emojis: ["🦷", "🩺", "💊", "💉", "👓", "⚡", "🔧", "🔨", "🪚", "🧰", "🧹", "🎨", "⚖️", "📐", "🧱", "🪠", "🚿", "🔒", "🎓", "📸"]
+  },
+  {
+    label: "Beleza & Bem-Estar",
+    emojis: ["💇", "💈", "💅", "🧖", "💄", "🧴", "🏋️", "🧘", "✨", "🌺"]
+  },
+  {
+    label: "Alimentação & Bebidas",
+    emojis: ["🍽️", "🍕", "🍔", "🌭", "🥪", "🍣", "🍰", "🍦", "☕", "🍻", "🥐", "🥖", "🥩", "🍉", "🥤", "🍩"]
+  },
+  {
+    label: "Automotivo & Transporte",
+    emojis: ["🚗", "🏍️", "🛵", "🚲", "🚚", "🛞", "⛽", "🧽", "🚕", "🚙"]
+  },
+  {
+    label: "Comércio, Moda & Pets",
+    emojis: ["🛒", "🛍️", "👗", "👟", "💍", "🎁", "📦", "📚", "🐶", "🐱", "🐾", "💻", "📱"]
+  },
+  {
+    label: "Destaque & Outros",
+    emojis: ["⭐", "🏷️", "📍", "📞", "🤝", "🎯", "🏆", "💡", "🔔", "🏢", "🏠"]
+  }
+];
+
+const QUICK_EMOJIS = ["🦷", "🍽️", "🍔", "🛒", "💊", "🥖", "🐶", "💇", "🚗", "⚡", "🔧", "🧹", "🎨", "⚖️", "📱", "👗", "⭐"];
+
+const EMOJI_REGEX = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u;
+
 function CategoryManager() {
   const { data: categories = [], isLoading } = useDirectoryCategories();
   const update = useUpdateDirectoryCategories();
   const [open, setOpen] = useState(false);
   const [newCat, setNewCat] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState("🏷️");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [customEmoji, setCustomEmoji] = useState("");
+
+  // Edição inline de categoria existente
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editEmoji, setEditEmoji] = useState("🏷️");
+  const [editName, setEditName] = useState("");
+  const [editPickerOpen, setEditPickerOpen] = useState(false);
+
+  const handleNameChange = (val: string) => {
+    const match = val.match(EMOJI_REGEX);
+    if (match) {
+      setSelectedEmoji(match[1]);
+      setNewCat(val.replace(EMOJI_REGEX, "").trimStart());
+    } else {
+      setNewCat(val);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCat.trim()) return;
-    // Evita duplicatas ignorando case sensitivity
-    if (categories.find(c => c.toLowerCase() === newCat.trim().toLowerCase())) {
-      toast.error("Categoria já existe");
+    const cleanName = newCat.replace(EMOJI_REGEX, "").trim();
+    if (!cleanName) {
+      toast.error("Por favor, digite o nome da categoria.");
       return;
     }
-    const updated = [...categories, newCat.trim()];
+
+    const fullCat = selectedEmoji ? `${selectedEmoji} ${cleanName}` : cleanName;
+
+    // Evita duplicatas ignorando case e emojis
+    const cleanLower = cleanName.toLowerCase();
+    if (categories.some(c => c.replace(EMOJI_REGEX, "").trim().toLowerCase() === cleanLower)) {
+      toast.error("Essa categoria já existe na lista!");
+      return;
+    }
+
+    const updated = [...categories, fullCat];
     try {
       await update.mutateAsync(updated);
       setNewCat("");
-      toast.success("Categoria adicionada");
+      toast.success(`Categoria "${fullCat}" adicionada com sucesso!`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleStartEdit = (cat: string, index: number) => {
+    const match = cat.match(EMOJI_REGEX);
+    if (match) {
+      setEditEmoji(match[1]);
+      setEditName(cat.replace(EMOJI_REGEX, "").trim());
+    } else {
+      setEditEmoji("🏷️");
+      setEditName(cat.trim());
+    }
+    setEditingIndex(index);
+  };
+
+  const handleSaveEdit = async (index: number) => {
+    const cleanName = editName.replace(EMOJI_REGEX, "").trim();
+    if (!cleanName) {
+      toast.error("O nome da categoria não pode ficar vazio.");
+      return;
+    }
+    const fullCat = editEmoji ? `${editEmoji} ${cleanName}` : cleanName;
+    const updated = [...categories];
+    updated[index] = fullCat;
+    try {
+      await update.mutateAsync(updated);
+      setEditingIndex(null);
+      toast.success(`Categoria atualizada para "${fullCat}"!`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -313,34 +403,256 @@ function CategoryManager() {
       <DialogTrigger asChild>
         <Button variant="outline"><Building2 className="mr-2 h-4 w-4" /> Categorias</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg rounded-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Gerenciar Categorias</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-xl font-black">
+            <Sparkles className="h-5 w-5 text-primary" /> Gerenciar Categorias com Emojis
+          </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4 mt-2">
-          <form onSubmit={handleAdd} className="flex gap-2">
-            <Input 
-              value={newCat} 
-              onChange={e => setNewCat(e.target.value)} 
-              placeholder="Nova categoria..." 
-            />
-            <Button type="submit" disabled={update.isPending || isLoading}>Adicionar</Button>
+          {/* Formulário de Criação com Seletor de Emoji */}
+          <form onSubmit={handleAdd} className="p-4 rounded-2xl bg-muted/40 border border-border/80 space-y-3">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+              Nova Categoria
+            </span>
+
+            <div className="flex gap-2 items-center">
+              {/* Botão de Escolha do Emoji com Popover */}
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    title="Clique para escolher um emoji"
+                    className="h-11 w-14 rounded-xl border border-border bg-background hover:bg-muted text-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform active:scale-95 cursor-pointer"
+                  >
+                    {selectedEmoji}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-3 rounded-2xl shadow-2xl max-h-80 overflow-y-auto z-50">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-border">
+                      <span className="text-xs font-bold flex items-center gap-1.5">
+                        <Smile className="h-3.5 w-3.5 text-primary" /> Escolha o Emoji
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          value={customEmoji}
+                          onChange={(e) => {
+                            setCustomEmoji(e.target.value);
+                            if (e.target.value.trim()) {
+                              setSelectedEmoji(e.target.value.trim());
+                              setPickerOpen(false);
+                            }
+                          }}
+                          placeholder="Colar..."
+                          className="h-6 w-14 text-xs text-center border border-border rounded-md bg-background"
+                          title="Digite ou cole qualquer emoji aqui"
+                        />
+                      </div>
+                    </div>
+
+                    {EMOJI_GROUPS.map((group) => (
+                      <div key={group.label} className="space-y-1">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                          {group.label}
+                        </span>
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {group.emojis.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => {
+                                setSelectedEmoji(emoji);
+                                setPickerOpen(false);
+                              }}
+                              className={`h-9 w-9 rounded-lg text-lg flex items-center justify-center transition-all hover:scale-110 hover:bg-primary/20 ${
+                                selectedEmoji === emoji ? "bg-primary/30 border border-primary" : "hover:bg-muted"
+                              }`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <Input 
+                value={newCat} 
+                onChange={e => handleNameChange(e.target.value)} 
+                placeholder="Nome da categoria (ex: Dentistas, Mecânica)..." 
+                className="rounded-xl h-11 text-sm font-medium"
+                required
+              />
+              <Button type="submit" disabled={update.isPending || isLoading} className="h-11 rounded-xl font-bold px-4 shrink-0">
+                <Plus className="h-4 w-4 mr-1" /> Adicionar
+              </Button>
+            </div>
+
+            {/* Atalhos rápidos de emojis populares */}
+            <div className="space-y-1 pt-1">
+              <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+                Sugestões rápidas:
+              </span>
+              <div className="flex gap-1.5 flex-wrap">
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setSelectedEmoji(emoji)}
+                    className={`h-8 w-8 rounded-lg text-base flex items-center justify-center transition-transform hover:scale-115 active:scale-95 border ${
+                      selectedEmoji === emoji ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-background border-border/70 hover:bg-muted"
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Prévia elegante em tempo real */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-[11px] text-muted-foreground font-medium">Prévia no App:</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 text-primary border border-primary/30 font-bold text-xs shadow-xs">
+                <span>{selectedEmoji}</span>
+                <span>{newCat.trim() || "Nova Categoria"}</span>
+              </span>
+            </div>
           </form>
-          <div className="border border-border rounded-xl divide-y max-h-[60vh] overflow-y-auto">
-            {isLoading ? (
-              <p className="p-4 text-center text-muted-foreground text-sm">Carregando...</p>
-            ) : categories.length === 0 ? (
-              <p className="p-4 text-center text-muted-foreground text-sm">Nenhuma categoria.</p>
-            ) : (
-              categories.map(cat => (
-                <div key={cat} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
-                  <span className="font-medium text-sm">{cat}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemove(cat)} disabled={update.isPending}>
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))
-            )}
+
+          {/* Lista de Categorias com Opção de Edição Inline de Emoji */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+              <span>Categorias Cadastradas ({categories.length})</span>
+              <span className="text-[10px] font-normal text-muted-foreground lowercase">Clique no lápis para alterar o emoji</span>
+            </span>
+
+            <div className="border border-border rounded-2xl divide-y max-h-[50vh] overflow-y-auto bg-background">
+              {isLoading ? (
+                <p className="p-6 text-center text-muted-foreground text-sm">Carregando categorias...</p>
+              ) : categories.length === 0 ? (
+                <p className="p-6 text-center text-muted-foreground text-sm">Nenhuma categoria cadastrada.</p>
+              ) : (
+                categories.map((cat, idx) => {
+                  const isEditing = editingIndex === idx;
+
+                  if (isEditing) {
+                    return (
+                      <div key={idx} className="p-3 bg-primary/5 flex items-center gap-2">
+                        {/* Seletor de Emoji no modo edição */}
+                        <Popover open={editPickerOpen} onOpenChange={setEditPickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="h-9 w-10 rounded-lg border border-border bg-background text-lg flex items-center justify-center shrink-0 hover:bg-muted"
+                            >
+                              {editEmoji}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-3 rounded-2xl shadow-2xl max-h-72 overflow-y-auto z-50">
+                            <div className="space-y-3">
+                              <span className="text-xs font-bold block pb-1 border-b border-border">
+                                Alterar Emoji da Categoria
+                              </span>
+                              {EMOJI_GROUPS.map((group) => (
+                                <div key={group.label} className="space-y-1">
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                                    {group.label}
+                                  </span>
+                                  <div className="grid grid-cols-6 gap-1">
+                                    {group.emojis.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => {
+                                          setEditEmoji(emoji);
+                                          setEditPickerOpen(false);
+                                        }}
+                                        className="h-8 w-8 rounded text-base flex items-center justify-center hover:bg-primary/20"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="h-9 text-xs font-semibold rounded-lg flex-1"
+                        />
+
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveEdit(idx)}
+                          disabled={update.isPending}
+                          className="h-9 rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                        >
+                          <Check className="h-3.5 w-3.5 mr-1" /> Salvar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingIndex(null)}
+                          className="h-9 w-9 p-0 rounded-lg"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  const match = cat.match(EMOJI_REGEX);
+                  const hasEmoji = Boolean(match);
+                  const emojiChar = match ? match[1] : null;
+                  const textOnly = match ? cat.replace(EMOJI_REGEX, "").trim() : cat;
+
+                  return (
+                    <div key={cat} className="flex items-center justify-between p-3 hover:bg-muted/40 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {hasEmoji ? (
+                          <span className="text-xl shrink-0">{emojiChar}</span>
+                        ) : (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border shrink-0">sem emoji</span>
+                        )}
+                        <span className="font-semibold text-sm truncate">{textOnly}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" 
+                          onClick={() => handleStartEdit(cat, idx)}
+                          title="Alterar emoji ou nome"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg" 
+                          onClick={() => handleRemove(cat)} 
+                          disabled={update.isPending}
+                          title="Excluir categoria"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
