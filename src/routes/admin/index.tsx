@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Truck, DollarSign, Package, Bike, RefreshCw, Bike as BikeIcon } from "lucide-react";
+import { Truck, DollarSign, Package, Bike, RefreshCw, Building2, BookUser, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -129,6 +129,46 @@ function DashboardPage() {
               onClick={() => navigate({ to: "/admin/drivers" })} />
           </>
         )}
+      </div>
+
+      {/* Atalhos Rápidos da Operação */}
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/admin/business" })}
+          className="p-4 rounded-2xl bg-gradient-to-r from-primary/15 via-background to-primary/5 border border-primary/30 hover:border-primary flex items-center justify-between text-left transition-all shadow-sm group cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-foreground flex items-center gap-1.5">
+                Central de Negócios
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-black uppercase">Novo</span>
+              </p>
+              <p className="text-xs text-muted-foreground">Gerenciar Imóveis (Locação/Venda) e Veículos à venda</p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/admin/directory" })}
+          className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/15 via-background to-blue-500/5 border border-blue-500/30 hover:border-blue-500 flex items-center justify-between text-left transition-all shadow-sm group cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 group-hover:scale-105 transition-transform">
+              <BookUser className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-foreground">PPP (Prestadores de Serviços)</p>
+              <p className="text-xs text-muted-foreground">Profissionais autônomos, comércios e categorias</p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+        </button>
       </div>
 
       {/* Charts */}
