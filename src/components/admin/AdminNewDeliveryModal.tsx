@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanies } from "@/services/companies";
 import { useDrivers } from "@/services/drivers";
 import { useRegions } from "@/services/regions";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { resolveRegionDeliveryFee } from "@/lib/pricingResolver";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
@@ -42,6 +43,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
   const [neighborhood, setNeighborhood] = useState("");
   const [complement, setComplement] = useState("");
   const [regionId, setRegionId] = useState("");
+  const [pricingRules, setPricingRules] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("cartao");
   const [orderValue, setOrderValue] = useState("");
   const [changeFor, setChangeFor] = useState("");
@@ -51,14 +53,73 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
 
   const selectedCompany = (companies ?? []).find((c) => c.id === companyId);
 
+  // Carrega regras de preço personalizadas da empresa selecionada
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCompanyPricing() {
+      if (!companyId) {
+        setPricingRules([]);
+        return;
+      }
+      try {
+        let loadedRules: any[] = [];
+        // 1. Tentar via RPC get_company_pricing_rules
+        const { data: rpcRules, error: rpcErr } = await supabase.rpc("get_company_pricing_rules", {
+          p_company_id: companyId,
+        });
+        if (!rpcErr && rpcRules && rpcRules.length > 0) {
+          loadedRules = rpcRules;
+        } else if (selectedCompany?.pricing_table_id) {
+          // 2. Fallback direto para pricing_rules caso RPC não retorne
+          const { data: rulesData } = await supabase
+            .from("pricing_rules")
+            .select("*")
+            .eq("pricing_table_id", selectedCompany.pricing_table_id);
+          if (rulesData) {
+            loadedRules = rulesData;
+          }
+        }
+        if (isMounted) {
+          setPricingRules(loadedRules);
+        }
+      } catch (err) {
+        console.warn("[AdminNewDeliveryModal] Erro ao carregar regras da empresa:", err);
+      }
+    }
+    loadCompanyPricing();
+    return () => {
+      isMounted = false;
+    };
+  }, [companyId, selectedCompany?.pricing_table_id]);
+
+  // Atualiza taxa de entrega sempre que a região, empresa ou regras mudarem
+  useEffect(() => {
+    if (regionId && regions) {
+      const r = regions.find((reg) => reg.id === regionId);
+      if (r) {
+        const calculatedFee = resolveRegionDeliveryFee({
+          region: r,
+          vehicleType: "moto",
+          companySettings: selectedCompany,
+          pricingRules,
+        });
+        setDeliveryFee(Number(calculatedFee).toFixed(2));
+      }
+    }
+  }, [regionId, pricingRules, selectedCompany, regions]);
+
   const handleRegionChange = (rId: string) => {
     setRegionId(rId);
     if (!rId) return;
     const r = (regions ?? []).find((reg) => reg.id === rId);
     if (r) {
-      if (r.price !== undefined && r.price !== null) {
-        setDeliveryFee(Number(r.price).toFixed(2));
-      }
+      const calculatedFee = resolveRegionDeliveryFee({
+        region: r,
+        vehicleType: "moto",
+        companySettings: selectedCompany,
+        pricingRules,
+      });
+      setDeliveryFee(Number(calculatedFee).toFixed(2));
       if (r.name && !neighborhood) {
         setNeighborhood(r.name);
       }
@@ -76,6 +137,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
     setNeighborhood("");
     setComplement("");
     setRegionId("");
+    setPricingRules([]);
     setPaymentMethod("cartao");
     setOrderValue("");
     setChangeFor("");
@@ -408,11 +470,19 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
                   className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs font-semibold outline-none"
                 >
                   <option value="">-- Selecionar Região --</option>
-                  {(regions ?? []).map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} {r.price ? `(R$ ${Number(r.price).toFixed(2)})` : ""}
-                    </option>
-                  ))}
+                  {(regions ?? []).map((r) => {
+                    const price = resolveRegionDeliveryFee({
+                      region: r,
+                      vehicleType: "moto",
+                      companySettings: selectedCompany,
+                      pricingRules,
+                    });
+                    return (
+                      <option key={r.id} value={r.id}>
+                        {r.name} {price ? `(R$ ${Number(price).toFixed(2)})` : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
