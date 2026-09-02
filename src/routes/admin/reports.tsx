@@ -388,31 +388,15 @@ function ReportsPage() {
       start.setDate(now.getDate() - 7);
       start.setHours(0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    } else if (period === "30d") {
-      start = new Date(now);
-      start.setDate(now.getDate() - 30);
-      start.setHours(0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else if (period === "month") {
-      // Mês corrente completo (do dia 1º até o último dia do mês)
+      // Mês corrente completo (do dia 1º ao último dia do mês)
       start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (period === "last_month") {
-      // Mês passado completo
+      // Mês passado completo (do dia 1º ao último dia do mês passado)
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-    } else if (period === "month_before_last") {
-      // Mês retrasado completo (2 meses atrás)
-      start = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
-    } else if (period === "year") {
-      // Ano todo
-      start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     } else {
-      // Período desconhecido — remove filtros de data
-      setDateFrom("");
-      setDateTo("");
       return;
     }
 
@@ -421,19 +405,6 @@ function ReportsPage() {
       setDateTo(toLocalDateStr(end));
     }
   }, [period]);
-
-  // Função para selecionar um mês/ano específico diretamente
-  const handleSelectSpecificMonth = (yearMonthStr: string) => {
-    if (!yearMonthStr || yearMonthStr === "none") return;
-    const [yearStr, monthStr] = yearMonthStr.split("-");
-    const y = Number(yearStr);
-    const m = Number(monthStr) - 1; // 0-indexed
-    const start = new Date(y, m, 1, 0, 0, 0, 0);
-    const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
-    setPeriod("custom");
-    setDateFrom(toLocalDateStr(start));
-    setDateTo(toLocalDateStr(end));
-  };
 
   const isCompletedDelivery = (status: string) => {
     return status === "completed" || status === "delivered" || status === "finished" || status === "concluded" || status === "entregue" || status === "finalizada";
@@ -463,18 +434,15 @@ function ReportsPage() {
       // 5. Filtro de Forma de Pagamento
       if (selectedPayment !== "all" && d.payment_method !== selectedPayment) return false;
 
-      // 6. Datas — comparar no fuso horário local
-      if (dateFrom) {
-        const [fy, fm, fd] = dateFrom.split("-").map(Number);
-        const fromDate = new Date(fy, fm - 1, fd, 0, 0, 0, 0);
-        const created = new Date(d.created_at);
-        if (created < fromDate) return false;
-      }
-      if (dateTo) {
-        const [ty, tm, td] = dateTo.split("-").map(Number);
-        const toDate = new Date(ty, tm - 1, td, 23, 59, 59, 999);
-        const created = new Date(d.created_at);
-        if (created > toDate) return false;
+      // 6. Datas — comparar exatamente a data local (YYYY-MM-DD) da corrida
+      if (dateFrom || dateTo) {
+        const rawDate = d.created_at || d.completed_at || d.delivered_at;
+        if (rawDate) {
+          const dDate = new Date(rawDate);
+          const dDateStr = toLocalDateStr(dDate);
+          if (dateFrom && dDateStr < dateFrom) return false;
+          if (dateTo && dDateStr > dateTo) return false;
+        }
       }
 
       // 7. Faixa de Valores
@@ -922,57 +890,22 @@ function ReportsPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-5 space-y-5">
-              {/* Período Rápido e Seleção de Mês */}
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block">Período de Análise / Fechamento:</Label>
-                  
-                  {/* Seletor direto de Mês Específico */}
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary shrink-0" />
-                    <select
-                      className="h-9 px-3 py-1 rounded-xl text-xs font-bold border border-input bg-card text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      value="none"
-                      onChange={(e) => handleSelectSpecificMonth(e.target.value)}
-                    >
-                      <option value="none">🗓️ Selecionar Mês Específico...</option>
-                      {(() => {
-                        const now = new Date();
-                        const monthNames = [
-                          "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-                        ];
-                        const opts = [];
-                        for (let i = 0; i < 24; i++) {
-                          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                          const y = d.getFullYear();
-                          const m = d.getMonth();
-                          const val = `${y}-${String(m + 1).padStart(2, "0")}`;
-                          const label = `${monthNames[m]} / ${y}${i === 0 ? " (Este Mês)" : i === 1 ? " (Mês Passado)" : ""}`;
-                          opts.push(<option key={val} value={val}>{label}</option>);
-                        }
-                        return opts;
-                      })()}
-                    </select>
-                  </div>
-                </div>
-
+              {/* Período Rápido — botões em linha */}
+              <div>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">Período Rápido:</Label>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: "month", label: "Este Mês" },
-                    { value: "last_month", label: "Mês Passado" },
-                    { value: "month_before_last", label: "Mês Retrasado" },
                     { value: "today", label: "Hoje" },
                     { value: "yesterday", label: "Ontem" },
                     { value: "7d", label: "Últimos 7 Dias" },
-                    { value: "30d", label: "Últimos 30 Dias" },
-                    { value: "year", label: "Ano Todo" },
+                    { value: "month", label: "Este Mês" },
+                    { value: "last_month", label: "Mês Passado" },
                     { value: "custom", label: "Personalizado" },
                   ].map((p) => (
                     <button
                       key={p.value}
                       onClick={() => setPeriod(p.value)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                         period === p.value
                           ? "bg-primary text-primary-foreground border-primary shadow-sm"
                           : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
