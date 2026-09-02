@@ -9,8 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, Sparkles, X, Pencil, ArrowDownAZ } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { WhatsappIcon } from "@/components/icons/WhatsappIcon";
 
 export const Route = createFileRoute("/admin/directory")({
   component: DirectoryAdminPage,
@@ -249,7 +249,20 @@ function DirectoryAdminPage() {
               <div className="p-4 flex items-center justify-between mt-auto">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{c.category} • {c.whatsapp || c.phone}</p>
+                  <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                    <span>{c.category}</span>
+                    <span>•</span>
+                    {c.whatsapp ? (
+                      <span className="inline-flex items-center gap-1 text-[#25D366] font-medium">
+                        <WhatsappIcon className="w-3 h-3 shrink-0" />
+                        {c.whatsapp}
+                      </span>
+                    ) : c.phone ? (
+                      <span>{c.phone}</span>
+                    ) : (
+                      <span className="opacity-50">Sem contato</span>
+                    )}
+                  </p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
