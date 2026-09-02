@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, Sparkles, X, Pencil } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, Sparkles, X, Pencil, ArrowDownAZ } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -329,7 +329,7 @@ function CategoryManager() {
   const [customEmoji, setCustomEmoji] = useState("");
 
   // Edição inline de categoria existente
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingCatName, setEditingCatName] = useState<string | null>(null);
   const [editEmoji, setEditEmoji] = useState("🏷️");
   const [editName, setEditName] = useState("");
   const [editPickerOpen, setEditPickerOpen] = useState(false);
@@ -341,6 +341,16 @@ function CategoryManager() {
       setNewCat(val.replace(EMOJI_REGEX, "").trimStart());
     } else {
       setNewCat(val);
+    }
+  };
+
+  const handleSortAll = async () => {
+    const sorted = sortCategoriesAlphabetically(rawCategories);
+    try {
+      await update.mutateAsync(sorted);
+      toast.success("Categorias organizadas em ordem alfabética (A-Z) com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
@@ -365,13 +375,13 @@ function CategoryManager() {
     try {
       await update.mutateAsync(updated);
       setNewCat("");
-      toast.success(`Categoria "${fullCat}" adicionada com sucesso!`);
+      toast.success(`Categoria "${fullCat}" adicionada em ordem alfabética!`);
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const handleStartEdit = (cat: string, index: number) => {
+  const handleStartEdit = (cat: string) => {
     const match = cat.match(EMOJI_REGEX);
     if (match) {
       setEditEmoji(match[1]);
@@ -380,21 +390,23 @@ function CategoryManager() {
       setEditEmoji("🏷️");
       setEditName(cat.trim());
     }
-    setEditingIndex(index);
+    setEditingCatName(cat);
   };
 
-  const handleSaveEdit = async (index: number) => {
+  const handleSaveEdit = async (originalCat: string) => {
     const cleanName = editName.replace(EMOJI_REGEX, "").trim();
     if (!cleanName) {
       toast.error("O nome da categoria não pode ficar vazio.");
       return;
     }
     const fullCat = editEmoji ? `${editEmoji} ${cleanName}` : cleanName;
-    const updated = sortCategoriesAlphabetically(categories.map((c, i) => i === index ? fullCat : c));
+    const updated = sortCategoriesAlphabetically(
+      categories.map(c => c === originalCat ? fullCat : c)
+    );
     try {
       await update.mutateAsync(updated);
-      setEditingIndex(null);
-      toast.success(`Categoria atualizada para "${fullCat}"!`);
+      setEditingCatName(null);
+      toast.success(`Categoria atualizada para "${fullCat}" e reordenada de A a Z!`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -539,11 +551,28 @@ function CategoryManager() {
           </form>
 
           {/* Lista de Categorias com Opção de Edição Inline de Emoji */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-              <span>Categorias Cadastradas ({categories.length})</span>
-              <span className="text-[10px] font-normal text-muted-foreground lowercase">Clique no lápis para alterar o emoji</span>
-            </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  Categorias Cadastradas ({categories.length})
+                </span>
+                <span className="text-[10px] text-muted-foreground lowercase block">
+                  Ordem alfabética (A-Z) com Tudo no topo
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSortAll}
+                disabled={update.isPending || isLoading}
+                className="h-8 text-xs font-bold rounded-xl border-primary/40 text-primary hover:bg-primary/10 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title="Reorganizar e salvar todas as categorias em ordem alfabética de A a Z"
+              >
+                <ArrowDownAZ className="h-4 w-4" /> Organizar A-Z
+              </Button>
+            </div>
 
             <div className="border border-border rounded-2xl divide-y max-h-[50vh] overflow-y-auto bg-background">
               {isLoading ? (
@@ -551,18 +580,18 @@ function CategoryManager() {
               ) : categories.length === 0 ? (
                 <p className="p-6 text-center text-muted-foreground text-sm">Nenhuma categoria cadastrada.</p>
               ) : (
-                categories.map((cat, idx) => {
-                  const isEditing = editingIndex === idx;
+                categories.map((cat) => {
+                  const isEditing = editingCatName === cat;
 
                   if (isEditing) {
                     return (
-                      <div key={idx} className="p-3 bg-primary/5 flex items-center gap-2">
+                      <div key={cat} className="p-3 bg-primary/5 flex items-center gap-2">
                         {/* Seletor de Emoji no modo edição */}
                         <Popover open={editPickerOpen} onOpenChange={setEditPickerOpen}>
                           <PopoverTrigger asChild>
                             <button
                               type="button"
-                              className="h-9 w-10 rounded-lg border border-border bg-background text-lg flex items-center justify-center shrink-0 hover:bg-muted"
+                              className="h-9 w-10 rounded-lg border border-border bg-background text-lg flex items-center justify-center shrink-0 hover:bg-muted cursor-pointer"
                             >
                               {editEmoji}
                             </button>
@@ -586,7 +615,7 @@ function CategoryManager() {
                                           setEditEmoji(emoji);
                                           setEditPickerOpen(false);
                                         }}
-                                        className="h-8 w-8 rounded text-base flex items-center justify-center hover:bg-primary/20"
+                                        className="h-8 w-8 rounded text-base flex items-center justify-center hover:bg-primary/20 cursor-pointer"
                                       >
                                         {emoji}
                                       </button>
@@ -606,17 +635,17 @@ function CategoryManager() {
 
                         <Button
                           size="sm"
-                          onClick={() => handleSaveEdit(idx)}
+                          onClick={() => handleSaveEdit(cat)}
                           disabled={update.isPending}
-                          className="h-9 rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                          className="h-9 rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer"
                         >
                           <Check className="h-3.5 w-3.5 mr-1" /> Salvar
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setEditingIndex(null)}
-                          className="h-9 w-9 p-0 rounded-lg"
+                          onClick={() => setEditingCatName(null)}
+                          className="h-9 w-9 p-0 rounded-lg cursor-pointer"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -644,8 +673,8 @@ function CategoryManager() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" 
-                          onClick={() => handleStartEdit(cat, idx)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg cursor-pointer" 
+                          onClick={() => handleStartEdit(cat)}
                           title="Alterar emoji ou nome"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -653,7 +682,7 @@ function CategoryManager() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg" 
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer" 
                           onClick={() => handleRemove(cat)} 
                           disabled={update.isPending}
                           title="Excluir categoria"
