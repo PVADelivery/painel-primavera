@@ -263,6 +263,9 @@ function ReportsPage() {
     setCompanies(compData);
 
     const profMap = new Map(profilesRes.data?.map(p => [p.user_id, p]) || []);
+    const driverByIdMap = new Map((driversRes.data || []).map(d => [d.id, d]));
+    const driverByUserIdMap = new Map((driversRes.data || []).map(d => [d.user_id, d]));
+
     const drvData = (driversRes.data || []).map(d => ({
       ...d,
       full_name: profMap.get(d.user_id)?.full_name || "Motoboy Base",
@@ -270,30 +273,57 @@ function ReportsPage() {
     }));
     setDrivers(drvData);
 
-    // 2. Buscar todas as entregas do Supabase
-    const { data: delData, error: delErr } = await supabase
-      .from("deliveries")
-      .select(`
-        *,
-        companies(id, name, commission_percentage),
-        delivery_drivers(id, user_id, delivery_fee_tax),
-        orders(id, payment_method)
-      `)
-      .order("created_at", { ascending: false });
+    // 2. Buscar TODAS as entregas do Supabase sem corte de 1.000 linhas via paginação
+    let allDeliveriesRaw: any[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    let hasMore = true;
 
-    if (!delErr && delData) {
-      // Normalizar motoristas com nomes reais obtidos do Map de perfis
-      const normalized = delData.map((d: any) => {
-        const drv = d.delivery_drivers;
+    while (hasMore) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data: pageData, error: pageErr } = await supabase
+        .from("deliveries")
+        .select(`
+          *,
+          companies(id, name, commission_percentage),
+          delivery_drivers(id, user_id, delivery_fee_tax)
+        `)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (pageErr) {
+        console.error("Erro ao buscar página de entregas:", pageErr);
+        break;
+      }
+      if (pageData && pageData.length > 0) {
+        allDeliveriesRaw.push(...pageData);
+        if (pageData.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    if (allDeliveriesRaw.length > 0) {
+      // Normalizar motoristas com nomes reais obtidos do Map de perfis e delivery_drivers
+      const normalized = allDeliveriesRaw.map((d: any) => {
+        const rawDriver = d.delivery_drivers || driverByIdMap.get(d.driver_id) || driverByUserIdMap.get(d.driver_id);
         let driver_name = "Motoboy Base";
         let delivery_fee_tax = 0.40; // taxa padrão
-        if (drv) {
-          driver_name = profMap.get(drv.user_id)?.full_name || "Motoboy Base";
-          delivery_fee_tax = drv.delivery_fee_tax !== null && drv.delivery_fee_tax !== undefined ? Number(drv.delivery_fee_tax) : 0.40;
+        if (rawDriver) {
+          const prof = profMap.get(rawDriver.user_id);
+          driver_name = prof?.full_name || rawDriver.full_name || "Motoboy Base";
+          delivery_fee_tax = rawDriver.delivery_fee_tax !== null && rawDriver.delivery_fee_tax !== undefined ? Number(rawDriver.delivery_fee_tax) : 0.40;
+        } else if (d.driver_id && profMap.get(d.driver_id)) {
+          driver_name = profMap.get(d.driver_id)?.full_name || "Motoboy Base";
         }
 
         const orderValue = d.order_value !== null && d.order_value !== undefined ? Number(d.order_value) : 0;
-        const deliveryFee = d.value !== null && d.value !== undefined ? Number(d.value) : 0;
+        const deliveryFee = Number(d.value ?? d.price ?? 0);
         const compCommPercent = d.companies?.commission_percentage !== null && d.companies?.commission_percentage !== undefined ? Number(d.companies.commission_percentage) : 0;
 
         return {
@@ -303,10 +333,12 @@ function ReportsPage() {
           order_value: orderValue,
           delivery_fee: deliveryFee,
           company_commission_percent: compCommPercent,
-          payment_method: d.orders?.payment_method || "Não informado"
+          payment_method: d.payment_method || "Não informado"
         };
       });
       setAllDeliveries(normalized);
+    } else {
+      setAllDeliveries([]);
     }
     setLoadingDeliveries(false);
   };
@@ -330,6 +362,12 @@ function ReportsPage() {
     fetchCashFlow();
   }, []);
 
+  // Helper para converter Data local para string YYYY-MM-DD
+  const toLocalDateStr = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
   // Calcular limites de datas baseados no período rápido
   useEffect(() => {
     if (period === "custom") return;
@@ -350,12 +388,27 @@ function ReportsPage() {
       start.setDate(now.getDate() - 7);
       start.setHours(0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    } else if (period === "month") {
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    } else if (period === "30d") {
+      start = new Date(now);
+      start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } else if (period === "month") {
+      // Mês corrente completo (do dia 1º até o último dia do mês)
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (period === "last_month") {
+      // Mês passado completo
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (period === "month_before_last") {
+      // Mês retrasado completo (2 meses atrás)
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
+    } else if (period === "year") {
+      // Ano todo
+      start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     } else {
       // Período desconhecido — remove filtros de data
       setDateFrom("");
@@ -363,15 +416,28 @@ function ReportsPage() {
       return;
     }
 
-    // Converter para YYYY-MM-DD no fuso horário local
-    const toLocalDate = (d: Date) => {
-      const pad = (n: number) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    };
-
-    setDateFrom(toLocalDate(start));
-    setDateTo(toLocalDate(end));
+    if (start && end) {
+      setDateFrom(toLocalDateStr(start));
+      setDateTo(toLocalDateStr(end));
+    }
   }, [period]);
+
+  // Função para selecionar um mês/ano específico diretamente
+  const handleSelectSpecificMonth = (yearMonthStr: string) => {
+    if (!yearMonthStr || yearMonthStr === "none") return;
+    const [yearStr, monthStr] = yearMonthStr.split("-");
+    const y = Number(yearStr);
+    const m = Number(monthStr) - 1; // 0-indexed
+    const start = new Date(y, m, 1, 0, 0, 0, 0);
+    const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
+    setPeriod("custom");
+    setDateFrom(toLocalDateStr(start));
+    setDateTo(toLocalDateStr(end));
+  };
+
+  const isCompletedDelivery = (status: string) => {
+    return status === "completed" || status === "delivered" || status === "finished" || status === "concluded" || status === "entregue" || status === "finalizada";
+  };
 
   // Aplicar Filtros nos dados locais carregados
   const filteredDeliveries = useMemo(() => {
@@ -422,11 +488,11 @@ function ReportsPage() {
   // KPIs
   const kpis = useMemo(() => {
     const total = filteredDeliveries.length;
-    const finished = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered").length;
+    const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status)).length;
     const successRate = total > 0 ? (finished / total) * 100 : 0;
 
     // Faturamento Total (Bruto das taxas de entrega finalizadas)
-    const finishedDeliveries = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered");
+    const finishedDeliveries = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
     const grossRevenue = finishedDeliveries.reduce((s, d) => s + d.delivery_fee, 0);
 
     // Comissões Estimadas da Central (retidos do entregador)
@@ -481,7 +547,7 @@ function ReportsPage() {
   // Gráfico de Tendência (Agrupado por dia)
   const chartData = useMemo(() => {
     const dailyMap = new Map();
-    const finished = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered");
+    const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
 
     finished.forEach((d) => {
       const dateStr = new Date(d.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -500,7 +566,7 @@ function ReportsPage() {
   const statusChartData = useMemo(() => {
     const counts: Record<string, number> = { Finalizada: 0, Cancelada: 0, Outros: 0 };
     filteredDeliveries.forEach((d) => {
-      if (d.status === "completed" || d.status === "delivered") {
+      if (isCompletedDelivery(d.status)) {
         counts.Finalizada += 1;
       } else if (d.status === "cancelled") {
         counts.Cancelada += 1;
@@ -519,7 +585,7 @@ function ReportsPage() {
   // Relação por Empresa (Top 20)
   const companyBreakdown = useMemo(() => {
     const map: Record<string, { name: string; deliveries: number; revenue: number; due: number }> = {};
-    const finished = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered");
+    const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
 
     finished.forEach((d) => {
       const name = d.companies?.name || "Lojas / Diretas";
@@ -535,11 +601,16 @@ function ReportsPage() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredDeliveries]);
 
-  // Mapeamento de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow)
+  // Mapeamento de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow) NO PERÍODO SELECIONADO
   const driverPaymentsMap = useMemo(() => {
     const map: Record<string, number> = {};
     cashFlows.forEach((cf: any) => {
       if (cf.type === "expense" && (cf.category === "Repasse Motoboy" || cf.category === "Repasse Entregador" || cf.description?.toLowerCase().includes("repasse entregador"))) {
+        // Filtrar estritamente pela data do lançamento para que pagamentos de outros meses não subtraiam do mês atual
+        if (cf.date) {
+          if (dateFrom && cf.date < dateFrom) return;
+          if (dateTo && cf.date > dateTo) return;
+        }
         const match = cf.description.match(/Repasse Entregador:\s*([^(]+)/i);
         if (match && match[1]) {
           const nameKey = match[1].trim().toLowerCase();
@@ -548,12 +619,12 @@ function ReportsPage() {
       }
     });
     return map;
-  }, [cashFlows]);
+  }, [cashFlows, dateFrom, dateTo]);
 
   // Relação por Entregador com controle de quitado e saldo devido restante
   const driverBreakdown = useMemo(() => {
     const map: Record<string, { id: string; name: string; deliveries: number; totalEarned: number; paidAmount: number; due: number; taxTotal: number; isFullyPaid: boolean }> = {};
-    const finished = filteredDeliveries.filter((d) => d.status === "completed" || d.status === "delivered");
+    const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
 
     finished.forEach((d) => {
       const name = d.driver_name || "Sem Nome";
@@ -576,12 +647,12 @@ function ReportsPage() {
       drv.isFullyPaid = drv.totalEarned > 0 && drv.due <= 0.05;
     });
 
-    return Object.values(map).sort((a, b) => b.due - a.due).slice(0, 30);
+    return Object.values(map).sort((a, b) => b.due - a.due).slice(0, 50);
   }, [filteredDeliveries, driverPaymentsMap]);
 
   // Limpar Filtros
   const handleClearFilters = () => {
-    setPeriod("30d");
+    setPeriod("month");
     setSearchTerm("");
     setSelectedCompany("all");
     setSelectedDriver("all");
@@ -851,22 +922,57 @@ function ReportsPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-5 space-y-5">
-              {/* Período Rápido — botões em linha */}
-              <div>
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 block">Período Rápido:</Label>
+              {/* Período Rápido e Seleção de Mês */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block">Período de Análise / Fechamento:</Label>
+                  
+                  {/* Seletor direto de Mês Específico */}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    <select
+                      className="h-9 px-3 py-1 rounded-xl text-xs font-bold border border-input bg-card text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      value="none"
+                      onChange={(e) => handleSelectSpecificMonth(e.target.value)}
+                    >
+                      <option value="none">🗓️ Selecionar Mês Específico...</option>
+                      {(() => {
+                        const now = new Date();
+                        const monthNames = [
+                          "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                        ];
+                        const opts = [];
+                        for (let i = 0; i < 24; i++) {
+                          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                          const y = d.getFullYear();
+                          const m = d.getMonth();
+                          const val = `${y}-${String(m + 1).padStart(2, "0")}`;
+                          const label = `${monthNames[m]} / ${y}${i === 0 ? " (Este Mês)" : i === 1 ? " (Mês Passado)" : ""}`;
+                          opts.push(<option key={val} value={val}>{label}</option>);
+                        }
+                        return opts;
+                      })()}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   {[
+                    { value: "month", label: "Este Mês" },
+                    { value: "last_month", label: "Mês Passado" },
+                    { value: "month_before_last", label: "Mês Retrasado" },
                     { value: "today", label: "Hoje" },
                     { value: "yesterday", label: "Ontem" },
                     { value: "7d", label: "Últimos 7 Dias" },
-                    { value: "month", label: "Este Mês" },
-                    { value: "last_month", label: "Mês Passado" },
+                    { value: "30d", label: "Últimos 30 Dias" },
+                    { value: "year", label: "Ano Todo" },
                     { value: "custom", label: "Personalizado" },
                   ].map((p) => (
                     <button
                       key={p.value}
                       onClick={() => setPeriod(p.value)}
-                      className={`px-4 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                         period === p.value
                           ? "bg-primary text-primary-foreground border-primary shadow-sm"
                           : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
