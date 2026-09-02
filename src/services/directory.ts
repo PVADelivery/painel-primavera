@@ -72,32 +72,63 @@ export function useDirectoryCategories() {
   return useQuery({
     queryKey: ["directory_categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("platform_settings")
-        .select("value")
-        .eq("key", "directory_categories")
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from("platform_settings")
+          .select("value")
+          .eq("key", "directory_categories")
+          .maybeSingle();
 
-      if (error) throw error;
-      
-      const defaultCategories = [
-        "Tudo",
-        "Automotivo",
-        "Beleza",
-        "Construção",
-        "Dentistas",
-        "Farmácia",
-        "Hamburgueria",
-        "Mercado",
-        "Padaria",
-        "Pet Shop",
-        "Restaurante",
-        "Saúde",
-        "Serviços"
-      ];
-      if (!data || !data.value) return defaultCategories;
-      
-      return data.value as string[];
+        const defaultCategories = [
+          "Tudo",
+          "Automotivo",
+          "Beleza",
+          "Construção",
+          "Dentistas",
+          "Farmácia",
+          "Funilaria",
+          "Hamburgueria",
+          "Mercado",
+          "Padaria",
+          "Pet Shop",
+          "Restaurante",
+          "Saúde",
+          "Serviços"
+        ];
+        
+        const raw = (!data || !data.value || !Array.isArray(data.value)) 
+          ? defaultCategories 
+          : (data.value as string[]);
+
+        const isTudo = (c: string) => (c || "").replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u, "").trim().toLowerCase() === "tudo";
+        const tudo = raw.filter(isTudo);
+        const rest = raw
+          .filter(c => !isTudo(c))
+          .sort((a, b) => {
+            const aClean = a.replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u, "").trim();
+            const bClean = b.replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u, "").trim();
+            return aClean.localeCompare(bClean, "pt-BR", { sensitivity: "base" });
+          });
+
+        return [...(tudo.length > 0 ? ["Tudo"] : []), ...rest];
+      } catch {
+        return [
+          "Tudo",
+          "Automotivo",
+          "Beleza",
+          "Construção",
+          "Dentistas",
+          "Farmácia",
+          "Funilaria",
+          "Hamburgueria",
+          "Mercado",
+          "Padaria",
+          "Pet Shop",
+          "Restaurante",
+          "Saúde",
+          "Serviços"
+        ];
+      }
     },
   });
 }
