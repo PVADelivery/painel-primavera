@@ -6,7 +6,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
   Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check,
-  Percent, Sparkles, Coins
+  Percent, Sparkles, Coins, History, RotateCcw, AlertTriangle, Eye
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -109,24 +109,22 @@ function ReportsPage() {
   const [cfPeriodFilter, setCfPeriodFilter] = useState("all");
 
   // Modal de Pagamento de Repasse ao Entregador
-  const [payDriverDialogData, setPayDriverDialogData] = useState<{ name: string; id: string; due: number; deliveries: number } | null>(null);
+  const [payDriverDialogData, setPayDriverDialogData] = useState<{ name: string; id: string; due: number; deliveries: number; totalEarned?: number; paidAmount?: number } | null>(null);
   const [payAmount, setPayAmount] = useState("");
+  const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
   const [payMethod, setPayMethod] = useState("Pix");
   const [payNotes, setPayNotes] = useState("");
   const [submittingPay, setSubmittingPay] = useState(false);
   const [driverSearchTerm, setDriverSearchTerm] = useState("");
+  const [payoutCalcMode, setPayoutCalcMode] = useState<"all" | "period">("all");
+  const [historyModalDriver, setHistoryModalDriver] = useState<{ name: string; id: string; payouts: any[] } | null>(null);
   const isSubmittingPayRef = useRef(false);
 
-  const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; isFullyPaid?: boolean }) => {
-    if (drv.due <= 0.05 || drv.isFullyPaid) {
-      toast({
-        title: "Repasse Já Quitado",
-        description: `O entregador ${drv.name} já possui todos os repasses do período quitados.`,
-      });
-      return;
-    }
+  const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; totalEarned?: number; paidAmount?: number; isFullyPaid?: boolean }) => {
     setPayDriverDialogData(drv);
     setPayAmount(drv.due > 0 ? drv.due.toFixed(2) : "0.00");
+    // Se estiver filtrando um período com data fim específica, sugere essa data, senão data atual
+    setPayDate(dateTo && dateTo <= new Date().toISOString().split("T")[0] ? dateTo : new Date().toISOString().split("T")[0]);
     setPayMethod("Pix");
     setPayNotes("");
   };
@@ -140,26 +138,9 @@ function ReportsPage() {
     }
 
     const amountVal = Number(payAmount);
-    const dateStr = new Date().toISOString().split("T")[0];
-    const descriptionStr = `Repasse Entregador: ${payDriverDialogData.name} (${payDriverDialogData.deliveries} entregas)${payNotes ? ` - ${payNotes}` : ''}`;
-
-    // Previne duplicidade imediata se já existir lançamento idêntico no Fluxo de Caixa
-    const isDuplicate = cashFlows.some((cf: any) =>
-      cf.type === "expense" &&
-      cf.date === dateStr &&
-      Math.abs(Number(cf.amount) - amountVal) < 0.01 &&
-      (cf.description?.toLowerCase().includes(payDriverDialogData.name.toLowerCase()) || cf.description?.toLowerCase() === descriptionStr.toLowerCase())
-    );
-
-    if (isDuplicate) {
-      toast({
-        title: "Repasse Já Lançado!",
-        description: `Já existe um lançamento de repasse para ${payDriverDialogData.name} no valor de R$ ${amountVal.toFixed(2)} registrado hoje no Fluxo de Caixa.`,
-        variant: "destructive"
-      });
-      setPayDriverDialogData(null);
-      return;
-    }
+    const dateStr = payDate || new Date().toISOString().split("T")[0];
+    const periodLabel = dateFrom && dateTo ? ` (Ref. ${dateFrom} a ${dateTo})` : "";
+    const descriptionStr = `Repasse Entregador: ${payDriverDialogData.name} [ID: ${payDriverDialogData.id || "base"}] (${payDriverDialogData.deliveries} entregas)${periodLabel}${payNotes ? ` - ${payNotes}` : ''}`;
 
     isSubmittingPayRef.current = true;
     setSubmittingPay(true);
@@ -176,21 +157,39 @@ function ReportsPage() {
       if (error) throw error;
 
       toast({
-        title: "Repasse Efetuado com Sucesso!",
-        description: `R$ ${amountVal.toFixed(2)} repassados a ${payDriverDialogData.name} e lançados como SAÍDA no Fluxo de Caixa.`,
+        title: "Baixa de Repasse Registrada com Sucesso!",
+        description: `R$ ${amountVal.toFixed(2)} lançados como pagamento para ${payDriverDialogData.name} na data ${dateStr}.`,
       });
 
       setPayDriverDialogData(null);
-      fetchCashFlow();
+      await fetchCashFlow();
     } catch (err: any) {
       toast({
         title: "Erro ao registrar repasse",
-        description: err.message,
+        description: err.message || "Verifique as permissões da tabela platform_cash_flow.",
         variant: "destructive"
       });
     } finally {
       isSubmittingPayRef.current = false;
       setSubmittingPay(false);
+    }
+  };
+
+  const handleDeletePayout = async (payoutId: string) => {
+    if (!confirm("Tem certeza que deseja estornar/excluir esta baixa de repasse? O saldo do entregador será recalculado imediatamente.")) return;
+    try {
+      const { error } = await supabase.from('platform_cash_flow').delete().eq('id', payoutId);
+      if (error) throw error;
+      toast({ title: "Baixa estornada com sucesso!" });
+      await fetchCashFlow();
+      if (historyModalDriver) {
+        setHistoryModalDriver((prev) => prev ? {
+          ...prev,
+          payouts: prev.payouts.filter(p => p.id !== payoutId)
+        } : null);
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao estornar baixa", description: err.message, variant: "destructive" });
     }
   };
 
@@ -323,7 +322,15 @@ function ReportsPage() {
         }
 
         const orderValue = d.order_value !== null && d.order_value !== undefined ? Number(d.order_value) : 0;
-        const deliveryFee = Number(d.value ?? d.price ?? 0);
+        const deliveryFee = Number(
+          (d.delivery_fee != null && Number(d.delivery_fee) > 0)
+            ? d.delivery_fee
+            : (d.value != null && Number(d.value) > 0)
+              ? d.value
+              : (d.price != null && Number(d.price) > 0)
+                ? d.price
+                : 0
+        );
         const compCommPercent = d.companies?.commission_percentage !== null && d.companies?.commission_percentage !== undefined ? Number(d.companies.commission_percentage) : 0;
 
         return {
@@ -569,54 +576,124 @@ function ReportsPage() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredDeliveries]);
 
-  // Mapeamento de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow) NO PERÍODO SELECIONADO
-  const driverPaymentsMap = useMemo(() => {
+  // Helper para normalizar textos para comparacao (sem acentos, minusculas, sem espacos extras)
+  const cleanStr = (s: string) =>
+    (s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  // Mapeamento inteligente de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow)
+  const { driverPaymentsMap, driverPayoutsHistory } = useMemo(() => {
     const map: Record<string, number> = {};
+    const history: Record<string, any[]> = {};
+
     cashFlows.forEach((cf: any) => {
-      if (cf.type === "expense" && (cf.category === "Repasse Motoboy" || cf.category === "Repasse Entregador" || cf.description?.toLowerCase().includes("repasse entregador"))) {
-        // Filtrar estritamente pela data do lançamento para que pagamentos de outros meses não subtraiam do mês atual
-        if (cf.date) {
-          if (dateFrom && cf.date < dateFrom) return;
-          if (dateTo && cf.date > dateTo) return;
-        }
-        const match = cf.description.match(/Repasse Entregador:\s*([^(]+)/i);
-        if (match && match[1]) {
-          const nameKey = match[1].trim().toLowerCase();
-          map[nameKey] = (map[nameKey] || 0) + Number(cf.amount || 0);
+      const isExpense = cf.type === "expense" || cf.type === "saida";
+      const catLower = (cf.category || "").toLowerCase();
+      const descLower = (cf.description || "").toLowerCase();
+      const isRepasse =
+        isExpense &&
+        (catLower.includes("repasse") ||
+         catLower.includes("motoboy") ||
+         catLower.includes("entregador") ||
+         descLower.includes("repasse") ||
+         descLower.includes("motoboy"));
+
+      if (!isRepasse) return;
+
+      // Se o modo for estritamente do período, filtra pela data do lançamento
+      if (payoutCalcMode === "period" && cf.date) {
+        if (dateFrom && cf.date < dateFrom) return;
+        if (dateTo && cf.date > dateTo) return;
+      }
+
+      const amount = Number(cf.amount || 0);
+      const descNorm = cleanStr(cf.description);
+
+      // 1. Tenta extrair ID do entregador se presente no formato [ID: xyz]
+      const idMatch = cf.description?.match(/\[ID:\s*([^\]]+)\]/i);
+      const taggedId = idMatch?.[1]?.trim();
+
+      let matchedKey: string | null = null;
+
+      if (taggedId) {
+        matchedKey = taggedId;
+      }
+
+      // 2. Tenta encontrar por nome de motorista cadastrado
+      let matchedName: string | null = null;
+      for (const d of drivers) {
+        const dNorm = cleanStr(d.full_name);
+        if (dNorm && dNorm.length >= 3 && descNorm.includes(dNorm)) {
+          matchedName = dNorm;
+          if (!matchedKey) matchedKey = d.id;
+          break;
         }
       }
-    });
-    return map;
-  }, [cashFlows, dateFrom, dateTo]);
 
-  // Relação por Entregador com controle de quitado e saldo devido restante
+      // 3. Fallback: extrai nome da descrição via regex flexível
+      if (!matchedName) {
+        const regexMatch = cf.description?.match(/(?:Repasse|Pagamento)\s*(?:de\s+)?(?:Entregador|Motoboy)?\s*[:–-]?\s*([^(\[\n]+)/i);
+        if (regexMatch && regexMatch[1]) {
+          matchedName = cleanStr(regexMatch[1]);
+        }
+      }
+
+      const finalKey = matchedName || matchedKey || "outro";
+
+      // Acumula valor pago no mapa
+      map[finalKey] = (map[finalKey] || 0) + amount;
+      if (matchedKey && matchedKey !== finalKey) {
+        map[matchedKey] = (map[matchedKey] || 0) + amount;
+      }
+
+      // Registra no histórico de repasses deste entregador
+      if (!history[finalKey]) history[finalKey] = [];
+      history[finalKey].push(cf);
+      if (matchedKey && matchedKey !== finalKey) {
+        if (!history[matchedKey]) history[matchedKey] = [];
+        history[matchedKey].push(cf);
+      }
+    });
+
+    return { driverPaymentsMap: map, driverPayoutsHistory: history };
+  }, [cashFlows, drivers, payoutCalcMode, dateFrom, dateTo]);
+
+  // Relação por Entregador com controle inteligente de quitado, baixas e saldo devido restante
   const driverBreakdown = useMemo(() => {
-    const map: Record<string, { id: string; name: string; deliveries: number; totalEarned: number; paidAmount: number; due: number; taxTotal: number; isFullyPaid: boolean }> = {};
+    const map: Record<string, { id: string; name: string; deliveries: number; totalEarned: number; paidAmount: number; due: number; taxTotal: number; isFullyPaid: boolean; payouts: any[] }> = {};
     const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
 
     finished.forEach((d) => {
-      const name = d.driver_name || "Sem Nome";
-      const id = d.driver_id || "sem_motoboy";
-      if (!map[id]) {
-        map[id] = { id, name, deliveries: 0, totalEarned: 0, paidAmount: 0, due: 0, taxTotal: 0, isFullyPaid: false };
+      const name = (d.driver_name || "Motoboy Base").trim();
+      const normName = cleanStr(name);
+      const id = d.driver_id || normName;
+      const groupKey = normName || id;
+
+      if (!map[groupKey]) {
+        map[groupKey] = { id, name, deliveries: 0, totalEarned: 0, paidAmount: 0, due: 0, taxTotal: 0, isFullyPaid: false, payouts: [] };
       }
-      map[id].deliveries += 1;
+      map[groupKey].deliveries += 1;
       // Repasse do motoboy (75% do valor da corrida)
-      map[id].totalEarned += (d.delivery_fee * 0.75);
+      map[groupKey].totalEarned += (d.delivery_fee * 0.75);
       // Taxa fixa devida à central por entrega
-      map[id].taxTotal += (d.delivery_fee_tax || 0);
+      map[groupKey].taxTotal += (d.delivery_fee_tax || 0);
     });
 
     Object.values(map).forEach((drv) => {
-      const nameKey = (drv.name || "").trim().toLowerCase();
-      const paid = driverPaymentsMap[nameKey] || 0;
+      const normName = cleanStr(drv.name);
+      // Busca pelo nome normalizado ou pelo ID do motorista
+      const paid = driverPaymentsMap[normName] || driverPaymentsMap[drv.id] || 0;
       drv.paidAmount = paid;
       drv.due = Math.max(0, drv.totalEarned - paid);
       drv.isFullyPaid = drv.totalEarned > 0 && drv.due <= 0.05;
+      drv.payouts = driverPayoutsHistory[normName] || driverPayoutsHistory[drv.id] || [];
     });
 
-    return Object.values(map).sort((a, b) => b.due - a.due).slice(0, 50);
-  }, [filteredDeliveries, driverPaymentsMap]);
+    return Object.values(map).sort((a, b) => b.due - a.due);
+  }, [filteredDeliveries, driverPaymentsMap, driverPayoutsHistory]);
 
   // Limpar Filtros
   const handleClearFilters = () => {
@@ -1210,47 +1287,97 @@ function ReportsPage() {
 
             <Card className="rounded-3xl border-border/80 shadow-sm overflow-hidden">
               <CardHeader className="bg-muted/30 border-b pb-4">
-                <CardTitle className="text-base font-bold flex items-center justify-between">
-                  <span>🛵 Breakdown por Motorista</span>
-                  <span className="text-xs text-muted-foreground">Entregas e ganhos por entregador</span>
-                </CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <span>🛵 Breakdown por Motorista & Baixas</span>
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Visão transparente de produção (75%), baixas pagas e saldo em aberto</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto bg-muted/40 p-1 rounded-xl border border-border/50">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={payoutCalcMode === "all" ? "default" : "ghost"}
+                      onClick={() => setPayoutCalcMode("all")}
+                      className={`text-xs h-7 px-2.5 rounded-lg font-bold transition-all ${payoutCalcMode === "all" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"}`}
+                      title="Considera todos os repasses já pagos a este entregador"
+                    >
+                      Saldo Acumulado
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={payoutCalcMode === "period" ? "default" : "ghost"}
+                      onClick={() => setPayoutCalcMode("period")}
+                      className={`text-xs h-7 px-2.5 rounded-lg font-bold transition-all ${payoutCalcMode === "period" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"}`}
+                      title="Considera apenas baixas lançadas dentro do período filtrado"
+                    >
+                      Apenas Período
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="p-0 max-h-[350px] overflow-y-auto">
+              <CardContent className="p-0 max-h-[420px] overflow-y-auto">
                 {driverBreakdown.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Nenhum registro.</div>
+                  <div className="p-8 text-center text-muted-foreground text-sm">Nenhum registro de entregas concluídas no período.</div>
                 ) : (
                   <div className="divide-y">
                     {driverBreakdown.map((drv, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/10 transition-colors">
+                      <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-muted/10 transition-colors gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-xs font-bold text-blue-600">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-xs font-black text-blue-600">
                             {i + 1}
                           </span>
                           <div>
                             <p className="font-bold text-sm text-foreground leading-tight">{drv.name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{drv.deliveries} entregas</p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <span><strong>{drv.deliveries}</strong> entregas</span>
+                              <span>•</span>
+                              <span>Produzido (75%): <strong className="text-foreground">{drv.totalEarned.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></span>
+                              <span>•</span>
+                              <span>Já Pago: <strong className="text-emerald-600">{drv.paidAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-black text-sm text-foreground">
+
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                          <div className="text-left sm:text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+                              {drv.isFullyPaid ? "Status" : "Saldo Devido"}
+                            </p>
+                            <p className={`font-black text-base mt-1 ${drv.isFullyPaid ? "text-emerald-600" : "text-amber-600"}`}>
                               {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                             </p>
                           </div>
-                          {drv.isFullyPaid ? (
-                            <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1 rounded-xl border border-emerald-500/20">
-                              <Check className="h-3.5 w-3.5" /> Quitado
-                            </span>
-                          ) : (
+
+                          <div className="flex items-center gap-1.5">
                             <Button
                               size="sm"
-                              onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, isFullyPaid: drv.isFullyPaid })}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                              variant="outline"
+                              onClick={() => setHistoryModalDriver({ name: drv.name, id: drv.id, payouts: drv.payouts })}
+                              className="text-xs h-8 px-2.5 rounded-xl gap-1 font-semibold hover:bg-muted"
+                              title="Ver histórico de baixas pagas"
                             >
-                              <DollarSign className="h-3.5 w-3.5" />
-                              Pagar
+                              <History className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>Extrato ({drv.payouts.length})</span>
                             </Button>
-                          )}
+
+                            {drv.isFullyPaid ? (
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1.5 rounded-xl border border-emerald-500/20">
+                                <Check className="h-3.5 w-3.5" /> Quitado
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, totalEarned: drv.totalEarned, paidAmount: drv.paidAmount, isFullyPaid: drv.isFullyPaid })}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
+                              >
+                                <DollarSign className="h-3.5 w-3.5" />
+                                Dar Baixa
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1300,42 +1427,55 @@ function ReportsPage() {
                 </div>
                 {/* Entregadores */}
                 <div>
-                  <div className="px-5 py-3 border-b bg-muted/5">
-                    <p className="text-sm font-bold">🏍️ Cobrança de Entregadores (Taxa por Entrega)</p>
+                  <div className="px-5 py-3 border-b bg-muted/5 flex items-center justify-between">
+                    <p className="text-sm font-bold">🏍️ Cobrança de Entregadores (Taxa por Entrega & Repasse)</p>
                   </div>
                   <div className="divide-y max-h-[400px] overflow-y-auto">
                     {driverBreakdown.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground text-sm">Sem saldos devidos.</div>
                     ) : (
                       driverBreakdown.map((drv, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-colors">
+                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-muted/5 transition-colors gap-2">
                           <div>
                             <p className="font-bold text-sm text-foreground leading-tight">{drv.name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Corridas: {drv.deliveries} • Taxa por entrega: {drv.deliveries > 0 ? (drv.taxTotal / drv.deliveries).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,40"}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <span>Corridas: <strong>{drv.deliveries}</strong></span>
+                              <span>•</span>
+                              <span>Ganho: <strong className="text-foreground">{drv.totalEarned.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></span>
+                              <span>•</span>
+                              <span>Pago: <strong className="text-emerald-600">{drv.paidAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
+                          <div className="flex items-center justify-between sm:justify-end gap-2.5">
+                            <div className="text-left sm:text-right">
                               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
-                                {drv.isFullyPaid ? "Saldo Restante" : "Ganhos Entregador"}
+                                {drv.isFullyPaid ? "Saldo Restante" : "A Repassar"}
                               </p>
-                              <p className={`font-black text-base mt-1.5 ${drv.isFullyPaid ? "text-emerald-600/60 line-through" : "text-emerald-600"}`}>
+                              <p className={`font-black text-base mt-1 ${drv.isFullyPaid ? "text-emerald-600" : "text-amber-600"}`}>
                                 {drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                               </p>
                             </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setHistoryModalDriver({ name: drv.name, id: drv.id, payouts: drv.payouts })}
+                              className="text-xs h-8 px-2 rounded-xl"
+                              title="Ver histórico de baixas pagas"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
                             {drv.isFullyPaid ? (
-                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-3 py-1.5 rounded-xl border border-emerald-500/20">
-                                <Check className="h-4 w-4" /> Repasse Quitado
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1.5 rounded-xl border border-emerald-500/20">
+                                <Check className="h-3.5 w-3.5" /> Quitado
                               </span>
                             ) : (
                               <Button
                                 size="sm"
-                                onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, isFullyPaid: drv.isFullyPaid })}
+                                onClick={() => openPayDriverModal({ name: drv.name, id: drv.id || "", due: drv.due, deliveries: drv.deliveries, totalEarned: drv.totalEarned, paidAmount: drv.paidAmount, isFullyPaid: drv.isFullyPaid })}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-sm gap-1"
                               >
                                 <DollarSign className="h-3.5 w-3.5" />
-                                Pagar Repasse
+                                Pagar
                               </Button>
                             )}
                           </div>
@@ -2031,16 +2171,16 @@ function ReportsPage() {
 
         {/* Modal de Repasse ao Entregador */}
         <Dialog open={!!payDriverDialogData} onOpenChange={(open) => !open && setPayDriverDialogData(null)}>
-          <DialogContent className="w-[94vw] sm:max-w-[520px] rounded-3xl p-6 bg-background border border-border shadow-2xl overflow-hidden">
+          <DialogContent className="w-[94vw] sm:max-w-[540px] rounded-3xl p-6 bg-background border border-border shadow-2xl overflow-hidden">
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle className="flex items-center gap-2 text-xl font-extrabold text-foreground">
                 <div className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600">
                   <DollarSign className="h-6 w-6" />
                 </div>
-                Pagar Repasse ao Entregador
+                Dar Baixa de Repasse ao Entregador
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Este pagamento será registrado e deduzido como <strong className="text-rose-500 font-bold">Saída (Repasse Motoboy)</strong> do seu Fluxo de Caixa.
+                Este pagamento será registrado e deduzido como <strong className="text-rose-500 font-bold">Saída (Repasse Motoboy)</strong> no Fluxo de Caixa da Plataforma.
               </DialogDescription>
             </DialogHeader>
 
@@ -2062,7 +2202,7 @@ function ReportsPage() {
                     onValueChange={(selectedName) => {
                       const found = driverBreakdown.find(d => d.name === selectedName);
                       if (found) {
-                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries });
+                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries, totalEarned: found.totalEarned, paidAmount: found.paidAmount });
                       }
                     }}
                   >
@@ -2083,22 +2223,51 @@ function ReportsPage() {
                   </Select>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-1 w-full overflow-hidden">
-                  <p className="text-[11px] text-emerald-600 uppercase font-extrabold tracking-wider">Entregador Beneficiário</p>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2 w-full overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-emerald-600 uppercase font-extrabold tracking-wider">Entregador Beneficiário</p>
+                    <span className="text-xs bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-md">
+                      {payDriverDialogData.deliveries} entregas
+                    </span>
+                  </div>
                   <p className="text-lg font-black text-foreground truncate">{payDriverDialogData.name}</p>
-                  <p className="text-xs text-muted-foreground font-semibold">
-                    Volume acumulado: <strong className="text-foreground">{payDriverDialogData.deliveries} entregas</strong> (Saldo Devido: <strong className="text-emerald-600 font-bold">{payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>)
-                  </p>
-                  {payDriverDialogData.due <= 0.05 && (
-                    <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
-                      <Check className="h-4 w-4" /> Este entregador já possui todos os repasses do período quitados.
-                    </p>
-                  )}
+                  
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-emerald-500/10 text-xs">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Produzido (75%)</p>
+                      <p className="font-bold text-foreground">
+                        {(payDriverDialogData.totalEarned ?? (payDriverDialogData.due + (payDriverDialogData.paidAmount ?? 0))).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Já Baixado</p>
+                      <p className="font-bold text-emerald-600">
+                        {(payDriverDialogData.paidAmount ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Saldo Devido</p>
+                      <p className="font-black text-amber-600">
+                        {payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                   <div className="space-y-1.5 w-full">
-                    <Label htmlFor="payAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Valor do Repasse (R$)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="payAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Valor da Baixa (R$)</Label>
+                      {payDriverDialogData.due > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setPayAmount(payDriverDialogData.due.toFixed(2))}
+                          className="text-[11px] text-emerald-600 font-bold hover:underline"
+                        >
+                          Quitar total
+                        </button>
+                      )}
+                    </div>
                     <CurrencyInput
                       id="payAmount"
                       value={payAmount}
@@ -2108,6 +2277,20 @@ function ReportsPage() {
                     />
                   </div>
 
+                  <div className="space-y-1.5 w-full">
+                    <Label htmlFor="payDate" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Data do Pagamento</Label>
+                    <Input
+                      id="payDate"
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      className="h-12 rounded-2xl border-input bg-card px-4 font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                   <div className="space-y-1.5 w-full">
                     <Label htmlFor="payMethod" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</Label>
                     <Select value={payMethod} onValueChange={setPayMethod}>
@@ -2119,33 +2302,98 @@ function ReportsPage() {
                         <SelectItem value="Dinheiro" className="font-semibold">Dinheiro</SelectItem>
                         <SelectItem value="Transferência" className="font-semibold">Transferência Bancária</SelectItem>
                         <SelectItem value="Boleto" className="font-semibold">Boleto</SelectItem>
+                        <SelectItem value="Outro" className="font-semibold">Outro</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                <div className="space-y-1.5 w-full">
-                  <Label htmlFor="payNotes" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Observação (Opcional)</Label>
-                  <Input
-                    id="payNotes"
-                    placeholder="Ex: Quitação semanal de corridas"
-                    value={payNotes}
-                    onChange={(e) => setPayNotes(e.target.value)}
-                    className="h-12 rounded-2xl border-input bg-card px-4 font-medium"
-                  />
+                  <div className="space-y-1.5 w-full">
+                    <Label htmlFor="payNotes" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Observação (Opcional)</Label>
+                    <Input
+                      id="payNotes"
+                      placeholder="Ex: Quitação semanal de corridas"
+                      value={payNotes}
+                      onChange={(e) => setPayNotes(e.target.value)}
+                      className="h-12 rounded-2xl border-input bg-card px-4 font-medium"
+                    />
+                  </div>
                 </div>
 
                 <DialogFooter className="pt-3 border-t border-border flex-row gap-2 justify-end w-full">
                   <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-2xl h-12 px-5 font-bold flex-1 sm:flex-none">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={submittingPay || payDriverDialogData.due <= 0.05} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20 disabled:opacity-50">
+                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20 disabled:opacity-50">
                     <DollarSign className="h-5 w-5" />
-                    {submittingPay ? "Efetuando..." : payDriverDialogData.due <= 0.05 ? "Já Quitado" : "Confirmar Repasse"}
+                    {submittingPay ? "Registrando Baixa..." : "Confirmar Baixa de Repasse"}
                   </Button>
                 </DialogFooter>
               </form>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Extrato de Baixas do Entregador */}
+        <Dialog open={!!historyModalDriver} onOpenChange={(open) => !open && setHistoryModalDriver(null)}>
+          <DialogContent className="w-[94vw] sm:max-w-[620px] max-h-[85vh] flex flex-col rounded-3xl p-6 bg-background border border-border shadow-2xl overflow-hidden">
+            <DialogHeader className="space-y-1 text-left shrink-0">
+              <DialogTitle className="flex items-center gap-2 text-lg font-extrabold text-foreground">
+                <div className="p-2 rounded-2xl bg-blue-500/10 text-blue-600">
+                  <History className="h-5 w-5" />
+                </div>
+                Extrato de Baixas & Pagamentos
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Histórico completo de repasses registrados para <strong className="text-foreground font-bold">{historyModalDriver?.name}</strong> no Fluxo de Caixa.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto mt-3 pr-1 space-y-2.5">
+              {!historyModalDriver?.payouts || historyModalDriver.payouts.length === 0 ? (
+                <div className="p-8 text-center bg-muted/20 border border-dashed rounded-2xl text-muted-foreground text-sm">
+                  Nenhuma baixa ou repasse registrado para este entregador até o momento.
+                </div>
+              ) : (
+                historyModalDriver.payouts.map((p: any) => (
+                  <div key={p.id} className="p-3.5 rounded-2xl border bg-card hover:bg-muted/10 transition-colors flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-emerald-600">
+                          {Number(p.amount || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                        <span className="text-[10px] bg-muted px-2 py-0.5 rounded-md font-semibold text-muted-foreground uppercase">
+                          {p.origin || "Pix"}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground">
+                          {p.date ? new Date(p.date + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/80 truncate font-medium">{p.description}</p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDeletePayout(p.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl shrink-0"
+                      title="Estornar / Excluir este repasse"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <DialogFooter className="mt-4 pt-3 border-t border-border shrink-0 flex items-center justify-between">
+              <div className="text-xs text-muted-foreground font-semibold">
+                Total baixado: <strong className="text-emerald-600">{((historyModalDriver?.payouts || []).reduce((acc, p) => acc + Number(p.amount || 0), 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+              </div>
+              <Button type="button" variant="outline" onClick={() => setHistoryModalDriver(null)} className="rounded-xl h-10 px-4 font-bold">
+                Fechar
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </Tabs>
