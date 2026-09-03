@@ -52,19 +52,29 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         }
 
         try {
-          const [profRes, drvRes] = await Promise.all([
-            supabase.from("profiles").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
-            supabase.from("delivery_drivers").select("*").or(`id.eq.${uid},user_id.eq.${uid}`).maybeSingle(),
-          ]);
+          // Busca delivery_drivers por id ou user_id
+          const { data: drv } = await supabase
+            .from("delivery_drivers")
+            .select("*")
+            .or(`id.eq.${driver.id || uid},user_id.eq.${driver.user_id || uid}`)
+            .maybeSingle();
 
-          const prof = profRes.data as any;
-          const drv = drvRes.data as any;
+          // Busca profiles apenas por user_id (profiles não tem id)
+          let prof: any = null;
+          try {
+            const { data: p } = await supabase
+              .from("profiles")
+              .select("full_name, phone, document, cpf")
+              .eq("user_id", uid)
+              .maybeSingle();
+            prof = p;
+          } catch {}
 
-          const dbServices = drv?.service_types || prof?.service_types;
+          const dbServices = drv?.service_types;
           if (Array.isArray(dbServices) && dbServices.length > 0) {
             loadedServices = dbServices;
           } else if (loadedServices.length === 0) {
-            const v = String(drv?.vehicle || drv?.vehicle_type || prof?.vehicle || driver.vehicle_type || "moto").toLowerCase();
+            const v = String(drv?.vehicle || drv?.vehicle_type || driver.vehicle_type || "moto").toLowerCase();
             if (v.includes("car")) {
               loadedServices = ["delivery_car"];
             } else {
@@ -73,11 +83,11 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
           }
 
           setForm({
-            fullName: driver.full_name || drv?.full_name || prof?.full_name || "",
-            phone: driver.phone || drv?.phone || prof?.phone || "",
-            document: driver.document || drv?.cpf || drv?.document || prof?.document || prof?.cpf || "",
-            vehicleType: drv?.vehicle || drv?.vehicle_type || prof?.vehicle || driver.vehicle_type || "moto",
-            vehiclePlate: driver.vehicle_plate || driver.license_plate || drv?.license_plate || drv?.vehicle_plate || prof?.license_plate || "",
+            fullName: drv?.full_name || driver.full_name || prof?.full_name || "",
+            phone: drv?.phone || driver.phone || prof?.phone || "",
+            document: drv?.cpf || drv?.document || driver.document || prof?.document || prof?.cpf || "",
+            vehicleType: drv?.vehicle || drv?.vehicle_type || driver.vehicle_type || "moto",
+            vehiclePlate: drv?.license_plate || drv?.vehicle_plate || driver.vehicle_plate || driver.license_plate || "",
             commission: (drv?.commission_rate ?? driver.commission_rate ?? 25).toString(),
             serviceTypes: loadedServices,
           });
@@ -117,26 +127,26 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         ? "carro,moto"
         : (form.serviceTypes.includes("delivery_car") ? "car" : form.vehicleType);
 
-      // 1. Atualiza Profiles
-      const { error: profErr } = await supabase
-        .from("profiles")
-        .update({
-          full_name: form.fullName,
-          phone: form.phone,
-          document: form.document,
-          cpf: form.document,
-          vehicle: vehicleVal,
-          service_types: form.serviceTypes,
-        } as any)
-        .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
+      // 1. Atualiza Profiles (apenas campos existentes na tabela profiles)
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: form.fullName,
+            phone: form.phone,
+            document: form.document,
+            cpf: form.document,
+          } as any)
+          .eq("user_id", targetUserId);
+      } catch (e) {
+        console.warn("[Profiles Update Warning]:", e);
+      }
 
-      if (profErr) console.warn("[Profiles Update Warning]:", profErr.message);
-
-      // 2. Atualiza delivery_drivers
+      // 2. Atualiza ou insere em delivery_drivers (tabela principal de motoristas)
       const { data: existingDrivers } = await supabase
         .from("delivery_drivers")
-        .select("id")
-        .or(`id.eq.${driver.id},user_id.eq.${targetUserId}`);
+        .select("id, user_id")
+        .or(`id.eq.${driver.id || targetUserId},user_id.eq.${targetUserId},user_id.eq.${driver.id || targetUserId}`);
 
       const targetDriverRow = existingDrivers?.[0];
 
@@ -147,10 +157,15 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             full_name: form.fullName,
             phone: form.phone,
             cpf: form.document,
+            document: form.document,
             vehicle: vehicleVal,
+            vehicle_type: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+            vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             commission_rate: parseFloat(form.commission) || 0,
             service_types: form.serviceTypes,
+            status: "active",
+            is_active: true,
           } as any)
           .eq("id", targetDriverRow.id);
 
@@ -163,33 +178,41 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             full_name: form.fullName,
             phone: form.phone,
             cpf: form.document,
+            document: form.document,
             vehicle: vehicleVal,
+            vehicle_type: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+            vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             commission_rate: parseFloat(form.commission) || 0,
             service_types: form.serviceTypes,
+            status: "active",
             is_active: true,
           } as any);
 
         if (insErr) throw insErr;
       }
 
-      // 3. Tabela legada drivers (se existir)
-      try {
-        await supabase
-          .from("drivers")
-          .update({
-            full_name: form.fullName,
-            phone: form.phone,
-            document: form.document,
-            vehicle_type: vehicleVal,
-            service_types: form.serviceTypes,
-            license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-            commission_rate: parseFloat(form.commission) || 0,
-          } as any)
-          .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
-      } catch (e) {}
+      // Atualização otimista imediata no cache do React Query
+      queryClient.setQueryData(["drivers"], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((d: any) => {
+          if (d.id === driver.id || d.user_id === targetUserId) {
+            return {
+              ...d,
+              full_name: form.fullName,
+              phone: form.phone,
+              document: form.document,
+              vehicle_type: vehicleVal,
+              vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
+              commission_rate: parseFloat(form.commission) || 0,
+              service_types: form.serviceTypes,
+            };
+          }
+          return d;
+        });
+      });
 
-      toast.success("Dados do entregador atualizados com sucesso!");
+      toast.success("Funções e dados do entregador atualizados com sucesso!");
       await queryClient.invalidateQueries({ queryKey: ["drivers"] });
       onOpenChange(false);
     } catch (err: any) {
