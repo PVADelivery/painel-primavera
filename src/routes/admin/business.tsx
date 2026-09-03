@@ -469,8 +469,8 @@ export function BusinessAdminPage() {
                           </Badge>
                         </div>
                         <div className="absolute top-2.5 right-2.5">
-                          <Badge className={p.is_active ? "bg-emerald-500/90 text-white font-bold text-[10px]" : "bg-destructive/80 text-white font-bold text-[10px]"}>
-                            {p.is_active ? "Ativo" : "Pausado"}
+                          <Badge className={p.is_active ? "bg-emerald-500/90 text-white font-bold text-[10px]" : "bg-amber-500 text-slate-950 font-black text-[10px] shadow-sm animate-pulse"}>
+                            {p.is_active ? "Ativo" : "Aguardando Aprovação"}
                           </Badge>
                         </div>
                       </div>
@@ -512,7 +512,7 @@ export function BusinessAdminPage() {
                         </div>
 
                         {/* Ações */}
-                        <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                        <div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
                             <Switch
                               checked={p.is_active}
@@ -523,7 +523,19 @@ export function BusinessAdminPage() {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
+                            {!p.is_active && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  updateProp.mutate({ id: p.id, data: { is_active: true } });
+                                  toast.success("Imóvel aprovado com sucesso!");
+                                }}
+                                className="h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar Anúncio
+                              </Button>
+                            )}
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-foreground" onClick={() => openEditPropModal(p)}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
@@ -582,8 +594,8 @@ export function BusinessAdminPage() {
                           )}
                         </div>
                         <div className="absolute top-2.5 right-2.5">
-                          <Badge className={v.is_active ? "bg-emerald-500/90 text-white font-bold text-[10px]" : "bg-destructive/80 text-white font-bold text-[10px]"}>
-                            {v.is_active ? "Ativo" : "Pausado"}
+                          <Badge className={v.is_active ? "bg-emerald-500/90 text-white font-bold text-[10px]" : "bg-amber-500 text-slate-950 font-black text-[10px] shadow-sm animate-pulse"}>
+                            {v.is_active ? "Ativo" : "Aguardando Aprovação"}
                           </Badge>
                         </div>
                       </div>
@@ -622,7 +634,7 @@ export function BusinessAdminPage() {
                         </div>
 
                         {/* Ações */}
-                        <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                        <div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
                             <Switch
                               checked={v.is_active}
@@ -633,7 +645,19 @@ export function BusinessAdminPage() {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
+                            {!v.is_active && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  updateVeh.mutate({ id: v.id, data: { is_active: true } });
+                                  toast.success("Veículo aprovado com sucesso!");
+                                }}
+                                className="h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar Anúncio
+                              </Button>
+                            )}
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-foreground" onClick={() => openEditVehModal(v)}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
