@@ -70,7 +70,7 @@ export function BusinessAdminPage() {
   });
 
   // Upload States & Refs
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const propFileInputRef = useRef<HTMLInputElement>(null);
   const vehFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingProp, setUploadingProp] = useState(false);
@@ -81,21 +81,39 @@ export function BusinessAdminPage() {
   const uploadFilesToStorage = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     const bucketName = "avatars";
+    const currentUserId = user?.id || (await supabase.auth.getUser()).data.user?.id;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const ext = file.name.split(".").pop() || "jpg";
       const fileName = `business_${Math.random().toString(36).substring(2, 9)}_${Date.now()}.${ext}`;
-      const filePath = `business/${fileName}`;
+      // A política do bucket avatars exige que o primeiro diretório seja o ID do usuário (auth.uid())
+      const filePath = currentUserId ? `${currentUserId}/${fileName}` : fileName;
 
       const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, {
         cacheControl: "3600",
         upsert: true,
+        contentType: file.type || undefined,
       });
 
       if (uploadError) {
-        console.error("[uploadFilesToStorage] Erro:", uploadError);
-        throw uploadError;
+        console.error("[uploadFilesToStorage] Erro ao subir para avatars, tentando store-assets:", uploadError);
+        // Fallback de contingência para bucket store-assets caso avatars falhe
+        const { error: fallbackError } = await supabase.storage.from("store-assets").upload(`business/${fileName}`, file, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+
+        if (fallbackError) {
+          throw uploadError; // Lança o erro original
+        }
+
+        const { data: fallbackUrl } = supabase.storage.from("store-assets").getPublicUrl(`business/${fileName}`);
+        if (fallbackUrl?.publicUrl) {
+          uploadedUrls.push(fallbackUrl.publicUrl);
+        }
+        continue;
       }
 
       const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
