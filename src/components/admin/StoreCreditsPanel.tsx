@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
@@ -91,6 +93,31 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
   const [minValue, setMinValue] = useState("");
   const [maxValue, setMaxValue] = useState("");
 
+  // Busca entregas reais criadas pelas lojas no período filtrado para somar o consumo real de créditos
+  const { data: storeDeliveries = [], isLoading: loadingDeliveries } = useQuery({
+    queryKey: ["store-deliveries-consumed", period, dateFrom, dateTo],
+    queryFn: async () => {
+      try {
+        const { from, to } = getPeriodDates(period, dateFrom, dateTo);
+        const { data, error } = await supabase
+          .from("deliveries")
+          .select("id, company_id, delivery_fee, value, status, created_at")
+          .not("company_id", "is", null)
+          .gte("created_at", from.toISOString())
+          .lte("created_at", to.toISOString())
+          .neq("status", "cancelled");
+
+        if (error) {
+          console.warn("[storeDeliveries query error]:", error);
+          return [];
+        }
+        return data ?? [];
+      } catch (e) {
+        return [];
+      }
+    },
+  });
+
   const [dialogCompany, setDialogCompany] = useState<any>(null);
   const [mode, setMode] = useState<"purchase" | "debit">("purchase");
   const [form, setForm] = useState({ amount: "", payment_method: "Pix", description: "" });
@@ -178,13 +205,26 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
 
   const storeConsumedInPeriod = useMemo(() => {
     const map = new Map<string, number>();
+
+    // 1. Débitos manuais da tabela company_credit_transactions
     filteredTxs.forEach((t) => {
       if (Number(t.amount) < 0) {
         map.set(t.company_id, (map.get(t.company_id) || 0) + Math.abs(Number(t.amount)));
       }
     });
+
+    // 2. Entregas reais de lojas no período (taxa de entrega consumida)
+    storeDeliveries.forEach((d: any) => {
+      if (!d.company_id) return;
+      if (selectedCompany !== "all" && d.company_id !== selectedCompany) return;
+      const fee = Number(d.delivery_fee || d.value || 0);
+      if (fee > 0) {
+        map.set(d.company_id, (map.get(d.company_id) || 0) + fee);
+      }
+    });
+
     return map;
-  }, [filteredTxs]);
+  }, [filteredTxs, storeDeliveries, selectedCompany]);
 
   const rows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -216,11 +256,20 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
   const totals = useMemo(() => {
     const balance = credits.reduce((s, c) => s + Number(c.balance || 0), 0);
     const purchased = filteredTxs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
-    const consumed = filteredTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+    const manualDebits = filteredTxs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+
+    const filteredDeliveries = storeDeliveries.filter((d: any) => {
+      if (selectedCompany !== "all" && d.company_id !== selectedCompany) return false;
+      return true;
+    });
+    const deliveriesConsumed = filteredDeliveries.reduce((s, d: any) => s + Number(d.delivery_fee || d.value || 0), 0);
+    const consumed = manualDebits + deliveriesConsumed;
+    const totalDebitsCount = filteredTxs.filter((t) => Number(t.amount) < 0).length + filteredDeliveries.length;
+
     const low = companies.filter((c) => (creditsByCompany.get(c.id)?.balance || 0) < LOW_BALANCE).length;
     const platformCommission = purchased * 0.02;
-    return { balance, purchased, consumed, low, platformCommission };
-  }, [credits, filteredTxs, companies, creditsByCompany]);
+    return { balance, purchased, consumed, low, platformCommission, totalDebitsCount, deliveriesCount: filteredDeliveries.length };
+  }, [credits, filteredTxs, companies, creditsByCompany, storeDeliveries, selectedCompany]);
 
   // Gráfico de vendas dia a dia no período filtrado
   const salesTrend = useMemo(() => {
@@ -575,7 +624,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
         <StatsCard
           title="Créditos consumidos"
           value={brl(totals.consumed)}
-          sub={`${filteredTxs.filter(t => Number(t.amount) < 0).length} entregas / débitos`}
+          sub={`${totals.totalDebitsCount || 0} consumos (${totals.deliveriesCount || 0} entregas)`}
           icon={TrendingDown}
           color="info"
         />
