@@ -123,8 +123,8 @@ function ReportsPage() {
   const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; totalEarned?: number; paidAmount?: number; isFullyPaid?: boolean }) => {
     setPayDriverDialogData(drv);
     setPayAmount(drv.due > 0 ? drv.due.toFixed(2) : "0.00");
-    // Se estiver filtrando um período com data fim específica, sugere essa data, senão data atual
-    setPayDate(dateTo && dateTo <= new Date().toISOString().split("T")[0] ? dateTo : new Date().toISOString().split("T")[0]);
+    // Sempre sugere a data de hoje por padrão, sem obrigar a jogar para o último dia do mês
+    setPayDate(new Date().toISOString().split("T")[0]);
     setPayMethod("Pix");
     setPayNotes("");
   };
@@ -585,8 +585,9 @@ function ReportsPage() {
       .trim();
 
   // Mapeamento inteligente de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow)
-  const { driverPaymentsMap, driverPayoutsHistory } = useMemo(() => {
-    const map: Record<string, number> = {};
+  const { allTimePaymentsMap, periodPaymentsMap, driverPayoutsHistory } = useMemo(() => {
+    const allTimeMap: Record<string, number> = {};
+    const periodMap: Record<string, number> = {};
     const history: Record<string, any[]> = {};
 
     cashFlows.forEach((cf: any) => {
@@ -603,12 +604,6 @@ function ReportsPage() {
 
       if (!isRepasse) return;
 
-      // Se o modo for estritamente do período, filtra pela data do lançamento
-      if (payoutCalcMode === "period" && cf.date) {
-        if (dateFrom && cf.date < dateFrom) return;
-        if (dateTo && cf.date > dateTo) return;
-      }
-
       const amount = Number(cf.amount || 0);
       const descNorm = cleanStr(cf.description);
 
@@ -617,7 +612,6 @@ function ReportsPage() {
       const taggedId = idMatch?.[1]?.trim();
 
       let matchedKey: string | null = null;
-
       if (taggedId) {
         matchedKey = taggedId;
       }
@@ -643,10 +637,27 @@ function ReportsPage() {
 
       const finalKey = matchedName || matchedKey || "outro";
 
-      // Acumula valor pago no mapa
-      map[finalKey] = (map[finalKey] || 0) + amount;
+      // Acumula valor pago no mapa histórico (All Time)
+      allTimeMap[finalKey] = (allTimeMap[finalKey] || 0) + amount;
       if (matchedKey && matchedKey !== finalKey) {
-        map[matchedKey] = (map[matchedKey] || 0) + amount;
+        allTimeMap[matchedKey] = (allTimeMap[matchedKey] || 0) + amount;
+      }
+
+      // Checa se o lançamento pertence ao período selecionado
+      let isInPeriod = true;
+      if (cf.date) {
+        if (dateFrom && cf.date < dateFrom) isInPeriod = false;
+        if (dateTo && cf.date > dateTo) isInPeriod = false;
+      }
+      if (!isInPeriod && dateFrom && dateTo && cf.description?.includes(dateFrom) && cf.description?.includes(dateTo)) {
+        isInPeriod = true;
+      }
+
+      if (isInPeriod) {
+        periodMap[finalKey] = (periodMap[finalKey] || 0) + amount;
+        if (matchedKey && matchedKey !== finalKey) {
+          periodMap[matchedKey] = (periodMap[matchedKey] || 0) + amount;
+        }
       }
 
       // Registra no histórico de repasses deste entregador
@@ -658,42 +669,122 @@ function ReportsPage() {
       }
     });
 
-    return { driverPaymentsMap: map, driverPayoutsHistory: history };
-  }, [cashFlows, drivers, payoutCalcMode, dateFrom, dateTo]);
+    return { allTimePaymentsMap, periodPaymentsMap, driverPayoutsHistory: history };
+  }, [cashFlows, drivers, dateFrom, dateTo]);
 
-  // Relação por Entregador com controle inteligente de quitado, baixas e saldo devido restante
-  const driverBreakdown = useMemo(() => {
-    const map: Record<string, { id: string; name: string; deliveries: number; totalEarned: number; paidAmount: number; due: number; taxTotal: number; isFullyPaid: boolean; payouts: any[] }> = {};
-    const finished = filteredDeliveries.filter((d) => isCompletedDelivery(d.status));
+  // Lista unificada com TODOS os entregadores para pagamentos e baixas sem depender de filtros
+  const allDriversForPayout = useMemo(() => {
+    const map = new Map<string, any>();
 
-    finished.forEach((d) => {
-      const name = (d.driver_name || "Motoboy Base").trim();
-      const normName = cleanStr(name);
-      const id = d.driver_id || normName;
-      const groupKey = normName || id;
+    // 1. Inicializar com todos os motoristas cadastrados na plataforma
+    drivers.forEach((d: any) => {
+      const normName = cleanStr(d.full_name);
+      const key = d.id || normName;
+      map.set(key, {
+        id: d.id,
+        name: d.full_name || "Motoboy",
+        normName,
+        allTimeDeliveries: 0,
+        allTimeEarned: 0,
+        periodDeliveries: 0,
+        periodEarned: 0,
+      });
+    });
 
-      if (!map[groupKey]) {
-        map[groupKey] = { id, name, deliveries: 0, totalEarned: 0, paidAmount: 0, due: 0, taxTotal: 0, isFullyPaid: false, payouts: [] };
+    // 2. Processar todas as entregas concluídas da base (All Time)
+    allDeliveries.forEach((d: any) => {
+      if (!isCompletedDelivery(d.status)) return;
+      const rawName = (d.driver_name || "Motoboy Base").trim();
+      const normName = cleanStr(rawName);
+      const key = d.driver_id || normName;
+
+      if (!map.has(key)) {
+        let foundKey: string | null = null;
+        for (const [k, v] of map.entries()) {
+          if (v.normName === normName) { foundKey = k; break; }
+        }
+        if (foundKey) {
+          map.get(foundKey)!.allTimeDeliveries += 1;
+          map.get(foundKey)!.allTimeEarned += (Number(d.delivery_fee || 0) * 0.75);
+          return;
+        }
+        map.set(key, {
+          id: d.driver_id || normName,
+          name: rawName,
+          normName,
+          allTimeDeliveries: 0,
+          allTimeEarned: 0,
+          periodDeliveries: 0,
+          periodEarned: 0,
+        });
       }
-      map[groupKey].deliveries += 1;
-      // Repasse do motoboy (75% do valor da corrida)
-      map[groupKey].totalEarned += (d.delivery_fee * 0.75);
-      // Taxa fixa devida à central por entrega
-      map[groupKey].taxTotal += (d.delivery_fee_tax || 0);
+
+      const item = map.get(key)!;
+      item.allTimeDeliveries += 1;
+      item.allTimeEarned += (Number(d.delivery_fee || 0) * 0.75);
     });
 
-    Object.values(map).forEach((drv) => {
-      const normName = cleanStr(drv.name);
-      // Busca pelo nome normalizado ou pelo ID do motorista
-      const paid = driverPaymentsMap[normName] || driverPaymentsMap[drv.id] || 0;
-      drv.paidAmount = paid;
-      drv.due = Math.max(0, drv.totalEarned - paid);
-      drv.isFullyPaid = drv.totalEarned > 0 && drv.due <= 0.05;
-      drv.payouts = driverPayoutsHistory[normName] || driverPayoutsHistory[drv.id] || [];
+    // 3. Processar entregas do período filtrado
+    filteredDeliveries.forEach((d: any) => {
+      if (!isCompletedDelivery(d.status)) return;
+      const rawName = (d.driver_name || "Motoboy Base").trim();
+      const normName = cleanStr(rawName);
+      const key = d.driver_id || normName;
+
+      let targetItem = map.get(key);
+      if (!targetItem) {
+        for (const v of map.values()) {
+          if (v.normName === normName) { targetItem = v; break; }
+        }
+      }
+
+      if (targetItem) {
+        targetItem.periodDeliveries += 1;
+        targetItem.periodEarned += (Number(d.delivery_fee || 0) * 0.75);
+      }
     });
 
-    return Object.values(map).sort((a, b) => b.due - a.due);
-  }, [filteredDeliveries, driverPaymentsMap, driverPayoutsHistory]);
+    // 4. Calcular saldos e quitações para cada entregador
+    return Array.from(map.values()).map((drv) => {
+      const allTimePaid = allTimePaymentsMap[drv.normName] || allTimePaymentsMap[drv.id] || 0;
+      const periodPaid = periodPaymentsMap[drv.normName] || periodPaymentsMap[drv.id] || 0;
+
+      const allTimeDue = Math.max(0, drv.allTimeEarned - allTimePaid);
+      const periodDue = Math.max(0, drv.periodEarned - periodPaid);
+
+      const isAllMode = payoutCalcMode === "all";
+      const totalEarned = isAllMode ? drv.allTimeEarned : drv.periodEarned;
+      const paidAmount = isAllMode ? allTimePaid : periodPaid;
+      const due = isAllMode ? allTimeDue : periodDue;
+      const deliveries = isAllMode ? drv.allTimeDeliveries : drv.periodDeliveries;
+      const isFullyPaid = totalEarned > 0 && due <= 0.05;
+      const payouts = driverPayoutsHistory[drv.normName] || driverPayoutsHistory[drv.id] || [];
+
+      return {
+        ...drv,
+        allTimePaid,
+        allTimeDue,
+        periodPaid,
+        periodDue,
+        totalEarned,
+        paidAmount,
+        due,
+        deliveries,
+        isFullyPaid,
+        payouts,
+      };
+    }).sort((a, b) => b.due - a.due);
+  }, [drivers, allDeliveries, filteredDeliveries, allTimePaymentsMap, periodPaymentsMap, driverPayoutsHistory, payoutCalcMode]);
+
+  // Breakdown para a tabela da tela
+  const driverBreakdown = useMemo(() => {
+    return allDriversForPayout.filter((d) => {
+      if (payoutCalcMode === "period") {
+        return d.periodDeliveries > 0 || d.periodPaid > 0;
+      }
+      return d.allTimeDeliveries > 0 || d.allTimePaid > 0 || d.due > 0;
+    });
+  }, [allDriversForPayout, payoutCalcMode]);
 
   // Limpar Filtros
   const handleClearFilters = () => {
@@ -915,9 +1006,9 @@ function ReportsPage() {
 
         <Button
           onClick={() => {
-            if (driverBreakdown && driverBreakdown.length > 0) {
-              const firstDrv = driverBreakdown[0];
-              openPayDriverModal({ name: firstDrv.name, id: firstDrv.id || "", due: firstDrv.due, deliveries: firstDrv.deliveries });
+            const firstPending = allDriversForPayout.find(d => d.due > 0) || allDriversForPayout[0];
+            if (firstPending) {
+              openPayDriverModal({ name: firstPending.name, id: firstPending.id || "", due: firstPending.due, deliveries: firstPending.deliveries, totalEarned: firstPending.totalEarned, paidAmount: firstPending.paidAmount, isFullyPaid: firstPending.isFullyPaid });
             } else {
               openPayDriverModal({ name: "Selecione o Entregador", id: "", due: 0, deliveries: 0 });
             }
@@ -2200,9 +2291,9 @@ function ReportsPage() {
                   <Select
                     value={payDriverDialogData.name}
                     onValueChange={(selectedName) => {
-                      const found = driverBreakdown.find(d => d.name === selectedName);
+                      const found = allDriversForPayout.find(d => d.name === selectedName);
                       if (found) {
-                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries, totalEarned: found.totalEarned, paidAmount: found.paidAmount });
+                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries, totalEarned: found.totalEarned, paidAmount: found.paidAmount, isFullyPaid: found.isFullyPaid });
                       }
                     }}
                   >
@@ -2210,10 +2301,10 @@ function ReportsPage() {
                       <SelectValue placeholder="Selecione um entregador" className="truncate" />
                     </SelectTrigger>
                     <SelectContent className="max-w-[90vw] sm:max-w-[480px] max-h-[220px]">
-                      {driverBreakdown
+                      {allDriversForPayout
                         .filter(drv => drv.name.toLowerCase().includes((driverSearchTerm || "").toLowerCase()))
                         .map((drv) => (
-                          <SelectItem key={drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
+                          <SelectItem key={drv.id || drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
                             <span className="truncate">
                               {drv.name} ({drv.deliveries} entregas — {drv.isFullyPaid ? "✅ Quitado" : `${drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} a pagar`})
                             </span>
