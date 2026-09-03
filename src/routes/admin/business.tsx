@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   Building2, Home, Car, Plus, Search, Trash2, Edit3, Phone,
   CheckCircle2, XCircle, MapPin, Tag, Fuel, Gauge, Sparkles, Filter,
-  UploadCloud, Image as ImageIcon, Loader2, Star, X
+  UploadCloud, Image as ImageIcon, Loader2, Star, X, Copy, Clock
 } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/WhatsappIcon";
 
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/admin/business")({
 });
 
 export function BusinessAdminPage() {
-  const [activeTab, setActiveTab] = useState<"properties" | "vehicles">("properties");
+  const [activeTab, setActiveTab] = useState<"properties" | "vehicles" | "pending">("properties");
   const [search, setSearch] = useState("");
   const [dealFilter, setDealFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -197,14 +197,26 @@ export function BusinessAdminPage() {
     toast.success("Foto adicionada!");
   };
 
+  // Contagem e lista de pendentes
+  const pendingProps = useMemo(() => properties.filter((p) => !p.is_active), [properties]);
+  const pendingVehs = useMemo(() => vehicles.filter((v) => !v.is_active), [vehicles]);
+  const totalPending = pendingProps.length + pendingVehs.length;
+
   // Filtragem Imóveis
   const filteredProperties = useMemo(() => {
     return properties.filter((p) => {
+      const term = search.toLowerCase().trim();
+      const shortId = `#imv-${p.id.slice(0, 8).toLowerCase()}`;
+      const rawShort = p.id.slice(0, 8).toLowerCase();
       const matchSearch =
         !search ||
-        (p.neighborhood || "").toLowerCase().includes(search.toLowerCase()) ||
-        (p.description || "").toLowerCase().includes(search.toLowerCase()) ||
-        (p.agency_name || "").toLowerCase().includes(search.toLowerCase());
+        p.id.toLowerCase().includes(term) ||
+        shortId.includes(term) ||
+        rawShort.includes(term) ||
+        (p.neighborhood || "").toLowerCase().includes(term) ||
+        (p.description || "").toLowerCase().includes(term) ||
+        (p.agency_name || "").toLowerCase().includes(term) ||
+        (p.contact_phone || "").includes(term);
       const matchDeal = dealFilter === "all" || p.deal_type === dealFilter;
       const matchType = typeFilter === "all" || p.property_type === typeFilter;
       return matchSearch && matchDeal && matchType;
@@ -214,15 +226,31 @@ export function BusinessAdminPage() {
   // Filtragem Veículos
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
+      const term = search.toLowerCase().trim();
+      const shortId = `#veh-${v.id.slice(0, 8).toLowerCase()}`;
+      const rawShort = v.id.slice(0, 8).toLowerCase();
       const matchSearch =
         !search ||
-        (v.model || "").toLowerCase().includes(search.toLowerCase()) ||
-        (v.brand || "").toLowerCase().includes(search.toLowerCase()) ||
-        (v.seller_name || "").toLowerCase().includes(search.toLowerCase());
+        v.id.toLowerCase().includes(term) ||
+        shortId.includes(term) ||
+        rawShort.includes(term) ||
+        (v.model || "").toLowerCase().includes(term) ||
+        (v.brand || "").toLowerCase().includes(term) ||
+        (v.seller_name || "").toLowerCase().includes(term) ||
+        (v.contact_phone || "").includes(term);
       const matchType = typeFilter === "all" || v.vehicle_type === typeFilter;
       return matchSearch && matchType;
     });
   }, [vehicles, search, typeFilter]);
+
+  // Filtragem Pendentes (Imóveis + Veículos)
+  const filteredPendingProps = useMemo(() => {
+    return filteredProperties.filter((p) => !p.is_active);
+  }, [filteredProperties]);
+
+  const filteredPendingVehs = useMemo(() => {
+    return filteredVehicles.filter((v) => !v.is_active);
+  }, [filteredVehicles]);
 
   // Handlers Imóvel
   const openNewPropModal = () => {
@@ -394,23 +422,33 @@ export function BusinessAdminPage() {
         {/* Abas e Filtros */}
         <Tabs value={activeTab} onValueChange={(v: any) => { setActiveTab(v); setTypeFilter("all"); }} className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-border pb-3">
-            <TabsList className="bg-muted/60 p-1">
+            <TabsList className="bg-muted/60 p-1 flex-wrap">
               <TabsTrigger value="properties" className="gap-2 font-bold text-xs">
                 <Home className="h-3.5 w-3.5" /> Imóveis ({properties.length})
               </TabsTrigger>
               <TabsTrigger value="vehicles" className="gap-2 font-bold text-xs">
                 <Car className="h-3.5 w-3.5" /> Veículos ({vehicles.length})
               </TabsTrigger>
+              <TabsTrigger
+                value="pending"
+                className={`gap-2 font-bold text-xs ${
+                  totalPending > 0
+                    ? "text-amber-500 data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 font-black animate-pulse"
+                    : ""
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" /> Pendentes de Aprovação ({totalPending})
+              </TabsTrigger>
             </TabsList>
 
             {/* Barra de Busca e Filtros */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
+              <div className="relative flex-1 sm:w-72">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar anúncio..."
+                  placeholder="Buscar por ID (#IMV-...), bairro, modelo..."
                   className="pl-8 h-9 text-xs"
                 />
               </div>
@@ -478,6 +516,23 @@ export function BusinessAdminPage() {
                       {/* Conteúdo */}
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                         <div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
+                              <span className="font-black text-foreground">#IMV-{p.id.slice(0, 8).toUpperCase()}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`#IMV-${p.id.slice(0, 8).toUpperCase()}`);
+                                  toast.success("ID copiado!");
+                                }}
+                                title="Copiar ID"
+                                className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+
                           <div className="flex items-center justify-between gap-2">
                             <h3 className="font-extrabold text-base text-foreground capitalize">
                               {p.property_type} em {p.neighborhood || "Primavera do Leste"}
@@ -603,6 +658,23 @@ export function BusinessAdminPage() {
                       {/* Conteúdo */}
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                         <div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
+                              <span className="font-black text-foreground">#VEH-{v.id.slice(0, 8).toUpperCase()}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`#VEH-${v.id.slice(0, 8).toUpperCase()}`);
+                                  toast.success("ID copiado!");
+                                }}
+                                title="Copiar ID"
+                                className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+
                           <h3 className="font-extrabold text-base text-foreground leading-snug">
                             {v.brand ? `${v.brand} ` : ""}{v.model}
                           </h3>
@@ -670,6 +742,260 @@ export function BusinessAdminPage() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ══════════════ ABA: PENDENTES DE APROVAÇÃO ══════════════ */}
+          <TabsContent value="pending" className="space-y-6 mt-0">
+            {totalPending === 0 ? (
+              <div className="text-center py-16 border border-dashed border-border rounded-2xl p-6 bg-card/40">
+                <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-500/60 mb-3" />
+                <h3 className="font-bold text-base text-foreground">Tudo em dia!</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  Não há nenhum anúncio de imóvel ou veículo aguardando aprovação no momento.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Pendentes: Imóveis */}
+                {filteredPendingProps.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-border pb-2">
+                      <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                        <Home className="h-4 w-4 text-primary" /> Imóveis Aguardando Aprovação ({filteredPendingProps.length})
+                      </h3>
+                      <span className="text-[11px] text-muted-foreground">Busque pelo ID na barra superior</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPendingProps.map((p) => {
+                        const cover = p.images?.[0] || null;
+                        const cleanPhone = p.contact_phone ? p.contact_phone.replace(/\D/g, "") : "";
+                        return (
+                          <Card key={p.id} className="overflow-hidden border-amber-500/40 bg-card hover:border-amber-500 transition-all flex flex-col shadow-sm">
+                            <div className="relative aspect-[16/9] bg-muted overflow-hidden">
+                              {cover ? (
+                                <img src={cover} alt={p.property_type} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-1">
+                                  <Home className="h-10 w-10" />
+                                  <span className="text-[10px] uppercase font-bold tracking-wider">Sem fotos</span>
+                                </div>
+                              )}
+                              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                                <Badge className={p.deal_type === "locacao" ? "bg-emerald-600 text-white font-black uppercase text-[10px]" : "bg-amber-500 text-slate-950 font-black uppercase text-[10px]"}>
+                                  {p.deal_type === "locacao" ? "Locação" : "Venda"}
+                                </Badge>
+                                <Badge variant="outline" className="bg-background/80 backdrop-blur-md uppercase text-[10px] font-bold">
+                                  {p.property_type}
+                                </Badge>
+                              </div>
+                              <div className="absolute top-2.5 right-2.5">
+                                <Badge className="bg-amber-500 text-slate-950 font-black text-[10px] shadow-sm animate-pulse">
+                                  Pendente de Aprovação
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                              <div>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="inline-flex items-center gap-1.5 font-mono text-xs font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-500/30">
+                                    <span>#IMV-{p.id.slice(0, 8).toUpperCase()}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(`#IMV-${p.id.slice(0, 8).toUpperCase()}`);
+                                        toast.success("ID copiado!");
+                                      }}
+                                      title="Copiar ID"
+                                      className="hover:scale-110 transition-transform p-0.5"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <h3 className="font-extrabold text-base text-foreground capitalize">
+                                  {p.property_type} em {p.neighborhood || "Primavera do Leste"}
+                                </h3>
+
+                                <p className="text-sm font-black text-foreground mt-1">
+                                  {p.price ? `R$ ${Number(p.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Consulte valor"}
+                                  {p.deal_type === "locacao" && <span className="text-xs text-muted-foreground font-normal"> /mês</span>}
+                                </p>
+
+                                {p.description && (
+                                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+                                    {p.description}
+                                  </p>
+                                )}
+
+                                {p.contact_phone && (
+                                  <div className="mt-3 p-2 rounded-xl bg-muted/60 border border-border flex items-center justify-between gap-2">
+                                    <span className="text-xs font-bold text-foreground flex items-center gap-1">
+                                      <Phone className="w-3 h-3 text-muted-foreground" /> {p.contact_phone}
+                                    </span>
+                                    {cleanPhone && (
+                                      <a
+                                        href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá! Estou analisando seu anúncio de imóvel #IMV-${p.id.slice(0, 8).toUpperCase()} cadastrado no MT 24horas express.`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                      >
+                                        <WhatsappIcon className="w-3 h-3 text-[#25D366]" /> Responder
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updateProp.mutate({ id: p.id, data: { is_active: true } });
+                                    toast.success(`Imóvel #IMV-${p.id.slice(0, 8).toUpperCase()} aprovado com sucesso!`);
+                                  }}
+                                  className="flex-1 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" /> Aprovar Anúncio
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-9 w-9 text-foreground" onClick={() => openEditPropModal(p)}>
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteProp(p.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pendentes: Veículos */}
+                {filteredPendingVehs.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-border pb-2">
+                      <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                        <Car className="h-4 w-4 text-blue-500" /> Veículos Aguardando Aprovação ({filteredPendingVehs.length})
+                      </h3>
+                      <span className="text-[11px] text-muted-foreground">Busque pelo ID na barra superior</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPendingVehs.map((v) => {
+                        const cover = v.images?.[0] || null;
+                        const cleanPhone = v.contact_phone ? v.contact_phone.replace(/\D/g, "") : "";
+                        return (
+                          <Card key={v.id} className="overflow-hidden border-amber-500/40 bg-card hover:border-amber-500 transition-all flex flex-col shadow-sm">
+                            <div className="relative aspect-[16/9] bg-muted overflow-hidden">
+                              {cover ? (
+                                <img src={cover} alt={v.vehicle_type} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-1">
+                                  <Car className="h-10 w-10" />
+                                  <span className="text-[10px] uppercase font-bold tracking-wider">Sem fotos</span>
+                                </div>
+                              )}
+                              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                                <Badge className="bg-blue-600 text-white font-black uppercase text-[10px]">
+                                  {v.vehicle_type}
+                                </Badge>
+                                {v.year && (
+                                  <Badge variant="outline" className="bg-background/80 backdrop-blur-md text-[10px] font-bold">
+                                    {v.year}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="absolute top-2.5 right-2.5">
+                                <Badge className="bg-amber-500 text-slate-950 font-black text-[10px] shadow-sm animate-pulse">
+                                  Pendente de Aprovação
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                              <div>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="inline-flex items-center gap-1.5 font-mono text-xs font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-500/30">
+                                    <span>#VEH-{v.id.slice(0, 8).toUpperCase()}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(`#VEH-${v.id.slice(0, 8).toUpperCase()}`);
+                                        toast.success("ID copiado!");
+                                      }}
+                                      title="Copiar ID"
+                                      className="hover:scale-110 transition-transform p-0.5"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <h3 className="font-extrabold text-base text-foreground leading-snug">
+                                  {v.brand ? `${v.brand} ` : ""}{v.model}
+                                </h3>
+
+                                <p className="text-sm font-black text-foreground mt-1">
+                                  {v.price ? `R$ ${Number(v.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Consulte valor"}
+                                </p>
+
+                                {v.description && (
+                                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+                                    {v.description}
+                                  </p>
+                                )}
+
+                                {v.contact_phone && (
+                                  <div className="mt-3 p-2 rounded-xl bg-muted/60 border border-border flex items-center justify-between gap-2">
+                                    <span className="text-xs font-bold text-foreground flex items-center gap-1">
+                                      <Phone className="w-3 h-3 text-muted-foreground" /> {v.contact_phone}
+                                    </span>
+                                    {cleanPhone && (
+                                      <a
+                                        href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá! Estou analisando seu anúncio de veículo #VEH-${v.id.slice(0, 8).toUpperCase()} cadastrado no MT 24horas express.`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                      >
+                                        <WhatsappIcon className="w-3 h-3 text-[#25D366]" /> Responder
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updateVeh.mutate({ id: v.id, data: { is_active: true } });
+                                    toast.success(`Veículo #VEH-${v.id.slice(0, 8).toUpperCase()} aprovado com sucesso!`);
+                                  }}
+                                  className="flex-1 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" /> Aprovar Anúncio
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-9 w-9 text-foreground" onClick={() => openEditVehModal(v)}>
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteVeh(v.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
