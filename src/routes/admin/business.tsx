@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   useProperties, useCreateProperty, useUpdateProperty, useDeleteProperty, Property, PropertyDeal, PropertyType,
   useVehicles, useCreateVehicle, useUpdateVehicle, useDeleteVehicle, Vehicle, VehicleType
@@ -8,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -16,7 +18,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
   Building2, Home, Car, Plus, Search, Trash2, Edit3, Phone,
-  CheckCircle2, XCircle, MapPin, Tag, Fuel, Gauge, Sparkles, Filter
+  CheckCircle2, XCircle, MapPin, Tag, Fuel, Gauge, Sparkles, Filter,
+  UploadCloud, Image as ImageIcon, Loader2, Star, X
 } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/WhatsappIcon";
 
@@ -65,6 +68,116 @@ export function BusinessAdminPage() {
     is_active: true,
     images: [],
   });
+
+  // Upload States & Refs
+  const { profile } = useAuth();
+  const propFileInputRef = useRef<HTMLInputElement>(null);
+  const vehFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingProp, setUploadingProp] = useState(false);
+  const [uploadingVeh, setUploadingVeh] = useState(false);
+  const [customPropUrl, setCustomPropUrl] = useState("");
+  const [customVehUrl, setCustomVehUrl] = useState("");
+
+  const uploadFilesToStorage = async (files: File[]): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    const bucketName = "avatars";
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split(".").pop() || "jpg";
+      const fileName = `business_${Math.random().toString(36).substring(2, 9)}_${Date.now()}.${ext}`;
+      const filePath = `business/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+      if (uploadError) {
+        console.error("[uploadFilesToStorage] Erro:", uploadError);
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+      if (urlData?.publicUrl) {
+        uploadedUrls.push(urlData.publicUrl);
+      }
+    }
+
+    return uploadedUrls;
+  };
+
+  const handleUploadPropFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingProp(true);
+    try {
+      const newUrls = await uploadFilesToStorage(Array.from(files));
+      setPropForm((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...newUrls],
+      }));
+      toast.success(`${newUrls.length} foto(s) enviada(s) com sucesso!`);
+    } catch (err: any) {
+      toast.error("Erro ao enviar imagem: " + (err.message || "Tente novamente"));
+    } finally {
+      setUploadingProp(false);
+      if (propFileInputRef.current) propFileInputRef.current.value = "";
+    }
+  };
+
+  const handleUploadVehFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingVeh(true);
+    try {
+      const newUrls = await uploadFilesToStorage(Array.from(files));
+      setVehForm((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...newUrls],
+      }));
+      toast.success(`${newUrls.length} foto(s) enviada(s) com sucesso!`);
+    } catch (err: any) {
+      toast.error("Erro ao enviar imagem: " + (err.message || "Tente novamente"));
+    } finally {
+      setUploadingVeh(false);
+      if (vehFileInputRef.current) vehFileInputRef.current.value = "";
+    }
+  };
+
+  const removePropImage = (indexToRemove: number) => {
+    setPropForm((prev) => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== indexToRemove),
+    }));
+  };
+
+  const removeVehImage = (indexToRemove: number) => {
+    setVehForm((prev) => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== indexToRemove),
+    }));
+  };
+
+  const addCustomPropUrl = () => {
+    if (!customPropUrl.trim()) return;
+    setPropForm((prev) => ({
+      ...prev,
+      images: [...(prev.images || []), customPropUrl.trim()],
+    }));
+    setCustomPropUrl("");
+    toast.success("Foto adicionada!");
+  };
+
+  const addCustomVehUrl = () => {
+    if (!customVehUrl.trim()) return;
+    setVehForm((prev) => ({
+      ...prev,
+      images: [...(prev.images || []), customVehUrl.trim()],
+    }));
+    setCustomVehUrl("");
+    toast.success("Foto adicionada!");
+  };
 
   // Filtragem Imóveis
   const filteredProperties = useMemo(() => {
@@ -647,14 +760,88 @@ export function BusinessAdminPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">URL da Imagem de Capa</label>
-                <Input
-                  value={propForm.images?.[0] || ""}
-                  onChange={(e) => setPropForm({ ...propForm, images: e.target.value ? [e.target.value] : [] })}
-                  placeholder="https://exemplo.com/foto-imovel.jpg"
-                  className="h-9 text-xs mt-1"
+              {/* Seção de Fotos e Upload do Imóvel */}
+              <div className="space-y-2.5 border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                    Fotos do Imóvel ({propForm.images?.length || 0})
+                  </label>
+                  <span className="text-[11px] text-muted-foreground">A 1ª foto será usada como capa</span>
+                </div>
+
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  ref={propFileInputRef}
+                  onChange={handleUploadPropFiles}
+                  className="hidden"
                 />
+
+                {/* Botão / Área de Upload */}
+                <div
+                  onClick={() => propFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl p-4 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 group"
+                >
+                  {uploadingProp ? (
+                    <div className="flex items-center gap-2 text-primary font-bold text-xs py-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Enviando fotos para o servidor...
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <UploadCloud className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Clique aqui para selecionar fotos do seu computador ou celular
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Suporta múltiplas fotos ao mesmo tempo (JPG, PNG, WEBP)
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Grade de Fotos Enviadas (Preview) */}
+                {propForm.images && propForm.images.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-2">
+                    {propForm.images.map((imgUrl, idx) => (
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-border bg-muted group">
+                        <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                        {idx === 0 && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] uppercase shadow-sm">
+                            Capa
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removePropImage(idx)}
+                          className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-80 hover:opacity-100 hover:scale-110 transition-all shadow-sm cursor-pointer"
+                          title="Remover foto"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Entrada opcional de URL manual */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    value={customPropUrl}
+                    onChange={(e) => setCustomPropUrl(e.target.value)}
+                    placeholder="Ou cole o link direto de uma imagem (https://...)"
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button type="button" size="sm" variant="outline" onClick={addCustomPropUrl} className="h-8 text-xs shrink-0 font-semibold">
+                    Adicionar Link
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -809,14 +996,88 @@ export function BusinessAdminPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">URL da Imagem de Capa</label>
-                <Input
-                  value={vehForm.images?.[0] || ""}
-                  onChange={(e) => setVehForm({ ...vehForm, images: e.target.value ? [e.target.value] : [] })}
-                  placeholder="https://exemplo.com/foto-veiculo.jpg"
-                  className="h-9 text-xs mt-1"
+              {/* Seção de Fotos e Upload do Veículo */}
+              <div className="space-y-2.5 border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <ImageIcon className="h-4 w-4 text-blue-500" />
+                    Fotos do Veículo ({vehForm.images?.length || 0})
+                  </label>
+                  <span className="text-[11px] text-muted-foreground">A 1ª foto será usada como capa</span>
+                </div>
+
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  ref={vehFileInputRef}
+                  onChange={handleUploadVehFiles}
+                  className="hidden"
                 />
+
+                {/* Botão / Área de Upload */}
+                <div
+                  onClick={() => vehFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-blue-500/40 hover:border-blue-500 rounded-2xl p-4 bg-blue-500/5 hover:bg-blue-500/10 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 group"
+                >
+                  {uploadingVeh ? (
+                    <div className="flex items-center gap-2 text-blue-500 font-bold text-xs py-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Enviando fotos para o servidor...
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                        <UploadCloud className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Clique aqui para selecionar fotos do seu computador ou celular
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Suporta múltiplas fotos ao mesmo tempo (JPG, PNG, WEBP)
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Grade de Fotos Enviadas (Preview) */}
+                {vehForm.images && vehForm.images.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-2">
+                    {vehForm.images.map((imgUrl, idx) => (
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-border bg-muted group">
+                        <img src={imgUrl} alt={`Foto Veículo ${idx + 1}`} className="w-full h-full object-cover" />
+                        {idx === 0 && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-blue-600 text-white font-black text-[9px] uppercase shadow-sm">
+                            Capa
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeVehImage(idx)}
+                          className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-80 hover:opacity-100 hover:scale-110 transition-all shadow-sm cursor-pointer"
+                          title="Remover foto"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Entrada opcional de URL manual */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    value={customVehUrl}
+                    onChange={(e) => setCustomVehUrl(e.target.value)}
+                    placeholder="Ou cole o link direto de uma imagem (https://...)"
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button type="button" size="sm" variant="outline" onClick={addCustomVehUrl} className="h-8 text-xs shrink-0 font-semibold">
+                    Adicionar Link
+                  </Button>
+                </div>
               </div>
 
               <div>
