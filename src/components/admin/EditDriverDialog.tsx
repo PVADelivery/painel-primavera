@@ -127,8 +127,6 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
           cpf: form.document,
           vehicle: vehicleVal,
           service_types: form.serviceTypes,
-          license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-          plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
         } as any)
         .or(`id.eq.${targetUserId},user_id.eq.${targetUserId}`);
 
