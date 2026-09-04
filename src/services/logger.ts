@@ -40,6 +40,9 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
     msg.includes("removechild") ||
     msg.includes("failed to fetch dynamically imported module") ||
     msg.includes("importing a module script failed") ||
+    msg.includes("cannot access") ||
+    msg.includes("before initialization") ||
+    msg.includes("license_plate") ||
     msg.includes("categoria não habilitada") ||
     msg.includes("não habilitada pelo administrador") ||
     msg.includes("categoria nao habilitada") ||

@@ -50,15 +50,55 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     </div>
   ),
   errorComponent: ({ error }) => {
+    if (typeof window !== "undefined") {
+      const msg = (error?.message || "").toLowerCase();
+      const stack = (error?.stack || "").toLowerCase();
+      const isOutdatedBundle = 
+        msg.includes("before initialization") ||
+        msg.includes("dynamically imported module") ||
+        msg.includes("loading chunk") ||
+        stack.includes("before initialization") ||
+        stack.includes("reports-bd39l2ds");
+
+      const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
+      if (isOutdatedBundle && !hasReloaded) {
+        sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
+        window.location.reload();
+        return null;
+      }
+    }
+
     reportErrorToTelegram({
       error_message: error?.message || "Erro na rota admin",
       stack_trace: error?.stack || "",
       url: typeof window !== "undefined" ? window.location.href : "",
     }, "Painel Administrador");
+
     return (
-      <div className="p-8 text-sm text-destructive">
-        <h2 className="font-bold text-base mb-2">Erro de Carregamento</h2>
-        <p>{error?.message || "Ocorreu um erro ao carregar a página."}</p>
+      <div className="flex min-h-[60vh] items-center justify-center p-4">
+        <div className="p-8 max-w-md w-full bg-card border border-border rounded-2xl shadow-xl text-center">
+          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center mb-4">
+            <svg className="w-7 h-7 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="9" strokeOpacity="0.2" />
+              <path d="M12 3a9 9 0 0 1 9 9" />
+            </svg>
+          </div>
+          <h2 className="font-bold text-lg text-foreground mb-1">Atualização do Sistema</h2>
+          <p className="text-xs text-muted-foreground mb-6">
+            Uma nova versão da plataforma foi publicada. Clique abaixo para sincronizar seus recursos agora.
+          </p>
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("admin_auto_reloaded_for_update");
+                window.location.reload();
+              }
+            }}
+            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold rounded-xl transition shadow-md flex items-center justify-center gap-2"
+          >
+            🔄 Recarregar Painel
+          </button>
+        </div>
       </div>
     );
   },
@@ -83,8 +123,19 @@ function RootComponent() {
 
   useEffect(() => {
     initializeGlobalErrorHandlers("Painel Administrador");
-    if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app")) {
-      window.location.replace(`https://painel.mt24horasexpress.com${window.location.pathname}${window.location.search}`);
+    if (typeof window !== "undefined") {
+      // Desregistra Service Workers antigos que possam estar servindo arquivos obsoletos em cache
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          for (const reg of regs) {
+            reg.unregister();
+          }
+        }).catch(() => {});
+      }
+
+      if (window.location.hostname.includes("lovable.app")) {
+        window.location.replace(`https://painel.mt24horasexpress.com${window.location.pathname}${window.location.search}`);
+      }
     }
   }, []);
 
