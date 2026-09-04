@@ -65,6 +65,23 @@ const PAYMENT_LABELS: Record<string, string> = {
   "Não informado": "Não informado"
 };
 
+// Helpers puros em escopo de módulo para evitar TDZ ou re-criações
+const toLocalDateStr = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const isCompletedDelivery = (status: string) => {
+  return status === "completed" || status === "delivered" || status === "finished" || status === "concluded" || status === "entregue" || status === "finalizada";
+};
+
+const cleanStr = (s: string) =>
+  (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 function ReportsPage() {
   const { toast } = useToast();
 
@@ -369,12 +386,6 @@ function ReportsPage() {
     fetchCashFlow();
   }, []);
 
-  // Helper para converter Data local para string YYYY-MM-DD
-  const toLocalDateStr = (d: Date) => {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  };
-
   // Calcular limites de datas baseados no período rápido
   useEffect(() => {
     if (period === "custom") return;
@@ -412,10 +423,6 @@ function ReportsPage() {
       setDateTo(toLocalDateStr(end));
     }
   }, [period]);
-
-  const isCompletedDelivery = (status: string) => {
-    return status === "completed" || status === "delivered" || status === "finished" || status === "concluded" || status === "entregue" || status === "finalizada";
-  };
 
   // Aplicar Filtros nos dados locais carregados
   const filteredDeliveries = useMemo(() => {
@@ -576,14 +583,6 @@ function ReportsPage() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredDeliveries]);
 
-  // Helper para normalizar textos para comparacao (sem acentos, minusculas, sem espacos extras)
-  const cleanStr = (s: string) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-
   // Mapeamento inteligente de repasses já pagos por entregador via Fluxo de Caixa (platform_cash_flow)
   const { allTimePaymentsMap, periodPaymentsMap, driverPayoutsHistory } = useMemo(() => {
     const allTimeMap: Record<string, number> = {};
@@ -669,7 +668,11 @@ function ReportsPage() {
       }
     });
 
-    return { allTimePaymentsMap, periodPaymentsMap, driverPayoutsHistory: history };
+    return {
+      allTimePaymentsMap: allTimeMap,
+      periodPaymentsMap: periodMap,
+      driverPayoutsHistory: history,
+    };
   }, [cashFlows, drivers, dateFrom, dateTo]);
 
   // Lista unificada com TODOS os entregadores para pagamentos e baixas sem depender de filtros
