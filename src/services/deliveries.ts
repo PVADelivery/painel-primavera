@@ -212,8 +212,7 @@ export function useDeliveryCounts() {
       });
       return counts;
     },
-    staleTime: 5000,
-    refetchInterval: 5000,
+    staleTime: 10000,
   });
 }
 
