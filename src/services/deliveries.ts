@@ -118,35 +118,26 @@ export function useDeliveries(params?: UseDeliveriesParams) {
         new Set((data ?? []).map((delivery: any) => delivery.order_id).filter(Boolean))
       ) as string[];
 
-      const paymentMethodsByOrderId = new Map<string, string | null>();
-      if (orderIds.length > 0) {
-        const { data: ordersData, error: ordersError } = await supabase
-          .from("orders")
-          .select("id, payment_method")
-          .in("id", orderIds);
+      // Buscar ordens e profiles em paralelo para reduzir latência
+      const [ordersDataRes, profilesDataRes] = await Promise.all([
+        orderIds.length > 0
+          ? supabase.from("orders").select("id, payment_method").in("id", orderIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+        driverUserIds.length > 0
+          ? supabase.from("profiles").select("user_id, full_name, phone").in("user_id", driverUserIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
 
-        if (ordersError) {
-          console.error("Erro ao buscar formas de pagamento das entregas:", ordersError);
-        } else {
-          (ordersData ?? []).forEach((order: any) => {
-            paymentMethodsByOrderId.set(order.id, order.payment_method ?? null);
-          });
-        }
+      const paymentMethodsByOrderId = new Map<string, string | null>();
+      if (ordersDataRes.data) {
+        ordersDataRes.data.forEach((order: any) => {
+          paymentMethodsByOrderId.set(order.id, order.payment_method ?? null);
+        });
       }
 
-      // Buscar profiles dos entregadores para obter nome e telefone reais
-      const driverUserIds = Array.from(
-        new Set((data ?? []).map((delivery: any) => delivery.delivery_drivers?.user_id).filter(Boolean))
-      ) as string[];
-
       const driverProfilesMap = new Map<string, any>();
-      if (driverUserIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, phone")
-          .in("user_id", driverUserIds);
-
-        (profilesData ?? []).forEach((p: any) => {
+      if (profilesDataRes.data) {
+        profilesDataRes.data.forEach((p: any) => {
           driverProfilesMap.set(p.user_id, p);
         });
       }
@@ -178,8 +169,9 @@ export function useDeliveries(params?: UseDeliveriesParams) {
       return { data: normalizedData as unknown as DeliveryWithRelations[], count: count || 0 };
     },
     enabled,
-    staleTime: 10000,
+    staleTime: 30000,
     gcTime: 300000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -192,50 +184,22 @@ export function useDeliveryCounts(dateFrom?: string | null) {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString();
       const effectiveDateFrom = dateFrom === undefined ? startOfMonth : (dateFrom || undefined);
 
-      let query = supabase.from("deliveries").select("id, status, created_at");
+      let query = supabase.from("deliveries").select("status", { count: "exact" });
       if (effectiveDateFrom) {
         query = query.gte("created_at", effectiveDateFrom);
       }
 
-      // Paginação segura para buscar todas as entregas do período sem corte de 1000 linhas
-      let allDeliveriesRaw: any[] = [];
-      let page = 0;
-      const PAGE_SIZE = 1000;
-      let hasMore = true;
+      // Consulta rápida em uma única requisição leve com count exato
+      const { data, count, error } = await query.limit(3000);
 
-      while (hasMore) {
-        const from = page * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-        const { data: pageData, error: pageErr } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (pageErr) {
-          console.error("Erro ao carregar contagens de entregas:", pageErr);
-          break;
-        }
-
-        if (pageData && pageData.length > 0) {
-          allDeliveriesRaw.push(...pageData);
-          if (pageData.length < PAGE_SIZE) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else {
-          hasMore = false;
-        }
+      if (error) {
+        console.error("Erro ao carregar contagens de entregas:", error);
+        return {};
       }
 
-      // Buscar também todas as entregas em aberto atualmente (para o badge do menu lateral e avisos)
-      const { data: openData } = await supabase
-        .from("deliveries")
-        .select("id, status")
-        .in("status", ["pending", "broadcasted", "accepted", "collecting", "in_route", "in_transit"]);
-
       const counts: Record<string, number> = {
-        all: allDeliveriesRaw.length,
-        open: openData?.length || 0,
+        all: count ?? (data?.length || 0),
+        open: 0,
         pending: 0,
         broadcasted: 0,
         accepted: 0,
@@ -245,7 +209,7 @@ export function useDeliveryCounts(dateFrom?: string | null) {
         cancelled: 0,
       };
 
-      allDeliveriesRaw.forEach((d: any) => {
+      (data || []).forEach((d: any) => {
         const s = String(d.status || "").toLowerCase();
         if (s === "pending" || s === "pendente" || s === "open") {
           counts.pending++;
@@ -262,12 +226,17 @@ export function useDeliveryCounts(dateFrom?: string | null) {
         } else if (s === "cancelled" || s === "cancelada") {
           counts.cancelled++;
         }
+
+        if (["pending", "pendente", "open", "broadcasted", "accepted", "aceita", "collecting", "coletando", "in_transit", "in_route", "em_rota"].includes(s)) {
+          counts.open++;
+        }
       });
 
       return counts;
     },
-    staleTime: 10000,
-    refetchInterval: 15000,
+    staleTime: 30000,
+    gcTime: 300000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -301,9 +270,9 @@ export function useDeliveryStats() {
         todayRevenue: normalizedData.filter((d) => d.status === "delivered").reduce((sum, d) => sum + Number(d.price ?? 0), 0),
       };
     },
-    staleTime: 15000,
+    staleTime: 30000,
     gcTime: 300000,
-    refetchInterval: 30000,
+    refetchOnWindowFocus: false,
   });
 }
 

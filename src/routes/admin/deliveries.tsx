@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { formatDeliveryValue } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
@@ -77,12 +77,16 @@ function DeliveriesPage() {
     setPage(0);
   };
 
-  const now = new Date();
-  const dateFrom = periodFilter === "month"
-    ? new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString()
-    : periodFilter === "today"
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString()
-      : undefined;
+  const dateFrom = useMemo(() => {
+    const now = new Date();
+    if (periodFilter === "month") {
+      return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString();
+    }
+    if (periodFilter === "today") {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+    }
+    return undefined;
+  }, [periodFilter]);
 
   const { data: qData, isLoading } = useDeliveries({
     status: activeFilter,
