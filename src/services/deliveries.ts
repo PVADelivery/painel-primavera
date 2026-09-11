@@ -183,15 +183,59 @@ export function useDeliveries(params?: UseDeliveriesParams) {
   });
 }
 
-export function useDeliveryCounts() {
+export function useDeliveryCounts(dateFrom?: string | null) {
   return useQuery({
-    queryKey: ["delivery-counts"],
+    queryKey: ["delivery-counts", dateFrom],
     queryFn: async () => {
-      const { data, error } = await supabase.from("deliveries").select("status");
-      if (error) throw error;
+      const now = new Date();
+      // Padrão: início do mês atual (às 00:00:00 do 1º dia do mês)
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString();
+      const effectiveDateFrom = dateFrom === undefined ? startOfMonth : (dateFrom || undefined);
+
+      let query = supabase.from("deliveries").select("id, status, created_at");
+      if (effectiveDateFrom) {
+        query = query.gte("created_at", effectiveDateFrom);
+      }
+
+      // Paginação segura para buscar todas as entregas do período sem corte de 1000 linhas
+      let allDeliveriesRaw: any[] = [];
+      let page = 0;
+      const PAGE_SIZE = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        const { data: pageData, error: pageErr } = await query
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (pageErr) {
+          console.error("Erro ao carregar contagens de entregas:", pageErr);
+          break;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allDeliveriesRaw.push(...pageData);
+          if (pageData.length < PAGE_SIZE) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Buscar também todas as entregas em aberto atualmente (para o badge do menu lateral e avisos)
+      const { data: openData } = await supabase
+        .from("deliveries")
+        .select("id, status")
+        .in("status", ["pending", "broadcasted", "accepted", "collecting", "in_route", "in_transit"]);
+
       const counts: Record<string, number> = {
-        all: data?.length || 0,
-        open: 0,
+        all: allDeliveriesRaw.length,
+        open: openData?.length || 0,
         pending: 0,
         broadcasted: 0,
         accepted: 0,
@@ -200,19 +244,30 @@ export function useDeliveryCounts() {
         delivered: 0,
         cancelled: 0,
       };
-      (data || []).forEach((d: any) => {
-        const s = d.status;
-        if (counts[s] !== undefined) {
-          counts[s]++;
-        }
-        // Entregas em aberto (não finalizadas e não canceladas)
-        if (["pending", "broadcasted", "accepted", "collecting", "in_route", "in_transit"].includes(s)) {
-          counts.open++;
+
+      allDeliveriesRaw.forEach((d: any) => {
+        const s = String(d.status || "").toLowerCase();
+        if (s === "pending" || s === "pendente" || s === "open") {
+          counts.pending++;
+        } else if (s === "broadcasted") {
+          counts.broadcasted++;
+        } else if (s === "accepted" || s === "aceita") {
+          counts.accepted++;
+        } else if (s === "collecting" || s === "coletando") {
+          counts.collecting++;
+        } else if (s === "in_transit" || s === "in_route" || s === "em_rota") {
+          counts.in_transit++;
+        } else if (s === "delivered" || s === "completed" || s === "finalizada" || s === "concluida") {
+          counts.delivered++;
+        } else if (s === "cancelled" || s === "cancelada") {
+          counts.cancelled++;
         }
       });
+
       return counts;
     },
     staleTime: 10000,
+    refetchInterval: 15000,
   });
 }
 

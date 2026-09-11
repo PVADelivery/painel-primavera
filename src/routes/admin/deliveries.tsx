@@ -13,6 +13,7 @@ import {
   MessageSquare, Clock, Calendar
 } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuSeparator,
@@ -57,6 +58,7 @@ function DeliveriesPage() {
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
   const [driverFilter, setDriverFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState<"month" | "today" | "all">("month");
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
@@ -71,21 +73,30 @@ function DeliveriesPage() {
     setSearch("");
     setCompanyFilter("");
     setDriverFilter("");
+    setPeriodFilter("month");
     setPage(0);
   };
+
+  const now = new Date();
+  const dateFrom = periodFilter === "month"
+    ? new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString()
+    : periodFilter === "today"
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString()
+      : undefined;
 
   const { data: qData, isLoading } = useDeliveries({
     status: activeFilter,
     search: search || undefined,
     companyId: companyFilter || undefined,
     driverId: driverFilter || undefined,
+    dateFrom,
     page,
     pageSize,
   });
 
   const { data: companies } = useCompanies();
   const { data: drivers } = useDrivers();
-  const { data: counts = {} } = useDeliveryCounts();
+  const { data: counts = {} } = useDeliveryCounts(dateFrom);
   const updateStatus = useUpdateDeliveryStatus();
   const reassignMut = useReassignDelivery();
 
@@ -365,12 +376,24 @@ function AdminDispatchWindowWidget({
               <option key={d.id} value={d.id}>{d.full_name || "—"}</option>
             ))}
           </select>
+          <select
+            value={periodFilter}
+            onChange={(e) => { setPeriodFilter(e.target.value as any); setPage(0); }}
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none font-semibold text-foreground shadow-sm"
+          >
+            <option value="month">📅 Mês Atual ({format(new Date(), "MMMM", { locale: ptBR })})</option>
+            <option value="today">⚡ Hoje</option>
+            <option value="all">🌐 Todas as Entregas (Histórico Geral)</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           {statusFilters.map((f) => {
             const countVal = (counts as any)[f.value] ?? 0;
+            const label = f.value === "all"
+              ? (periodFilter === "month" ? "Mês Atual" : periodFilter === "today" ? "Hoje" : "Todas")
+              : f.label;
             return (
               <button
                 key={f.value}
@@ -381,7 +404,7 @@ function AdminDispatchWindowWidget({
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
-                <span>{f.label}</span>
+                <span>{label}</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   activeFilter === f.value
                     ? "bg-primary-foreground/20 text-primary-foreground"
