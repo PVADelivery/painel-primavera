@@ -10,7 +10,7 @@ import { cn, formatDateTime } from "@/lib/utils";
 import {
   Search, Filter, Eye, MoreHorizontal, X as XIcon, ChevronLeft, ChevronRight,
   Loader2, Printer, UserCheck, Package, Radio, Send, MapPin, Plus,
-  MessageSquare, Clock, Calendar
+  MessageSquare, Clock, Calendar, Phone
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -457,6 +457,11 @@ function AdminDispatchWindowWidget({
                       <td className="p-4">
                         <div className="flex flex-col gap-0.5">
                           <p className="text-sm font-medium text-foreground">{delivery.customer_name}</p>
+                          {(delivery as any).customer_phone && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono font-medium">
+                              <Phone className="h-3 w-3 text-muted-foreground" /> {(delivery as any).customer_phone}
+                            </span>
+                          )}
                           {(delivery as any).delivery_type === "BUSCA_CONDICIONAL" && (
                             <span className="inline-flex items-center w-max gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider border border-purple-500/30">
                               👗 Busca de Condicional (Cliente → Loja)
@@ -665,6 +670,7 @@ function AdminDispatchWindowWidget({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 bg-muted/30 p-4 rounded-2xl border border-border">
                 <DetailField label="Cliente" value={detailDelivery.customer_name || "—"} icon={<UserCheck className="h-3.5 w-3.5 text-primary" />} />
+                <DetailField label="Telefone do Cliente" value={(detailDelivery as any).customer_phone || "—"} icon={<Phone className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Empresa" value={detailDelivery.companies?.name || "—"} icon={<Package className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Valor da Corrida" value={formatDeliveryValue(detailDelivery)} icon={<Clock className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Criado em" value={format(new Date(detailDelivery.created_at), "dd/MM/yyyy HH:mm")} icon={<Calendar className="h-3.5 w-3.5 text-primary" />} />
