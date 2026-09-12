@@ -184,21 +184,23 @@ export function useDeliveryCounts(dateFrom?: string | null) {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).toISOString();
       const effectiveDateFrom = dateFrom === undefined ? startOfMonth : (dateFrom || undefined);
 
-      let query = supabase.from("deliveries").select("status", { count: "exact" });
+      // Busca o count total exato de entregas no período selecionado (Mês, Hoje ou Todas)
+      let totalQuery = supabase.from("deliveries").select("id", { count: "exact", head: true });
       if (effectiveDateFrom) {
-        query = query.gte("created_at", effectiveDateFrom);
+        totalQuery = totalQuery.gte("created_at", effectiveDateFrom);
       }
+      const { count: totalExactCount } = await totalQuery;
 
-      // Consulta rápida em uma única requisição leve com count exato
-      const { data, count, error } = await query.limit(3000);
-
-      if (error) {
-        console.error("Erro ao carregar contagens de entregas:", error);
-        return {};
+      // Busca as entregas do período para decompor status (usando paginação ou range amplo)
+      let statusQuery = supabase.from("deliveries").select("status");
+      if (effectiveDateFrom) {
+        statusQuery = statusQuery.gte("created_at", effectiveDateFrom);
       }
+      // Buscar até 10000 status para cobrir o mês inteiro sem corte de 1000
+      const { data } = await statusQuery.limit(10000);
 
       const counts: Record<string, number> = {
-        all: count ?? (data?.length || 0),
+        all: typeof totalExactCount === "number" ? totalExactCount : (data?.length || 0),
         open: 0,
         pending: 0,
         broadcasted: 0,
