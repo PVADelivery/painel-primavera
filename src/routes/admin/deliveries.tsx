@@ -346,24 +346,31 @@ function AdminDispatchWindowWidget({
           </div>
           {/* Filters */}
       <div className="flex flex-col gap-3 mb-5">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 shadow-card flex-1 max-w-md">
-            <Search className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 shadow-sm flex-1 min-w-[260px] max-w-md">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               type="text"
               placeholder="Buscar por cliente ou endereço..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-              className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
+              className="bg-transparent text-sm outline-none flex-1 min-w-0 placeholder:text-muted-foreground"
             />
             {search && (
-              <button onClick={() => setSearch("")}><XIcon className="h-3.5 w-3.5 text-muted-foreground" /></button>
+              <button 
+                type="button"
+                onClick={() => { setSearch(""); setPage(0); }}
+                className="p-1 hover:bg-muted rounded-full transition-colors shrink-0"
+                title="Limpar busca"
+              >
+                <XIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
             )}
           </div>
           <select
             value={companyFilter}
             onChange={(e) => { setCompanyFilter(e.target.value); setPage(0); }}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none max-w-[220px] truncate"
           >
             <option value="">Todas empresas</option>
             {(companies ?? []).map((c) => (
@@ -373,7 +380,7 @@ function AdminDispatchWindowWidget({
           <select
             value={driverFilter}
             onChange={(e) => { setDriverFilter(e.target.value); setPage(0); }}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none max-w-[200px] truncate"
           >
             <option value="">Todos entregadores</option>
             {(drivers ?? []).map((d) => (
@@ -383,7 +390,7 @@ function AdminDispatchWindowWidget({
           <select
             value={periodFilter}
             onChange={(e) => { setPeriodFilter(e.target.value as any); setPage(0); }}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none font-semibold text-foreground shadow-sm"
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none font-semibold text-foreground shadow-sm shrink-0"
           >
             <option value="month">📅 Mês Atual ({format(new Date(), "MMMM", { locale: ptBR })})</option>
             <option value="today">⚡ Hoje</option>

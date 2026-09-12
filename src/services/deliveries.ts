@@ -118,6 +118,10 @@ export function useDeliveries(params?: UseDeliveriesParams) {
         new Set((data ?? []).map((delivery: any) => delivery.order_id).filter(Boolean))
       ) as string[];
 
+      const driverUserIds = Array.from(
+        new Set((data ?? []).map((delivery: any) => delivery.delivery_drivers?.user_id).filter(Boolean))
+      ) as string[];
+
       // Buscar ordens e profiles em paralelo para reduzir latência
       const [ordersDataRes, profilesDataRes] = await Promise.all([
         orderIds.length > 0
