@@ -26,13 +26,21 @@ export function useAdminRealtime() {
       )
       .subscribe();
 
+    let driversInvalidateTimer: any = null;
+    const debouncedInvalidateDrivers = () => {
+      clearTimeout(driversInvalidateTimer);
+      driversInvalidateTimer = setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["drivers"] });
+      }, 5000);
+    };
+
     const driversChannel = supabase
       .channel(`admin-drivers-${sessionId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_drivers" },
         () => {
-          qc.invalidateQueries({ queryKey: ["drivers"] });
+          debouncedInvalidateDrivers();
         }
       )
       .subscribe();
@@ -49,6 +57,7 @@ export function useAdminRealtime() {
       .subscribe();
 
     return () => {
+      clearTimeout(driversInvalidateTimer);
       supabase.removeChannel(deliverablesChannel);
       supabase.removeChannel(driversChannel);
       supabase.removeChannel(notificationsChannel);

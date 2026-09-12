@@ -28,15 +28,24 @@ function TrackingPage() {
   useEffect(() => { 
     setMounted(true); 
 
+    let trackingTimer: any = null;
+    const debouncedRefetch = () => {
+      clearTimeout(trackingTimer);
+      trackingTimer = setTimeout(() => {
+        refetch();
+      }, 5000);
+    };
+
     // Atualização em tempo real de posições e status dos entregadores
     const ch = supabase
       .channel("admin-tracking-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_drivers" }, () => {
-        refetch();
+        debouncedRefetch();
       })
       .subscribe();
 
     return () => {
+      clearTimeout(trackingTimer);
       supabase.removeChannel(ch);
     };
   }, [refetch]);

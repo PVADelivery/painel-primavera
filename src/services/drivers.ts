@@ -29,10 +29,10 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch all profiles and customers
+  // 2. Fetch profiles and customers (only essential columns)
   const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
-    supabase.from("profiles").select("*"),
-    supabase.from("customers").select("*"),
+    supabase.from("profiles").select("id, user_id, full_name, phone, whatsapp, celular, document, cpf, cnpj, avatar_url, vehicle, vehicle_type, license_plate, vehicle_plate, plate, is_online, online, latitude, longitude, status, role, created_at"),
+    supabase.from("customers").select("id, user_id, name, phone, cpf, document"),
   ]);
 
   const resultDrivers: DriverWithProfile[] = [];
@@ -139,7 +139,7 @@ export function useDrivers() {
   return useQuery({
     queryKey: ["drivers"],
     queryFn: fetchDrivers,
-    staleTime: 10000,
+    staleTime: 25000,
   });
 }
 
