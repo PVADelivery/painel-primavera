@@ -195,13 +195,12 @@ export function useDeliveryCounts(dateFrom?: string | null) {
       }
       const { count: totalExactCount } = await totalQuery;
 
-      // Busca as entregas do período para decompor status (usando paginação ou range amplo)
+      // Busca as entregas do período para decompor status de forma ágil
       let statusQuery = supabase.from("deliveries").select("status");
       if (effectiveDateFrom) {
         statusQuery = statusQuery.gte("created_at", effectiveDateFrom);
       }
-      // Buscar até 10000 status para cobrir o mês inteiro sem corte de 1000
-      const { data } = await statusQuery.limit(10000);
+      const { data } = await statusQuery.order("created_at", { ascending: false }).limit(1000);
 
       const counts: Record<string, number> = {
         all: typeof totalExactCount === "number" ? totalExactCount : (data?.length || 0),
@@ -240,9 +239,10 @@ export function useDeliveryCounts(dateFrom?: string | null) {
 
       return counts;
     },
-    staleTime: 30000,
+    staleTime: 60000,
     gcTime: 300000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 }
 

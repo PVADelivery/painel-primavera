@@ -13,6 +13,8 @@ export function useCompanies() {
   return useQuery({
     queryKey: ["companies"],
     queryFn: fetchCompanies,
+    staleTime: 60000,
+    gcTime: 300000,
   });
 }
 
