@@ -55,17 +55,19 @@ function getElapsedSeconds(created_at: string | Date | number | null | undefined
   } else if (created_at instanceof Date) {
     timestamp = created_at.getTime();
   } else {
-    const str = String(created_at).trim();
-    let parsed = new Date(str).getTime();
-    if (isNaN(parsed)) {
-      parsed = new Date(str.replace(" ", "T")).getTime();
+    let str = String(created_at).trim();
+    if (!str.endsWith("Z") && !/[+-]\d{2}(:\d{2})?$/.test(str)) {
+      str = str.replace(" ", "T") + "Z";
+    } else {
+      str = str.replace(" ", "T");
     }
+    const parsed = new Date(str).getTime();
     if (isNaN(parsed)) return 999999;
     timestamp = parsed;
   }
 
   const elapsedMs = Date.now() - timestamp;
-  return elapsedMs < 0 ? 0 : Math.floor(elapsedMs / 1000);
+  return Math.floor(elapsedMs / 1000);
 }
 
 // Calculador de distância entre coordenadas
