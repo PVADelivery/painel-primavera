@@ -29,10 +29,10 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch profiles and customers (only essential columns)
+  // 2. Fetch profiles and customers (valid columns only)
   const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
-    supabase.from("profiles").select("id, user_id, full_name, phone, whatsapp, celular, document, cpf, cnpj, avatar_url, vehicle, vehicle_type, license_plate, vehicle_plate, plate, is_online, online, latitude, longitude, status, role, created_at"),
-    supabase.from("customers").select("id, user_id, name, phone, cpf, document"),
+    supabase.from("profiles").select("*"),
+    supabase.from("customers").select("id, user_id, name, phone"),
   ]);
 
   const resultDrivers: DriverWithProfile[] = [];
