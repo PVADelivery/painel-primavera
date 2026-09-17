@@ -169,3 +169,12 @@ Este documento registra os bugs encontrados no sistema, suas causas raízes e as
     layers: [{ id: "osm-layer", type: "raster", source: "osm-tiles" }],
   }
   ```
+
+---
+
+### 37. Erro "Cannot read properties of null (reading 'focus')" ao fechar Select (`select.tsx` / `reports.tsx`)
+* **Sintoma**: Na tela de Relatórios (`/admin/reports`) ou ao selecionar itens em caixas de seleção `<Select>`, a tela dispara `Uncaught TypeError: Cannot read properties of null (reading 'focus')` no bundle do Select.
+* **Causa Raiz**: Ao selecionar um valor, o estado do componente pai é atualizado imediatamente (ex: recalculando listas ou filtros pesados). Durante o re-render, o Radix UI Select tenta restaurar o foco no elemento disparador (`trigger.focus()`), mas a referência do DOM pode estar nula ou desacoplada no momento do fechamento do popover.
+* **Solução Padrão**:
+  No componente `SelectContent` (`src/components/ui/select.tsx`), interceptar o evento `onCloseAutoFocus` com `e.preventDefault()`, impedindo que o Radix tente invocar `.focus()` em nós DOM nulos durante ciclos de renderização do React.
+
