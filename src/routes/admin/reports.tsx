@@ -162,16 +162,31 @@ function ReportsPage() {
     isSubmittingPayRef.current = true;
     setSubmittingPay(true);
     try {
-      const { error } = await supabase.from('platform_cash_flow').insert({
-        description: descriptionStr,
-        category: "Repasse Motoboy",
-        amount: amountVal,
-        type: "expense",
-        date: dateStr,
-        origin: payMethod || "Pix"
-      });
+      let insertError: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const { error } = await supabase.from('platform_cash_flow').insert({
+            description: descriptionStr,
+            category: "Repasse Motoboy",
+            amount: amountVal,
+            type: "expense",
+            date: dateStr,
+            origin: payMethod || "Pix"
+          });
+          if (!error) {
+            insertError = null;
+            break;
+          }
+          insertError = error;
+        } catch (fetchErr: any) {
+          insertError = fetchErr;
+        }
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+        }
+      }
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       toast({
         title: "Baixa de Repasse Registrada com Sucesso!",
@@ -179,11 +194,18 @@ function ReportsPage() {
       });
 
       setPayDriverDialogData(null);
-      await fetchCashFlow();
+      try {
+        await fetchCashFlow();
+      } catch (e) {
+        console.warn("[reports] Aviso ao atualizar fluxo de caixa pós-repasse:", e);
+      }
     } catch (err: any) {
+      const msg = err?.message || String(err);
       toast({
         title: "Erro ao registrar repasse",
-        description: err.message || "Verifique as permissões da tabela platform_cash_flow.",
+        description: msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("network")
+          ? "Oscilação temporária na conexão. Por favor, tente novamente."
+          : msg || "Verifique as permissões da tabela platform_cash_flow.",
         variant: "destructive"
       });
     } finally {
