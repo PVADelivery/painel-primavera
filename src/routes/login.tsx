@@ -81,8 +81,8 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md">
         <div className="mb-10 flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black">
-            <img src={icon} alt="MT 24horas express" className="h-12 w-12 object-contain" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-full overflow-hidden shrink-0 shadow-md ring-1 ring-border/40 bg-black">
+            <img src={icon} alt="MT 24horas express" className="h-full w-full object-cover rounded-full" />
           </div>
           <span className="text-2xl font-bold tracking-tight text-foreground">
             MT 24horas express

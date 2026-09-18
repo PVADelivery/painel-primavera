@@ -46,8 +46,8 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
   const renderSidebarContent = (isCol: boolean) => (
     <>
       <div className={cn("flex h-20 items-center border-b border-sidebar-border/60", isCol ? "justify-center px-2" : "gap-3 px-5")}>
-        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-900 shadow-elevated ring-1 ring-border/70 overflow-hidden">
-          <img src={icon} alt="MT 24horas express" className="h-full w-full object-contain p-1" />
+        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black shadow-elevated ring-1 ring-border/70 overflow-hidden">
+          <img src={icon} alt="MT 24horas express" className="h-full w-full object-cover rounded-full" />
         </div>
         {!isCol && (
           <div className="min-w-0 flex-1">
