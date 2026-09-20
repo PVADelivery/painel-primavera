@@ -465,7 +465,13 @@ function AdminDispatchWindowWidget({
                         </div>
                       </td>
                       <td className="p-4 hidden md:table-cell">
-                        <p className="text-sm text-foreground">{delivery.companies?.name || "—"}</p>
+                        {(delivery as any).is_customer_errand || !delivery.company_id ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/30">
+                            📦 Envio do Cliente (Marketplace)
+                          </span>
+                        ) : (
+                          <p className="text-sm font-medium text-foreground">{delivery.companies?.name || "—"}</p>
+                        )}
                       </td>
                       <td className="p-4 hidden lg:table-cell">
                         <p className="text-sm text-muted-foreground truncate max-w-[200px]">{delivery.dropoff_address || delivery.address}</p>
@@ -666,7 +672,7 @@ function AdminDispatchWindowWidget({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 bg-muted/30 p-4 rounded-2xl border border-border">
                 <DetailField label="Cliente" value={detailDelivery.customer_name || "—"} icon={<UserCheck className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Telefone do Cliente" value={(detailDelivery as any).customer_phone || "—"} icon={<Phone className="h-3.5 w-3.5 text-primary" />} />
-                <DetailField label="Empresa" value={detailDelivery.companies?.name || "—"} icon={<Package className="h-3.5 w-3.5 text-primary" />} />
+                <DetailField label="Origem / Empresa" value={(detailDelivery as any).is_customer_errand || !detailDelivery.company_id ? "Envio do Cliente (Marketplace)" : detailDelivery.companies?.name || "—"} icon={<Package className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Valor da Corrida" value={formatDeliveryValue(detailDelivery)} icon={<Clock className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Criado em" value={format(new Date(detailDelivery.created_at), "dd/MM/yyyy HH:mm")} icon={<Calendar className="h-3.5 w-3.5 text-primary" />} />
                 {detailDelivery.region_name && (
@@ -679,10 +685,20 @@ function AdminDispatchWindowWidget({
                 )}
               </div>
 
+              {(detailDelivery as any).pickup_address && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest px-1">Endereço de Coleta (Partida)</p>
+                  <div className="p-3 bg-card border border-emerald-500/30 rounded-xl flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <p className="text-sm font-medium text-foreground">{(detailDelivery as any).pickup_address}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Endereço de Entrega</p>
-                <div className="p-3 bg-card border border-border rounded-xl flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest px-1">Endereço de Entrega (Destino)</p>
+                <div className="p-3 bg-card border border-rose-500/30 rounded-xl flex items-start gap-3">
+                  <MapPin className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                   <p className="text-sm font-medium text-foreground">{detailDelivery.dropoff_address || detailDelivery.address || "—"}</p>
                 </div>
               </div>
