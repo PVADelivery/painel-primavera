@@ -117,7 +117,7 @@ function AdminDispatchWindowWidget({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
           </span>
           <h2 className="text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-            🚨 DIRECIOTE PARA O MOTORISTA (Janela do Admin: 2 min)
+            🚨 DIRECIONE PARA O MOTORISTA (Janela do Admin: 2 min)
           </h2>
         </div>
         <span className="text-[11px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-200 px-2.5 py-0.5 rounded-full border border-amber-500/30">

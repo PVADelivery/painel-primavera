@@ -201,8 +201,8 @@ function DeliveriesPage() {
         <div class="value">${delivery.customer_name} ${(delivery as any).customer_phone ? `(${(delivery as any).customer_phone})` : ""}</div>
         <div class="label">Endereço</div>
         <div class="value">${delivery.dropoff_address || delivery.address || "—"}</div>
-        <div class="label">Empresa</div>
-        <div class="value">${delivery.companies?.name || "—"}</div>
+        <div class="label">Empresa / Solicitante</div>
+        <div class="value">${(delivery as any).is_customer_errand || !delivery.company_id ? "CLIENTE MARKETPLACE" : delivery.companies?.name || "CLIENTE MARKETPLACE"}</div>
         <div class="label">Status</div>
         <div class="value">${delivery.status}</div>
         <div class="label">Forma de Pagamento</div>
@@ -284,7 +284,7 @@ function AdminDispatchWindowWidget({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
           </span>
           <h2 className="text-sm font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-            🚨 DIRECIOTE PARA O ENTREGADOR (Janela do Admin: 2 min)
+            🚨 DIRECIONE PARA O ENTREGADOR (Janela do Admin: 2 min)
           </h2>
         </div>
         <span className="text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full border border-amber-500/30">
@@ -305,7 +305,7 @@ function AdminDispatchWindowWidget({
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-black text-primary uppercase tracking-wider">#{d.id.slice(0, 8).toUpperCase()}</span>
                   <p className="text-sm font-bold text-foreground truncate">{d.customer_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{d.companies?.name || "Loja"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{d.companies?.name || "CLIENTE MARKETPLACE"}</p>
                 </div>
                 <div className="shrink-0 text-right">
                   <span className="text-xs font-black font-mono bg-amber-500 text-black px-2.5 py-1 rounded-lg shadow-sm">
@@ -467,10 +467,10 @@ function AdminDispatchWindowWidget({
                       <td className="p-4 hidden md:table-cell">
                         {(delivery as any).is_customer_errand || !delivery.company_id ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/30">
-                            📦 Envio do Cliente (Marketplace)
+                            📦 CLIENTE MARKETPLACE
                           </span>
                         ) : (
-                          <p className="text-sm font-medium text-foreground">{delivery.companies?.name || "—"}</p>
+                          <p className="text-sm font-medium text-foreground">{delivery.companies?.name || "CLIENTE MARKETPLACE"}</p>
                         )}
                       </td>
                       <td className="p-4 hidden lg:table-cell">
@@ -672,7 +672,7 @@ function AdminDispatchWindowWidget({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 bg-muted/30 p-4 rounded-2xl border border-border">
                 <DetailField label="Cliente" value={detailDelivery.customer_name || "—"} icon={<UserCheck className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Telefone do Cliente" value={(detailDelivery as any).customer_phone || "—"} icon={<Phone className="h-3.5 w-3.5 text-primary" />} />
-                <DetailField label="Origem / Empresa" value={(detailDelivery as any).is_customer_errand || !detailDelivery.company_id ? "Envio do Cliente (Marketplace)" : detailDelivery.companies?.name || "—"} icon={<Package className="h-3.5 w-3.5 text-primary" />} />
+                <DetailField label="Origem / Empresa" value={(detailDelivery as any).is_customer_errand || !detailDelivery.company_id ? "CLIENTE MARKETPLACE" : detailDelivery.companies?.name || "CLIENTE MARKETPLACE"} icon={<Package className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Valor da Corrida" value={formatDeliveryValue(detailDelivery)} icon={<Clock className="h-3.5 w-3.5 text-primary" />} />
                 <DetailField label="Criado em" value={format(new Date(detailDelivery.created_at), "dd/MM/yyyy HH:mm")} icon={<Calendar className="h-3.5 w-3.5 text-primary" />} />
                 {detailDelivery.region_name && (
