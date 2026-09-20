@@ -100,14 +100,48 @@ function DirectoryAdminPage() {
     }
   };
 
-  const set = (k: keyof DirectoryBusiness, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const [filterTab, setFilterTab] = useState<"all" | "pending" | "approved">("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleToggleApproval = async (b: DirectoryBusiness) => {
+    const newFeatured = !b.featured;
+    try {
+      await update.mutateAsync({ id: b.id, data: { featured: newFeatured } });
+      if (newFeatured) {
+        toast.success(`"${b.name}" foi APROVADO e publicado no app! 🎉`);
+      } else {
+        toast.info(`"${b.name}" foi pausado e ocultado do app.`);
+      }
+    } catch (err: any) {
+      toast.error("Erro ao alterar status: " + err.message);
+    }
+  };
+
+  const pendingCount = useMemo(() => data.filter(d => !d.featured).length, [data]);
+  const approvedCount = useMemo(() => data.filter(d => Boolean(d.featured)).length, [data]);
+
+  const filteredData = useMemo(() => {
+    return data.filter(d => {
+      if (filterTab === "pending" && d.featured) return false;
+      if (filterTab === "approved" && !d.featured) return false;
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const matchName = d.name.toLowerCase().includes(q);
+        const matchCat = (d.category || "").toLowerCase().includes(q);
+        const matchPhone = (d.whatsapp || d.phone || "").includes(q);
+        const matchAddr = (d.address || "").toLowerCase().includes(q);
+        if (!matchName && !matchCat && !matchPhone && !matchAddr) return false;
+      }
+      return true;
+    });
+  }, [data, filterTab, searchTerm]);
 
   return (
     <AdminLayout>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">PPP — Prestadores de Serviços</h1>
-          <p className="text-sm text-muted-foreground">Painel Profissional de Prestadores de Serviços e Cartões de Visita do App Marketplace</p>
+          <p className="text-sm text-muted-foreground">Painel de Aprovação e Gestão de Prestadores de Serviços do MT 24horas express</p>
         </div>
         <div className="flex items-center gap-2">
           <CategoryManager />
@@ -156,7 +190,7 @@ function DirectoryAdminPage() {
                         onChange={e => set("featured", e.target.checked)} 
                         className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                       />
-                      <span className="text-sm font-semibold text-foreground">⭐ Marcar como Destaque no App PPP</span>
+                      <span className="text-sm font-semibold text-foreground">⭐ Status: Aprovado & Publicado no App</span>
                     </label>
                   </div>
                 </div>
@@ -224,14 +258,76 @@ function DirectoryAdminPage() {
         </div>
       </div>
 
+      {/* Abas e Filtros de Aprovação */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterTab("all")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterTab === "all"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Todos ({data.length})
+          </button>
+          <button
+            onClick={() => setFilterTab("pending")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              filterTab === "pending"
+                ? "bg-amber-500 text-black shadow-sm font-black"
+                : "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30"
+            }`}
+          >
+            <span>⏳ Aguardando Aprovação</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-600 text-white font-black">{pendingCount}</span>
+          </button>
+          <button
+            onClick={() => setFilterTab("approved")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              filterTab === "approved"
+                ? "bg-emerald-600 text-white shadow-sm font-black"
+                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30"
+            }`}
+          >
+            <span>⭐ Aprovados & No Ar</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-600 text-white font-black">{approvedCount}</span>
+          </button>
+        </div>
+
+        <div className="relative min-w-[220px]">
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar prestador..."
+            className="pl-8 text-xs h-9 rounded-xl"
+          />
+          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
           <p className="text-muted-foreground">Carregando prestadores do PPP...</p>
-        ) : data.length === 0 ? (
-          <p className="text-muted-foreground">Nenhum prestador ou empresa cadastrado no PPP.</p>
+        ) : filteredData.length === 0 ? (
+          <p className="text-muted-foreground">Nenhum prestador encontrado neste filtro.</p>
         ) : (
-          data.map((c) => (
-            <div key={c.id} className="rounded-2xl bg-card border border-border shadow-card overflow-hidden flex flex-col">
+          filteredData.map((c) => (
+            <div key={c.id} className={`rounded-2xl bg-card border shadow-card overflow-hidden flex flex-col transition-all ${!c.featured ? 'border-amber-500/50 ring-1 ring-amber-500/30' : 'border-border'}`}>
+              {/* Status Header Badge */}
+              <div className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between border-b ${
+                c.featured 
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+              }`}>
+                <span>{c.featured ? '⭐ Aprovado (No Ar)' : '⏳ Aguardando Aprovação'}</span>
+                {c.featured ? (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                )}
+              </div>
+
               {c.card_image_url ? (
                 <div className="w-full aspect-[1.58] bg-muted">
                   <img src={c.card_image_url} alt={c.name} className="w-full h-full object-cover" />
@@ -246,8 +342,8 @@ function DirectoryAdminPage() {
                 </div>
               )}
               
-              <div className="p-4 flex items-center justify-between mt-auto">
-                <div className="min-w-0 flex-1">
+              <div className="p-4 flex flex-col gap-2.5 mt-auto">
+                <div>
                   <p className="font-semibold text-sm truncate">{c.name}</p>
                   <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
                     <span>{c.category}</span>
@@ -263,21 +359,43 @@ function DirectoryAdminPage() {
                       <span className="opacity-50">Sem contato</span>
                     )}
                   </p>
+                  {c.address && (
+                    <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
+                      📍 {c.address}
+                    </p>
+                  )}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openEdit(c)}>
-                      <Edit className="h-4 w-4 mr-2" /> Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDelete(c.id)}>
-                      <Trash className="h-4 w-4 mr-2" /> Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
+                {/* Botões de Ação Direta */}
+                <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                  <Button
+                    size="sm"
+                    variant={c.featured ? "outline" : "default"}
+                    onClick={() => handleToggleApproval(c)}
+                    className={`flex-1 text-xs font-bold h-8 rounded-xl ${
+                      !c.featured 
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm' 
+                        : 'hover:bg-amber-500/10 hover:text-amber-600 text-muted-foreground'
+                    }`}
+                  >
+                    {c.featured ? "Pausar" : "✅ Aprovar"}
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-xl"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(c)}>
+                        <Edit className="h-4 w-4 mr-2" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDelete(c.id)}>
+                        <Trash className="h-4 w-4 mr-2" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           ))
