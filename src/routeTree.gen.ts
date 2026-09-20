@@ -15,6 +15,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
 import { Route as AdminStoreSalesRouteImport } from './routes/admin/store-sales'
+import { Route as AdminSocialRouteImport } from './routes/admin/social'
 import { Route as AdminRidesRouteImport } from './routes/admin/rides'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
@@ -56,6 +57,11 @@ const AdminTrackingRoute = AdminTrackingRouteImport.update({
 const AdminStoreSalesRoute = AdminStoreSalesRouteImport.update({
   id: '/admin/store-sales',
   path: '/admin/store-sales',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSocialRoute = AdminSocialRouteImport.update({
+  id: '/admin/social',
+  path: '/admin/social',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRidesRoute = AdminRidesRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/rides': typeof AdminRidesRoute
+  '/admin/social': typeof AdminSocialRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/rides': typeof AdminRidesRoute
+  '/admin/social': typeof AdminSocialRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/rides': typeof AdminRidesRoute
+  '/admin/social': typeof AdminSocialRoute
   '/admin/store-sales': typeof AdminStoreSalesRoute
   '/admin/tracking': typeof AdminTrackingRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/admin/regions'
     | '/admin/reports'
     | '/admin/rides'
+    | '/admin/social'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/admin/regions'
     | '/admin/reports'
     | '/admin/rides'
+    | '/admin/social'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/admin/regions'
     | '/admin/reports'
     | '/admin/rides'
+    | '/admin/social'
     | '/admin/store-sales'
     | '/admin/tracking'
     | '/invite/$token'
@@ -258,6 +270,7 @@ export interface RootRouteChildren {
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRidesRoute: typeof AdminRidesRoute
+  AdminSocialRoute: typeof AdminSocialRoute
   AdminStoreSalesRoute: typeof AdminStoreSalesRoute
   AdminTrackingRoute: typeof AdminTrackingRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/store-sales'
       fullPath: '/admin/store-sales'
       preLoaderRoute: typeof AdminStoreSalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/social': {
+      id: '/admin/social'
+      path: '/admin/social'
+      fullPath: '/admin/social'
+      preLoaderRoute: typeof AdminSocialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/rides': {
@@ -410,6 +430,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRegionsRoute: AdminRegionsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRidesRoute: AdminRidesRoute,
+  AdminSocialRoute: AdminSocialRoute,
   AdminStoreSalesRoute: AdminStoreSalesRoute,
   AdminTrackingRoute: AdminTrackingRoute,
   InviteTokenRoute: InviteTokenRoute,

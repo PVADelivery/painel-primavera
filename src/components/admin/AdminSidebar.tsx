@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Truck, MessageSquare, Building2, Bike,
   MapPin, DollarSign, LogOut, Menu, X, User as UserIcon, Sun, Moon,
   Globe, ShoppingBag, Car, BookUser, Table as TableIcon,
-  ChevronLeft, ChevronRight, Store
+  ChevronLeft, ChevronRight, Store, Share2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import icon from "@/assets/logo-icon-v3.png";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useDeliveryCounts } from "@/services/deliveries";
+import { useSocialPosts } from "@/services/social";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const items: NavItem[] = [
@@ -26,6 +27,7 @@ const items: NavItem[] = [
   { to: "/admin/rides", label: "Táxi & Moto", icon: Car },
   { to: "/admin/directory", label: "PPP (Prestadores)", icon: BookUser },
   { to: "/admin/business", label: "Central de Negócios", icon: Store },
+  { to: "/admin/social", label: "Espaço Social", icon: Share2 },
   { to: "/admin/bases", label: "Bases", icon: Globe },
   { to: "/admin/regions", label: "Regiões", icon: MapPin },
   { to: "/admin/pricing", label: "Tabelas de Preços", icon: TableIcon },
@@ -35,6 +37,8 @@ const items: NavItem[] = [
 export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
   const { profile, signOut } = useAuth();
   const { data: counts } = useDeliveryCounts();
+  const { data: socialPosts = [] } = useSocialPosts();
+  const pendingSocialCount = socialPosts.filter((p) => !p.is_active).length;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -92,6 +96,17 @@ export function AdminSidebar({ collapsed = false, onToggle }: { collapsed?: bool
                   title={`${counts?.open ?? 0} entregas em aberto`}
                 >
                   {counts?.open ?? 0}
+                </span>
+              )}
+              {item.to === "/admin/social" && pendingSocialCount > 0 && (
+                <span
+                  className={cn(
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-sm transition-all bg-amber-500 text-black animate-pulse",
+                    isCol ? "absolute -top-1 -right-1 scale-75" : "ml-auto"
+                  )}
+                  title={`${pendingSocialCount} anúncios aguardando aprovação`}
+                >
+                  {pendingSocialCount}
                 </span>
               )}
             </Link>
