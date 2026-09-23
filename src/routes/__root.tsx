@@ -60,6 +60,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         stack.includes("before initialization") ||
         stack.includes("reports-bd39l2ds");
 
+      const isHydrationError =
+        msg.includes("418") ||
+        msg.includes("421") ||
+        msg.includes("422") ||
+        msg.includes("hydration");
+
+      if (isHydrationError) {
+        return null;
+      }
+
       const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
       if (isOutdatedBundle && !hasReloaded) {
         sessionStorage.setItem("admin_auto_reloaded_for_update", "true");

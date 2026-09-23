@@ -1,8 +1,8 @@
-import { Navigate } from "@tanstack/react-router";
+import { ClientOnly } from "@tanstack/react-router";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
-export function ProtectedRoute({
+function ProtectedRouteInner({
   children,
   requiredRole,
 }: {
@@ -31,4 +31,26 @@ export function ProtectedRoute({
   }
 
   return <>{children}</>;
+}
+
+export function ProtectedRoute({
+  children,
+  requiredRole,
+}: {
+  children: React.ReactNode;
+  requiredRole?: AppRole;
+}) {
+  return (
+    <ClientOnly
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <ProtectedRouteInner requiredRole={requiredRole}>
+        {children}
+      </ProtectedRouteInner>
+    </ClientOnly>
+  );
 }

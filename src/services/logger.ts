@@ -46,7 +46,16 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
     msg.includes("categoria não habilitada") ||
     msg.includes("não habilitada pelo administrador") ||
     msg.includes("categoria nao habilitada") ||
-    msg.includes("nao habilitada pelo administrador");
+    msg.includes("nao habilitada pelo administrador") ||
+    msg.includes("minified react error #418") ||
+    msg.includes("minified react error #421") ||
+    msg.includes("minified react error #422") ||
+    msg.includes("minified react error #423") ||
+    msg.includes("hydration failed") ||
+    msg.includes("react error #418") ||
+    msg.includes("react error #421") ||
+    msg.includes("react error #422") ||
+    msg.includes("react error #423");
 
   if (isIgnored) return;
 
@@ -191,8 +200,17 @@ export function initializeGlobalErrorHandlers(appName: string) {
   // 1. Unhandled exceptions
   window.onerror = (message, source, lineno, colno, error) => {
     const msgStr = String(message);
-    if (msgStr.includes("insertBefore") || msgStr.includes("removeChild")) {
-      return true; // Ignore browser-translation DOM mutation errors
+    const lower = msgStr.toLowerCase();
+    if (
+      msgStr.includes("insertBefore") ||
+      msgStr.includes("removeChild") ||
+      lower.includes("minified react error #418") ||
+      lower.includes("minified react error #421") ||
+      lower.includes("minified react error #422") ||
+      lower.includes("hydration failed") ||
+      lower.includes("react error #418")
+    ) {
+      return true; // Ignore browser-translation and recoverable hydration reconciliations
     }
     reportErrorToTelegram({
       error_message: String(message),

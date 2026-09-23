@@ -258,12 +258,17 @@ function AdminDispatchWindowWidget({
   deliveries: DeliveryWithRelations[];
   onDispatchClick: (delivery: DeliveryWithRelations) => void;
 }) {
-  const [now, setNow] = useState(Date.now());
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  if (!mounted) return null;
 
   const pendingDispatchList = deliveries.filter(d => {
     if (d.driver_id) return false;
@@ -387,7 +392,7 @@ function AdminDispatchWindowWidget({
             onChange={(e) => { setPeriodFilter(e.target.value as any); setPage(0); }}
             className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none font-semibold text-foreground shadow-sm shrink-0"
           >
-            <option value="month">📅 Mês Atual ({format(new Date(), "MMMM", { locale: ptBR })})</option>
+            <option value="month" suppressHydrationWarning>📅 Mês Atual ({format(new Date(), "MMMM", { locale: ptBR })})</option>
             <option value="today">⚡ Hoje</option>
             <option value="all">🌐 Todas as Entregas (Histórico Geral)</option>
           </select>
@@ -504,7 +509,7 @@ function AdminDispatchWindowWidget({
                         <span className="text-sm font-semibold text-foreground">{formatDeliveryValue(delivery)}</span>
                       </td>
                       <td className="p-4 hidden lg:table-cell">
-                        <span className="text-xs text-muted-foreground font-medium">
+                        <span suppressHydrationWarning className="text-xs text-muted-foreground font-medium">
                           {formatDateTime(delivery.created_at)}
                         </span>
                       </td>

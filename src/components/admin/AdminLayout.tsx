@@ -50,7 +50,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           {/* TOPBAR GLOBAL DO PAINEL ADMIN COM CENTRAL DE NOTIFICAÇÕES */}
           <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 pl-12 md:pl-0">
-              <span className="text-xs text-muted-foreground font-medium hidden lg:inline capitalize">
+              <span suppressHydrationWarning className="text-xs text-muted-foreground font-medium hidden lg:inline capitalize">
                 {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
               </span>
             </div>
