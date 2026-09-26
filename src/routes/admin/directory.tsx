@@ -11,6 +11,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { WhatsappIcon } from "@/components/icons/WhatsappIcon";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/directory")({
   component: DirectoryAdminPage,
@@ -28,6 +29,9 @@ function DirectoryAdminPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+
+  const set = (key: keyof DirectoryBusiness, val: any) =>
+    setForm(prev => ({ ...prev, [key]: val }));
 
   const resetForm = () => {
     setForm({
