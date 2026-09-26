@@ -154,6 +154,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         const { error: drvErr } = await supabase
           .from("delivery_drivers")
           .update({
+            user_id: targetUserId,
             full_name: form.fullName,
             phone: form.phone,
             cpf: form.document,

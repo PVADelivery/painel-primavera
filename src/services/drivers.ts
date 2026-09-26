@@ -56,18 +56,36 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     }
 
     const dName = (raw.full_name || raw.name || "").trim().toLowerCase();
+    const rawCleanPhone = (raw.phone || raw.whatsapp || raw.celular || "").replace(/\D/g, "");
 
     const profile = allProfiles?.find(p => 
       (p.user_id && (p.user_id === driver.user_id || p.user_id === driver.id)) ||
       (p.id && (p.id === driver.user_id || p.id === driver.id)) ||
-      (dName && (p.full_name || "").trim().toLowerCase() === dName)
+      (dName && (p.full_name || "").trim().toLowerCase() === dName) ||
+      (rawCleanPhone && p.phone && String(p.phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
     );
 
     const customer = allCustomers?.find(c =>
       (c.user_id && (c.user_id === driver.user_id || c.user_id === driver.id)) ||
       (c.id && (c.id === driver.user_id || c.id === driver.id)) ||
-      (dName && (c.name || "").trim().toLowerCase() === dName)
+      (dName && (c.name || "").trim().toLowerCase() === dName) ||
+      (rawCleanPhone && c.phone && String(c.phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
     );
+
+    const targetUserId = profile?.user_id || profile?.id || customer?.user_id || customer?.id;
+    if (driver.id && targetUserId && (!driver.user_id || driver.user_id !== targetUserId)) {
+      supabase
+        .from("delivery_drivers")
+        .update({ user_id: targetUserId })
+        .eq("id", driver.id)
+        .then(() => {
+          console.log(`[fetchDrivers] Auto-healed driver ${driver.id} with user_id ${targetUserId}`);
+        })
+        .catch(err => {
+          console.warn(`[fetchDrivers] Failed to auto-heal driver ${driver.id}:`, err);
+        });
+      driver.user_id = targetUserId;
+    }
 
     resultDrivers.push({
       id: driver.id || driver.user_id,
