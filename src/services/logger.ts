@@ -28,8 +28,29 @@ function escapeHtml(input: unknown, max = 1500): string {
 export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT 24 Horas Express") {
   if (typeof window === "undefined") return;
 
+  const ua = (typeof navigator !== "undefined" ? navigator.userAgent : "").toLowerCase();
+  if (
+    ua.includes("bot") ||
+    ua.includes("crawler") ||
+    ua.includes("spider") ||
+    ua.includes("lighthouse") ||
+    ua.includes("pingdom")
+  ) {
+    return;
+  }
+
   const msg = (payload.error_message || "").toLowerCase();
   const isIgnored = 
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("network request failed") ||
+    msg.includes("load failed") ||
+    msg.includes("the user aborted a request") ||
+    msg.includes("abort error") ||
+    msg.includes("aborted") ||
+    msg.includes("connection reset") ||
+    msg.includes("falha temporária de conexão") ||
+    msg.includes("verifique sua internet") ||
     msg.includes("aceita por outro") ||
     msg.includes("delivery_not_available") ||
     msg.includes("row level security") ||
@@ -51,11 +72,13 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
     msg.includes("minified react error #421") ||
     msg.includes("minified react error #422") ||
     msg.includes("minified react error #423") ||
+    msg.includes("minified react error #520") ||
     msg.includes("hydration failed") ||
     msg.includes("react error #418") ||
     msg.includes("react error #421") ||
     msg.includes("react error #422") ||
-    msg.includes("react error #423");
+    msg.includes("react error #423") ||
+    msg.includes("react error #520");
 
   if (isIgnored) return;
 
@@ -204,13 +227,21 @@ export function initializeGlobalErrorHandlers(appName: string) {
     if (
       msgStr.includes("insertBefore") ||
       msgStr.includes("removeChild") ||
+      lower.includes("failed to fetch") ||
+      lower.includes("networkerror") ||
+      lower.includes("network request failed") ||
+      lower.includes("load failed") ||
+      lower.includes("abort") ||
       lower.includes("minified react error #418") ||
       lower.includes("minified react error #421") ||
       lower.includes("minified react error #422") ||
+      lower.includes("minified react error #423") ||
+      lower.includes("minified react error #520") ||
       lower.includes("hydration failed") ||
-      lower.includes("react error #418")
+      lower.includes("react error #418") ||
+      lower.includes("react error #520")
     ) {
-      return true; // Ignore browser-translation and recoverable hydration reconciliations
+      return true; // Ignore browser-translation, network drops, and recoverable hydration reconciliations
     }
     reportErrorToTelegram({
       error_message: String(message),
@@ -234,6 +265,17 @@ export function initializeGlobalErrorHandlers(appName: string) {
     // Silencia rejeições de JWT Expirado e tenta renovar a sessão silenciosamente sem forçar logout
     if (lower.includes("jwt expired") || lower.includes("token expired") || lower.includes("session expired")) {
       supabase.auth.refreshSession().catch(() => {});
+      return;
+    }
+
+    // Silencia oscilações e quedas temporárias de rede (failed to fetch, timeouts, aborts)
+    if (
+      lower.includes("failed to fetch") ||
+      lower.includes("networkerror") ||
+      lower.includes("network request failed") ||
+      lower.includes("load failed") ||
+      lower.includes("abort")
+    ) {
       return;
     }
 

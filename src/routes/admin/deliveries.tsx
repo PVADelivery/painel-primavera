@@ -129,6 +129,20 @@ function DeliveriesPage() {
     return haversineDistance(delivery.pickup_latitude, delivery.pickup_longitude, driver.latitude, driver.longitude);
   };
 
+  const formatErrorMessage = (err: any) => {
+    const msg = err?.message || String(err || "");
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("failed to fetch") ||
+      lower.includes("networkerror") ||
+      lower.includes("network request failed") ||
+      lower.includes("load failed")
+    ) {
+      return "Falha temporária de conexão com o servidor. Verifique sua internet e tente novamente.";
+    }
+    return msg;
+  };
+
   const handleReassign = async () => {
     if (!reassignDelivery) return;
     try {
@@ -137,7 +151,7 @@ function DeliveriesPage() {
       setReassignDelivery(null);
       setSelectedDriverId("");
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: formatErrorMessage(err), variant: "destructive" });
     }
   };
 
@@ -146,7 +160,7 @@ function DeliveriesPage() {
       await updateStatus.mutateAsync({ id: delivery.id, status: "broadcasted" });
       toast({ title: "OS compartilhada!", description: `Enviada para ${onlineDrivers.length} entregador(es) online` });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: formatErrorMessage(err), variant: "destructive" });
     }
   };
 
@@ -159,7 +173,7 @@ function DeliveriesPage() {
       setDispatchDelivery(null);
       setSelectedDriverId("");
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: formatErrorMessage(err), variant: "destructive" });
     }
   };
 

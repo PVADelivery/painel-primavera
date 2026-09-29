@@ -142,18 +142,25 @@ function toast({ ...props }: Toast) {
     const titleText = typeof props.title === "string" ? props.title : "Alerta de Erro";
     const descText = typeof props.description === "string" ? props.description : "";
 
-    // Ignore common form validation and user input errors
+    // Ignore common form validation and user input errors as well as transient network drops
     const fullText = (titleText + " " + descText).toLowerCase();
-    const isValidationError = fullText.includes("preencha") || 
-                              fullText.includes("obrigatório") || 
-                              fullText.includes("inválid") || 
-                              fullText.includes("incorret") || 
-                              fullText.includes("já existe") || 
-                              fullText.includes("já cadastrado") ||
-                              fullText.includes("selecione") ||
-                              fullText.includes("marque");
+    const isIgnoredAlert = fullText.includes("preencha") || 
+                           fullText.includes("obrigatório") || 
+                           fullText.includes("inválid") || 
+                           fullText.includes("incorret") || 
+                           fullText.includes("já existe") || 
+                           fullText.includes("já cadastrado") ||
+                           fullText.includes("selecione") ||
+                           fullText.includes("marque") ||
+                           fullText.includes("failed to fetch") ||
+                           fullText.includes("networkerror") ||
+                           fullText.includes("network request failed") ||
+                           fullText.includes("load failed") ||
+                           fullText.includes("falha temporária de conexão") ||
+                           fullText.includes("falha de conexão") ||
+                           fullText.includes("verifique sua internet");
 
-    if (!isValidationError) {
+    if (!isIgnoredAlert) {
       import("@/services/logger").then(({ reportErrorToTelegram }) => {
       reportErrorToTelegram({
         error_message: `Alerta para o Usuário: [${titleText}] - ${descText}`,

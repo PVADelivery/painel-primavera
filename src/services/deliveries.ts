@@ -285,6 +285,8 @@ export function useDeliveryStats() {
 export function useUpdateDeliveryStatus() {
   const queryClient = useQueryClient();
   return useMutation({
+    retry: 2,
+    retryDelay: 1000,
     mutationFn: async ({ id, status }: { id: string; status: DeliveryStatus }) => {
       const now = new Date().toISOString();
       const dbStatus = toDbStatus(status);
@@ -353,6 +355,8 @@ export function useUpdateDeliveryStatus() {
 export function useReassignDelivery() {
   const queryClient = useQueryClient();
   return useMutation({
+    retry: 2,
+    retryDelay: 1000,
     mutationFn: async ({ id, driverId }: { id: string; driverId: string | null }) => {
       const { error } = await supabase.from("deliveries").update({ driver_id: driverId, updated_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
