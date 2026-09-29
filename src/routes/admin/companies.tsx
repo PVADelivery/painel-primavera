@@ -27,13 +27,24 @@ function CompaniesPage() {
   const create = useCreateCompany();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
 
+  const activeCount = useMemo(() => data.filter((c) => c.is_active === true).length, [data]);
+  const inactiveCount = useMemo(() => data.filter((c) => !c.is_active).length, [data]);
+  const totalCount = data.length;
+
   const filteredCompanies = useMemo(() => {
+    let list = data;
+    if (statusFilter === "active") {
+      list = list.filter((c) => c.is_active === true);
+    } else if (statusFilter === "inactive") {
+      list = list.filter((c) => !c.is_active);
+    }
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return data;
+    if (!q) return list;
     const qDigits = q.replace(/\D/g, "");
-    return data.filter((company) => {
+    return list.filter((company) => {
       const c = company as typeof company & { trade_name?: string | null; cnpj?: string | null };
       const matchName = (c.name || "").toLowerCase().includes(q) || (c.trade_name || "").toLowerCase().includes(q);
       const matchAddress = (c.address || "").toLowerCase().includes(q);
@@ -46,14 +57,22 @@ function CompaniesPage() {
 
       return matchName || matchAddress || matchPhone || matchDoc;
     });
-  }, [data, searchQuery]);
+  }, [data, statusFilter, searchQuery]);
 
   const handleToggleActive = async (companyId: string, isActive: boolean) => {
-    const { error } = await supabase.from("companies").update({ is_active: !isActive }).eq("id", companyId);
+    const nextState = !isActive;
+    const { error } = await supabase
+      .from("companies")
+      .update({ 
+        is_active: nextState,
+        active: nextState,
+        show_in_marketplace: nextState
+      })
+      .eq("id", companyId);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(isActive ? "Empresa desativada" : "Empresa ativada");
+      toast.success(nextState ? "Empresa ativada no Marketplace" : "Empresa desativada do Marketplace");
       qc.invalidateQueries({ queryKey: ["companies"] });
     }
   };
@@ -121,9 +140,45 @@ function CompaniesPage() {
         </div>
       </div>
 
-      {/* ── BARRA DE BUSCA DE EMPRESAS ── */}
-      <div className="mb-6 max-w-md">
-        <div className="relative">
+      {/* ── FILTROS DE STATUS E BUSCA ── */}
+      <div className="mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl border border-border/40 w-fit">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "all"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Todas ({totalCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("active")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "active"
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Ativas ({activeCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("inactive")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === "inactive"
+                ? "bg-destructive/15 text-destructive shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Inativas ({inactiveCount})
+          </button>
+        </div>
+
+        <div className="relative max-w-md w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
