@@ -1,4 +1,4 @@
-import { ClientOnly } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -40,17 +40,24 @@ export function ProtectedRoute({
   children: React.ReactNode;
   requiredRole?: AppRole;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <ClientOnly
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      }
-    >
-      <ProtectedRouteInner requiredRole={requiredRole}>
-        {children}
-      </ProtectedRouteInner>
-    </ClientOnly>
+    <ProtectedRouteInner requiredRole={requiredRole}>
+      {children}
+    </ProtectedRouteInner>
   );
 }
+

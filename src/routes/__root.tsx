@@ -13,6 +13,10 @@ import appCss from "../styles.css?url";
 import { initializeGlobalErrorHandlers, reportErrorToTelegram } from "@/services/logger";
 import { useEffect } from "react";
 
+if (typeof window !== "undefined") {
+  initializeGlobalErrorHandlers("Painel Administrador");
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -64,16 +68,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         msg.includes("418") ||
         msg.includes("421") ||
         msg.includes("422") ||
-        msg.includes("hydration");
+        msg.includes("423") ||
+        msg.includes("520") ||
+        msg.includes("hydration") ||
+        stack.includes("418") ||
+        stack.includes("421") ||
+        stack.includes("422") ||
+        stack.includes("423") ||
+        stack.includes("520") ||
+        stack.includes("hydration");
 
-      if (isHydrationError) {
+      const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
+      if ((isOutdatedBundle || isHydrationError) && !hasReloaded) {
+        sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
+        window.location.reload();
         return null;
       }
 
-      const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
-      if (isOutdatedBundle && !hasReloaded) {
-        sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
-        window.location.reload();
+      if (isHydrationError) {
         return null;
       }
     }

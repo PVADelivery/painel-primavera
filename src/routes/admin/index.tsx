@@ -95,7 +95,7 @@ function DashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-xs capitalize text-muted-foreground">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
+              <span suppressHydrationWarning className="text-xs capitalize text-muted-foreground">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">Dashboard</h1>
             <p className="text-sm text-muted-foreground">Visão geral em tempo real da sua operação</p>

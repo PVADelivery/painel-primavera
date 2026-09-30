@@ -68,17 +68,18 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
     msg.includes("não habilitada pelo administrador") ||
     msg.includes("categoria nao habilitada") ||
     msg.includes("nao habilitada pelo administrador") ||
-    msg.includes("minified react error #418") ||
-    msg.includes("minified react error #421") ||
-    msg.includes("minified react error #422") ||
-    msg.includes("minified react error #423") ||
-    msg.includes("minified react error #520") ||
-    msg.includes("hydration failed") ||
-    msg.includes("react error #418") ||
-    msg.includes("react error #421") ||
-    msg.includes("react error #422") ||
-    msg.includes("react error #423") ||
-    msg.includes("react error #520");
+    msg.includes("418") ||
+    msg.includes("421") ||
+    msg.includes("422") ||
+    msg.includes("423") ||
+    msg.includes("520") ||
+    msg.includes("hydration") ||
+    stack.includes("418") ||
+    stack.includes("421") ||
+    stack.includes("422") ||
+    stack.includes("423") ||
+    stack.includes("520") ||
+    stack.includes("hydration");
 
   if (isIgnored) return;
 
@@ -223,7 +224,8 @@ export function initializeGlobalErrorHandlers(appName: string) {
   // 1. Unhandled exceptions
   window.onerror = (message, source, lineno, colno, error) => {
     const msgStr = String(message);
-    const lower = msgStr.toLowerCase();
+    const stackStr = error?.stack ? String(error.stack) : "";
+    const lower = (msgStr + " " + stackStr).toLowerCase();
     if (
       msgStr.includes("insertBefore") ||
       msgStr.includes("removeChild") ||
@@ -232,15 +234,20 @@ export function initializeGlobalErrorHandlers(appName: string) {
       lower.includes("network request failed") ||
       lower.includes("load failed") ||
       lower.includes("abort") ||
-      lower.includes("minified react error #418") ||
-      lower.includes("minified react error #421") ||
-      lower.includes("minified react error #422") ||
-      lower.includes("minified react error #423") ||
-      lower.includes("minified react error #520") ||
-      lower.includes("hydration failed") ||
-      lower.includes("react error #418") ||
-      lower.includes("react error #520")
+      lower.includes("418") ||
+      lower.includes("421") ||
+      lower.includes("422") ||
+      lower.includes("423") ||
+      lower.includes("520") ||
+      lower.includes("hydration")
     ) {
+      if (typeof window !== "undefined") {
+        const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
+        if ((lower.includes("loading chunk") || lower.includes("dynamically imported module") || lower.includes("418")) && !hasReloaded) {
+          sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
+          window.location.reload();
+        }
+      }
       return true; // Ignore browser-translation, network drops, and recoverable hydration reconciliations
     }
     reportErrorToTelegram({
