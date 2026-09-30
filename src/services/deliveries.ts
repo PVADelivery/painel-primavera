@@ -365,6 +365,53 @@ export function useReassignDelivery() {
   });
 }
 
+export function useUnassignDeliveryDriver() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    retry: 2,
+    retryDelay: 1000,
+    mutationFn: async (deliveryId: string) => {
+      const now = new Date().toISOString();
+      // 1. Tenta RPC unassign_delivery_driver
+      try {
+        const { data, error } = await supabase.rpc("unassign_delivery_driver", {
+          p_delivery_id: deliveryId,
+        });
+        if (!error && (data as any)?.success) {
+          return;
+        }
+      } catch {}
+
+      // 2. Fallback REST
+      const { data: del, error: delErr } = await supabase
+        .from("deliveries")
+        .update({
+          driver_id: null,
+          status: "pending" as any,
+          accepted_at: null,
+          updated_at: now,
+        })
+        .eq("id", deliveryId)
+        .select("order_id")
+        .maybeSingle();
+
+      if (delErr) throw delErr;
+
+      // Se houver pedido vinculado, reverte o status para pronto para retirada (ready)
+      if (del?.order_id) {
+        await supabase
+          .from("orders")
+          .update({ status: "ready" as any, updated_at: now })
+          .eq("id", del.order_id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deliveries"] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-stats"] });
+    },
+  });
+}
+
 /**
  * INTEGRAÇÕES COM PAINEL LOJISTA
  */

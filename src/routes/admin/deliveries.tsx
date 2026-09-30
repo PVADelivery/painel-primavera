@@ -3,13 +3,13 @@ import { formatDeliveryValue } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
 import { AdminNewDeliveryModal } from "@/components/admin/AdminNewDeliveryModal";
-import { useDeliveries, useDeliveryCounts, useUpdateDeliveryStatus, useReassignDelivery, type DeliveryWithRelations } from "@/services/deliveries";
+import { useDeliveries, useDeliveryCounts, useUpdateDeliveryStatus, useReassignDelivery, useUnassignDeliveryDriver, type DeliveryWithRelations } from "@/services/deliveries";
 import { useCompanies } from "@/services/companies";
 import { useDrivers } from "@/services/drivers";
 import { cn, formatDateTime } from "@/lib/utils";
 import {
   Search, Filter, Eye, MoreHorizontal, X as XIcon, ChevronLeft, ChevronRight,
-  Loader2, Printer, UserCheck, Package, Radio, Send, MapPin, Plus,
+  Loader2, Printer, UserCheck, UserMinus, Package, Radio, Send, MapPin, Plus,
   MessageSquare, Clock, Calendar, Phone
 } from "lucide-react";
 import { format } from "date-fns";
@@ -103,6 +103,20 @@ function DeliveriesPage() {
   const { data: counts = {} } = useDeliveryCounts(dateFrom);
   const updateStatus = useUpdateDeliveryStatus();
   const reassignMut = useReassignDelivery();
+  const unassignDriverMut = useUnassignDeliveryDriver();
+
+  const handleUnassignDriver = async (deliveryId: string) => {
+    if (!confirm("Deseja desvincular o entregador e devolver esta entrega para a fila de disponíveis para todos os outros entregadores online?")) return;
+    try {
+      await unassignDriverMut.mutateAsync(deliveryId);
+      toast({
+        title: "Entregador desvinculado!",
+        description: "A entrega voltou para a fila de disponíveis para os outros entregadores online.",
+      });
+    } catch (err: any) {
+      toast({ title: "Erro ao desvincular", description: formatErrorMessage(err), variant: "destructive" });
+    }
+  };
 
   const rawDeliveries = Array.isArray(qData) ? qData : qData?.data ?? [];
   const deliveries = useUniqueDeliveries(rawDeliveries);
@@ -604,12 +618,26 @@ function AdminDispatchWindowWidget({
                               )}
                               {!["delivered", "cancelled"].includes(delivery.status) && (
                                 <>
+                                  {delivery.driver_id && !["delivered", "cancelled"].includes(delivery.status) && (
+                                    <DropdownMenuItem
+                                      className="text-amber-500 font-semibold"
+                                      onClick={() => handleUnassignDriver(delivery.id)}
+                                    >
+                                      <UserMinus className="h-4 w-4 mr-2" />
+                                      Desvincular Entregador
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => updateStatus.mutate({ id: delivery.id, status: "cancelled" })}
+                                    className="text-destructive font-semibold"
+                                    onClick={() => {
+                                      if (delivery.driver_id) {
+                                        if (!confirm("Atenção: Cancelar vai abortar a entrega definitivamente no sistema.\n\nSe você deseja apenas que OUTRO entregador faça a entrega, use 'Desvincular Entregador' em vez de Cancelar.\n\nDeseja realmente CANCELAR a entrega de forma definitiva?")) return;
+                                      }
+                                      updateStatus.mutate({ id: delivery.id, status: "cancelled" });
+                                    }}
                                   >
-                                    Cancelar
+                                    Cancelar Entrega
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -791,15 +819,32 @@ function AdminDispatchWindowWidget({
               </div>
 
               {!["delivered", "cancelled"].includes(detailDelivery.status) && (
-                <div className="flex gap-2 pt-2 border-t border-border">
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                   <button
                     onClick={() => { setReassignDelivery(detailDelivery); setSelectedDriverId(detailDelivery.driver_id || ""); setDetailDelivery(null); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-muted text-sm font-medium hover:bg-muted/80"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 rounded-lg bg-muted text-sm font-medium hover:bg-muted/80"
                   >
                     <UserCheck className="h-4 w-4" /> Reatribuir
                   </button>
+                  {detailDelivery.driver_id && (
+                    <button
+                      onClick={async () => {
+                        await handleUnassignDriver(detailDelivery.id);
+                        setDetailDelivery(null);
+                      }}
+                      className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 rounded-lg bg-amber-500/10 text-amber-500 text-sm font-medium hover:bg-amber-500/20"
+                    >
+                      <UserMinus className="h-4 w-4" /> Devolver para Fila
+                    </button>
+                  )}
                   <button
-                    onClick={() => { updateStatus.mutate({ id: detailDelivery.id, status: "cancelled" }); setDetailDelivery(null); }}
+                    onClick={() => {
+                      if (detailDelivery.driver_id) {
+                        if (!confirm("Atenção: Cancelar vai abortar a entrega definitivamente no sistema.\n\nSe você deseja apenas que OUTRO entregador faça a entrega, use 'Devolver para Fila' em vez de Cancelar.\n\nDeseja realmente CANCELAR a entrega de forma definitiva?")) return;
+                      }
+                      updateStatus.mutate({ id: detailDelivery.id, status: "cancelled" });
+                      setDetailDelivery(null);
+                    }}
                     className="px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20"
                   >
                     Cancelar
