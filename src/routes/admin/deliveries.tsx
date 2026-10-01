@@ -54,6 +54,7 @@ export const Route = createFileRoute("/admin/deliveries")({
 function DeliveriesPage() {
   const { toast } = useToast();
 
+  const [mounted, setMounted] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
@@ -61,6 +62,10 @@ function DeliveriesPage() {
   const [periodFilter, setPeriodFilter] = useState<"month" | "today" | "all">("month");
   const [page, setPage] = useState(0);
   const pageSize = 20;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [showNewForm, setShowNewForm] = useState(false);
   const [detailDelivery, setDetailDelivery] = useState<DeliveryWithRelations | null>(null);
@@ -406,7 +411,7 @@ function AdminDispatchWindowWidget({
             onChange={(e) => { setPeriodFilter(e.target.value as any); setPage(0); }}
             className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none font-semibold text-foreground shadow-sm shrink-0"
           >
-            <option value="month" suppressHydrationWarning>📅 Mês Atual ({format(new Date(), "MMMM", { locale: ptBR })})</option>
+            <option value="month" suppressHydrationWarning>📅 Mês Atual {mounted ? `(${format(new Date(), "MMMM", { locale: ptBR })})` : ""}</option>
             <option value="today">⚡ Hoje</option>
             <option value="all">🌐 Todas as Entregas (Histórico Geral)</option>
           </select>

@@ -78,14 +78,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         stack.includes("520") ||
         stack.includes("hydration");
 
-      const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
-      if ((isOutdatedBundle || isHydrationError) && !hasReloaded) {
-        sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
-        window.location.reload();
+      if (isHydrationError) {
         return null;
       }
 
-      if (isHydrationError) {
+      const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
+      if (isOutdatedBundle && !hasReloaded) {
+        sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
+        window.location.reload();
         return null;
       }
     }

@@ -15,8 +15,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   useGlobalChatNotifications();
 
   const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       setCollapsed(localStorage.getItem("admin_sidebar_collapsed") === "true");
     }
@@ -51,7 +53,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 pl-12 md:pl-0">
               <span suppressHydrationWarning className="text-xs text-muted-foreground font-medium hidden lg:inline capitalize">
-                {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+                {mounted ? new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) : null}
               </span>
             </div>
 

@@ -40,6 +40,7 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT
   }
 
   const msg = (payload.error_message || "").toLowerCase();
+  const stack = (payload.stack_trace || "").toLowerCase();
   const isIgnored = 
     msg.includes("failed to fetch") ||
     msg.includes("networkerror") ||
@@ -241,13 +242,6 @@ export function initializeGlobalErrorHandlers(appName: string) {
       lower.includes("520") ||
       lower.includes("hydration")
     ) {
-      if (typeof window !== "undefined") {
-        const hasReloaded = sessionStorage.getItem("admin_auto_reloaded_for_update");
-        if ((lower.includes("loading chunk") || lower.includes("dynamically imported module") || lower.includes("418")) && !hasReloaded) {
-          sessionStorage.setItem("admin_auto_reloaded_for_update", "true");
-          window.location.reload();
-        }
-      }
       return true; // Ignore browser-translation, network drops, and recoverable hydration reconciliations
     }
     reportErrorToTelegram({
