@@ -163,7 +163,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             vehicle_type: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-            commission_rate: parseFloat(form.commission) || 0,
+            commission_rate: parseFloat(form.commission) || 25,
             service_types: form.serviceTypes,
             status: "active",
             is_active: true,
@@ -184,7 +184,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
             vehicle_type: vehicleVal,
             license_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
             vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-            commission_rate: parseFloat(form.commission) || 0,
+            commission_rate: parseFloat(form.commission) || 25,
             service_types: form.serviceTypes,
             status: "active",
             is_active: true,
@@ -205,7 +205,7 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
               document: form.document,
               vehicle_type: vehicleVal,
               vehicle_plate: form.vehiclePlate ? form.vehiclePlate.toUpperCase() : null,
-              commission_rate: parseFloat(form.commission) || 0,
+              commission_rate: parseFloat(form.commission) || 25,
               service_types: form.serviceTypes,
             };
           }

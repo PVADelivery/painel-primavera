@@ -81,7 +81,7 @@ export function CreateDriverDialog({ open, onOpenChange }: CreateDriverDialogPro
     setStep(0);
     setForm({
       fullName: "", email: "", password: "", phone: "",
-      document: "", vehicle: "motorcycle", licensePlate: "", commissionRate: "0.40",
+      document: "", vehicle: "motorcycle", licensePlate: "", commissionRate: "25",
     });
   };
 
