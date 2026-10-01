@@ -47,11 +47,17 @@ function DashboardPage() {
     return [];
   }, [driversResult]);
 
+  const isDelivered = (s?: string) =>
+    s === "delivered" || s === "completed" || s === "concluded" || s === "finalizada";
+
+  const isInTransit = (s?: string) =>
+    ["in_route", "in_transit", "collecting", "collected", "accepted"].includes(s || "");
+
   const stats = useMemo(() => {
     if (!Array.isArray(deliveries) || !Array.isArray(drivers)) return { inTransit: 0, revenue: 0, total: 0, delivered: 0, onlineDrivers: 0, totalDrivers: 0 };
-    const inTransit = deliveries.filter((d) => d.status === "in_route").length;
-    const delivered = deliveries.filter((d) => d.status === "completed");
-    const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
+    const inTransit = deliveries.filter((d) => isInTransit(d.status)).length;
+    const delivered = deliveries.filter((d) => isDelivered(d.status));
+    const revenue = delivered.reduce((s, d) => s + Number(d.value ?? d.price ?? 0), 0);
     const onlineDrivers = drivers.filter((d) => d.is_online || d.online).length;
     return {
       inTransit,
@@ -70,8 +76,17 @@ function DashboardPage() {
     return range.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
       const total = deliveries
-        .filter((d) => d.status === "completed" && d.completed_at?.startsWith(dayStr))
-        .reduce((s, d) => s + Number(d.value || 0), 0);
+        .filter((d) => {
+          if (!isDelivered(d.status)) return false;
+          const dt = d.delivered_at || d.completed_at || d.created_at;
+          if (!dt) return false;
+          try {
+            return format(new Date(dt), "yyyy-MM-dd") === dayStr;
+          } catch {
+            return String(dt).startsWith(dayStr);
+          }
+        })
+        .reduce((s, d) => s + Number(d.value ?? d.price ?? 0), 0);
       return { day: format(day, "dd/MM", { locale: ptBR }), value: total };
     });
   }, [deliveries, days]);
@@ -79,13 +94,40 @@ function DashboardPage() {
   const statusData = useMemo(() => {
     if (!Array.isArray(deliveries)) return [];
     const counts: Record<string, number> = {};
-    deliveries.forEach((d) => { counts[d.status] = (counts[d.status] || 0) + 1; });
+    deliveries.forEach((d) => {
+      const s = d.status || "pending";
+      counts[s] = (counts[s] || 0) + 1;
+    });
     const colors: Record<string, string> = {
-      pending: "hsl(38 92% 50%)", broadcasted: "hsl(210 100% 52%)", accepted: "hsl(217 91% 50%)",
-      collecting: "hsl(32 95% 52%)", in_route: "hsl(280 70% 55%)", completed: "hsl(145 63% 42%)",
-      cancelled: "hsl(0 84% 60%)", returned: "hsl(220 10% 50%)",
+      pending: "hsl(38 92% 50%)",
+      broadcasted: "hsl(210 100% 52%)",
+      accepted: "hsl(217 91% 50%)",
+      collecting: "hsl(32 95% 52%)",
+      in_route: "hsl(280 70% 55%)",
+      in_transit: "hsl(280 70% 55%)",
+      delivered: "hsl(145 63% 42%)",
+      completed: "hsl(145 63% 42%)",
+      cancelled: "hsl(0 84% 60%)",
+      returned: "hsl(220 10% 50%)",
     };
-    return Object.entries(counts).map(([name, value]) => ({ name, value, fill: colors[name] || "#888" }));
+    const labels: Record<string, string> = {
+      pending: "Pendente",
+      broadcasted: "Disponível",
+      accepted: "Aceito",
+      collecting: "Coletando",
+      in_route: "Em rota",
+      in_transit: "Em trânsito",
+      delivered: "Entregue",
+      completed: "Concluído",
+      cancelled: "Cancelado",
+      returned: "Devolvido",
+    };
+    return Object.entries(counts).map(([statusKey, value]) => ({
+      name: labels[statusKey] || statusKey,
+      statusKey,
+      value,
+      fill: colors[statusKey] || "#888",
+    }));
   }, [deliveries]);
 
   return (

@@ -73,13 +73,19 @@ interface UseDeliveriesParams {
   pageSize?: number;
   page?: number;
   enabled?: boolean;
+  sinceDays?: number;
 }
 
 export function useDeliveries(params?: UseDeliveriesParams) {
-  const { status, search, companyId, driverId, dateFrom, dateTo, pageSize = 50, page = 0, enabled = true } = params || {};
+  const { status, search, companyId, driverId, dateFrom, dateTo, page = 0, enabled = true, sinceDays } = params || {};
+  const pageSize = params?.pageSize ?? (sinceDays !== undefined ? 1000 : 50);
+
+  const effectiveDateFrom = dateFrom ?? (sinceDays !== undefined
+    ? new Date(new Date().setHours(0, 0, 0, 0) - (sinceDays - 1) * 86400000).toISOString()
+    : undefined);
 
   return useQuery({
-    queryKey: ["deliveries", status, search, companyId, driverId, dateFrom, dateTo, page, pageSize],
+    queryKey: ["deliveries", status, search, companyId, driverId, effectiveDateFrom, dateTo, page, pageSize],
     queryFn: async () => {
       let query = supabase
         .from("deliveries")
@@ -104,7 +110,7 @@ export function useDeliveries(params?: UseDeliveriesParams) {
       }
       if (companyId) query = query.eq("company_id", companyId);
       if (driverId) query = query.eq("driver_id", driverId);
-      if (dateFrom) query = query.gte("created_at", new Date(dateFrom).toISOString());
+      if (effectiveDateFrom) query = query.gte("created_at", new Date(effectiveDateFrom).toISOString());
       if (dateTo) {
         const end = new Date(dateTo);
         end.setHours(23, 59, 59, 999);
