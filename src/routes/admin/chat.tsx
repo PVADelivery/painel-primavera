@@ -117,20 +117,20 @@ export function AdminChatPage() {
           ? supabase.from("profiles" as any).select("user_id, full_name, phone, avatar_url, role").in("user_id", userIdsList)
           : Promise.resolve({ data: [] }),
         userIdsList.length > 0
-          ? supabase.from("drivers" as any).select("user_id, full_name, phone").in("user_id", userIdsList)
+          ? supabase.from("delivery_drivers" as any).select("user_id, full_name, phone").in("user_id", userIdsList)
           : Promise.resolve({ data: [] }),
         userIdsList.length > 0
           ? supabase.from("companies" as any).select("user_id, name, phone, logo_url").in("user_id", userIdsList)
           : Promise.resolve({ data: [] }),
         userIdsList.length > 0
-          ? supabase.from("customers" as any).select("user_id, full_name, phone").in("user_id", userIdsList)
+          ? supabase.from("customers" as any).select("user_id, name, phone").in("user_id", userIdsList)
           : Promise.resolve({ data: [] }),
       ]);
 
       const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
       const driverMap = new Map((driversRes.data || []).map((d: any) => [d.user_id, d]));
       const companyMap = new Map((companiesRes.data || []).map((c: any) => [c.user_id, c]));
-      const customerMap = new Map((customersRes.data || []).map((c: any) => [c.user_id, c]));
+      const customerMap = new Map((customersRes.data || []).map((c: any) => [c.user_id, { ...c, full_name: c.name || c.full_name }]));
 
       // Busca a última mensagem de cada conversa
       const enrichedConversations: Conversation[] = await Promise.all(
