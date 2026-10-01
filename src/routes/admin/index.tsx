@@ -52,7 +52,7 @@ function DashboardPage() {
     const inTransit = deliveries.filter((d) => d.status === "in_route").length;
     const delivered = deliveries.filter((d) => d.status === "completed");
     const revenue = delivered.reduce((s, d) => s + Number(d.value || 0), 0);
-    const onlineDrivers = drivers.filter((d) => d.online).length;
+    const onlineDrivers = drivers.filter((d) => d.is_online || d.online).length;
     return {
       inTransit,
       revenue,

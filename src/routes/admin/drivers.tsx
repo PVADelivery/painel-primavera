@@ -47,14 +47,18 @@ function DriversPage() {
     }
 
     if (activeTab === "all") return true;
-    const services = Array.isArray(d.service_types) ? d.service_types : [];
+    const services = Array.isArray(d.service_types) ? d.service_types.map((s: string) => String(s).toLowerCase()) : [];
+    const vType = String(d.vehicle_type || "").toLowerCase().trim();
     
     if (activeTab === "encomendas") {
       return (
         services.includes("delivery_moto") || 
-        d.vehicle_type === "moto" || 
-        d.vehicle_type === "motorcycle" || 
-        !d.vehicle_type || 
+        services.includes("moto") ||
+        services.includes("motoboy") ||
+        services.includes("motorcycle") ||
+        vType === "moto" || 
+        vType === "motorcycle" || 
+        !vType || 
         services.length === 0
       );
     }
@@ -62,18 +66,27 @@ function DriversPage() {
       return (
         services.includes("delivery_car") || 
         services.includes("delivery_carro_aberto") || 
-        d.vehicle_type === "carro" || 
-        d.vehicle_type === "car" || 
-        d.vehicle_type === "carro_aberto" || 
-        d.vehicle_type === "van" || 
-        d.vehicle_type === "truck"
+        services.includes("car") ||
+        services.includes("carro") ||
+        vType === "carro" || 
+        vType === "car" || 
+        vType === "carro_aberto" || 
+        vType === "van" || 
+        vType === "truck"
       );
     }
     if (activeTab === "taxi") {
-      return services.includes("taxi") || d.vehicle_type === "taxi";
+      return services.includes("taxi") || services.includes("táxi") || vType === "taxi" || vType === "táxi";
     }
     if (activeTab === "mototaxi") {
-      return services.includes("mototaxi") || d.vehicle_type === "mototaxi" || d.vehicle_type === "moto_taxi";
+      return (
+        services.includes("mototaxi") || 
+        services.includes("moto_taxi") || 
+        services.includes("moto táxi") || 
+        vType === "mototaxi" || 
+        vType === "moto_taxi" || 
+        vType === "moto táxi"
+      );
     }
     return true;
   });

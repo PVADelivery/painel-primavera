@@ -114,18 +114,40 @@ function DeliveriesPage() {
   const totalCount = Array.isArray(qData) ? qData.length : qData?.count ?? 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const onlineDrivers = Array.isArray(drivers) ? drivers.filter((d) => d.is_online) : [];
+  const [driverModalSearch, setDriverModalSearch] = useState("");
 
-  const getDriversSortedByProximity = (delivery: DeliveryWithRelations) => {
-    if (!delivery.pickup_latitude || !delivery.pickup_longitude) return onlineDrivers;
-    return [...onlineDrivers].sort((a, b) => {
-      const distA = a.latitude && a.longitude
-        ? haversineDistance(delivery.pickup_latitude!, delivery.pickup_longitude!, a.latitude, a.longitude)
-        : Infinity;
-      const distB = b.latitude && b.longitude
-        ? haversineDistance(delivery.pickup_latitude!, delivery.pickup_longitude!, b.latitude, b.longitude)
-        : Infinity;
-      return distA - distB;
+  const allDriversList = Array.isArray(drivers) ? drivers : [];
+  const onlineDrivers = allDriversList.filter((d) => d.is_online || d.online);
+
+  const getSortedDriversForDispatch = (delivery: DeliveryWithRelations, searchQ = "") => {
+    let list = [...allDriversList];
+    const q = searchQ.trim().toLowerCase();
+    if (q) {
+      const qDigits = q.replace(/\D/g, "");
+      list = list.filter((d) => {
+        const nameMatch = (d.full_name || "").toLowerCase().includes(q);
+        const phoneMatch = (d.phone || "").toLowerCase().includes(q) || (qDigits.length > 0 && (d.phone || "").replace(/\D/g, "").includes(qDigits));
+        const plateMatch = (d.vehicle_plate || "").toLowerCase().includes(q);
+        return nameMatch || phoneMatch || plateMatch;
+      });
+    }
+
+    return list.sort((a, b) => {
+      const aOnline = a.is_online || a.online ? 1 : 0;
+      const bOnline = b.is_online || b.online ? 1 : 0;
+      if (aOnline !== bOnline) return bOnline - aOnline;
+
+      if (aOnline && delivery.pickup_latitude && delivery.pickup_longitude) {
+        const distA = a.latitude && a.longitude
+          ? haversineDistance(delivery.pickup_latitude, delivery.pickup_longitude, a.latitude, a.longitude)
+          : Infinity;
+        const distB = b.latitude && b.longitude
+          ? haversineDistance(delivery.pickup_latitude, delivery.pickup_longitude, b.latitude, b.longitude)
+          : Infinity;
+        if (distA !== distB) return distA - distB;
+      }
+
+      return (a.full_name || "").localeCompare(b.full_name || "");
     });
   };
 
@@ -875,40 +897,75 @@ function AdminDispatchWindowWidget({
               </div>
 
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Entregadores Online ({onlineDrivers.length})
-                </p>
-                {onlineDrivers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum entregador online</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Entregadores ({onlineDrivers.length} online · {allDriversList.length} total)
+                  </p>
+                </div>
+
+                <div className="relative mb-2.5">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={driverModalSearch}
+                    onChange={(e) => setDriverModalSearch(e.target.value)}
+                    placeholder="Buscar entregador por nome, fone, placa..."
+                    className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  />
+                  {driverModalSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDriverModalSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {allDriversList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum entregador cadastrado</p>
                 ) : (
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                    {getDriversSortedByProximity(dispatchDelivery).map((driver) => {
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                    {getSortedDriversForDispatch(dispatchDelivery, driverModalSearch).map((driver) => {
                       const dist = getDriverDistance(driver, dispatchDelivery);
+                      const isOnline = driver.is_online || driver.online;
                       return (
                         <button
                           key={driver.id}
                           onClick={() => setSelectedDriverId(driver.id)}
-                          className={`w-full text-left rounded-xl p-3 transition-all ${
+                          className={`w-full text-left rounded-xl p-2.5 transition-all ${
                             selectedDriverId === driver.id
-                              ? "bg-primary/10 border border-primary/30"
-                              : "bg-muted/50 hover:bg-muted border border-transparent"
+                              ? "bg-primary/10 border-2 border-primary shadow-xs"
+                              : "bg-muted/40 hover:bg-muted border border-border/60"
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-xs font-bold text-primary">
-                                  {(driver.full_name || "?")[0]}
-                                </span>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                                {(driver.full_name || "?")[0]}
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-foreground">{driver.full_name || "—"}</p>
-                                <p className="text-xs text-muted-foreground">{driver.vehicle_type}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-bold text-foreground">{driver.full_name || "—"}</p>
+                                  {isOnline ? (
+                                    <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded-full">
+                                      ● Online
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.2 rounded-full">
+                                      ● Cadastrado
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                                  {driver.vehicle_type || "moto"} {driver.phone ? `· ${driver.phone}` : ""}
+                                </p>
                               </div>
                             </div>
-                            {dist !== null && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                                <MapPin className="h-3 w-3" />
+                            {dist !== null && isOnline && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border/50">
+                                <MapPin className="h-3 w-3 text-primary" />
                                 {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}
                               </span>
                             )}

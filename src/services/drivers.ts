@@ -24,16 +24,57 @@ export type DriverWithProfile = {
 
 export async function fetchDrivers(): Promise<DriverWithProfile[]> {
   // 1. Fetch delivery_drivers
-  const { data: driversData } = await supabase
+  const { data: driversData, error: drvErr } = await supabase
     .from("delivery_drivers")
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch profiles and customers (valid columns only)
+  if (drvErr) {
+    console.warn("[fetchDrivers] Erro ao buscar delivery_drivers:", drvErr);
+  }
+
+  // 2. Fetch user_roles for drivers/motoboys/entregadores/taxi
+  const { data: driverRoles, error: rolesErr } = await supabase
+    .from("user_roles")
+    .select("user_id, role");
+
+  if (rolesErr) {
+    console.warn("[fetchDrivers] Erro ao buscar user_roles:", rolesErr);
+  }
+
+  const driverRoleKeywords = ["driver", "motoboy", "entregador", "taxi", "mototaxi", "motorista", "delivery"];
+
+  const roleDriverUserIds = (driverRoles || [])
+    .filter(r => {
+      const rRole = String(r.role || "").toLowerCase();
+      return driverRoleKeywords.some(k => rRole.includes(k));
+    })
+    .map(r => r.user_id)
+    .filter(Boolean);
+
+  // 3. Fetch profiles and customers (valid columns only)
   const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
     supabase.from("profiles").select("*"),
     supabase.from("customers").select("id, user_id, name, phone"),
   ]);
+
+  const profileDriverUserIds = (allProfiles || [])
+    .filter(p => {
+      const pRole = String(p.role || "").toLowerCase();
+      const pUserId = p.user_id || p.id;
+      return (
+        driverRoleKeywords.some(k => pRole.includes(k)) ||
+        roleDriverUserIds.includes(pUserId)
+      );
+    })
+    .map(p => p.user_id || p.id)
+    .filter(Boolean);
+
+  const allDriverUserIds = Array.from(new Set([
+    ...(driversData || []).map(d => d.user_id || d.id),
+    ...roleDriverUserIds,
+    ...profileDriverUserIds
+  ])).filter(Boolean);
 
   const resultDrivers: DriverWithProfile[] = [];
   const processedUserIds = new Set<string>();
@@ -41,13 +82,19 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
 
   for (const driver of (driversData || [])) {
     const raw = driver as any;
-    if (raw.status === "deleted") {
+    const dUserId = driver.user_id || driver.id;
+
+    // Se o motorista estiver marcado como "deleted", só ignora se ele realmente não estiver online
+    // e não possuir role ativa de driver em profiles/user_roles.
+    const isOnline = raw.is_online ?? raw.online ?? false;
+    const hasActiveRole = roleDriverUserIds.includes(dUserId) || (dUserId && profileDriverUserIds.includes(dUserId));
+    
+    if (raw.status === "deleted" && !isOnline && !hasActiveRole) {
       if (driver.user_id) processedUserIds.add(driver.user_id);
       if (driver.id) processedDriverIds.add(driver.id);
       continue;
     }
 
-    const dUserId = driver.user_id || driver.id;
     if (driver.user_id) processedUserIds.add(driver.user_id);
     if (driver.id) processedDriverIds.add(driver.id);
     if (dUserId) {
@@ -78,25 +125,28 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
         .from("delivery_drivers")
         .update({ user_id: targetUserId })
         .eq("id", driver.id)
-        .then(() => {
-          console.log(`[fetchDrivers] Auto-healed driver ${driver.id} with user_id ${targetUserId}`);
-        })
-        .catch(err => {
-          console.warn(`[fetchDrivers] Failed to auto-heal driver ${driver.id}:`, err);
-        });
+        .then(() => {})
+        .catch(() => {});
       driver.user_id = targetUserId;
+    }
+
+    const driverName = raw.full_name || profile?.full_name || customer?.name || raw.name || "Entregador";
+    if (/^driver\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i.test(driverName.trim())) {
+      continue;
     }
 
     resultDrivers.push({
       id: driver.id || driver.user_id,
       user_id: driver.user_id || driver.id,
-      full_name: raw.full_name || profile?.full_name || customer?.name || raw.name || "Entregador",
+      full_name: driverName,
       phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
       document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
       vehicle_type: raw.vehicle || raw.vehicle_type || profile?.vehicle || profile?.vehicle_type || "moto",
       vehicle_plate: raw.license_plate || raw.vehicle_plate || raw.plate || profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,
-      is_online: raw.is_online ?? raw.online ?? false,
+      is_online: isOnline,
+      online: isOnline,
+      rating: Number(driver.rating) || 5.0,
       latitude: (raw.latitude !== null && raw.latitude !== undefined && raw.latitude !== "" && !isNaN(Number(raw.latitude))) 
         ? Number(raw.latitude) 
         : ((raw.current_latitude !== null && raw.current_latitude !== undefined && raw.current_latitude !== "" && !isNaN(Number(raw.current_latitude))) 
@@ -109,44 +159,45 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
         : ((raw.current_longitude !== null && raw.current_longitude !== undefined && raw.current_longitude !== "" && !isNaN(Number(raw.current_longitude))) 
           ? Number(profile.longitude) 
           : null),
-      status: raw.status || "active",
+      status: (raw.status === "deleted" && (isOnline || hasActiveRole)) ? "active" : (raw.status || "active"),
       commission_rate: raw.commission_rate !== null && raw.commission_rate !== undefined ? Number(raw.commission_rate) : 25.00,
       service_types: raw.service_types || [],
       created_at: driver.created_at || profile?.created_at,
     });
   }
 
-  // 3. Adiciona perfis com role de motorista que ainda não estão em delivery_drivers
-  for (const profile of (allProfiles || [])) {
-    const pUserId = profile.user_id || profile.id;
-    const pRole = String(profile.role || "").toLowerCase();
-    const pStatus = String(profile.status || "").toLowerCase();
-    if (!pUserId || pStatus === "deleted" || pRole === "customer") continue;
-    if (processedUserIds.has(pUserId) || processedDriverIds.has(pUserId)) continue;
+  // 4. Adiciona perfis com role de motorista em user_roles ou profiles que ainda não estão em delivery_drivers
+  for (const userId of allDriverUserIds) {
+    if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
+      const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
+      const name = profile?.full_name || "";
+      
+      const isDummySeed = /^driver\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i.test(name.trim());
+      if (isDummySeed) continue;
 
-    if (["driver", "motoboy", "entregador", "taxi", "mototaxi"].some(k => pRole.includes(k))) {
-      const name = profile.full_name || "Entregador Cadastrado";
-      if (/^driver\s+(one|two|three|four|five|\d+)/i.test(name.trim())) continue;
+      const isOnline = profile?.is_online ?? profile?.online ?? false;
 
       resultDrivers.push({
-        id: pUserId,
-        user_id: pUserId,
-        full_name: name,
-        phone: profile.phone || profile.whatsapp || profile.celular || null,
-        document: profile.document || profile.cpf || profile.cnpj || null,
-        avatar_url: profile.avatar_url || null,
-        vehicle_type: profile.vehicle || profile.vehicle_type || "moto",
-        is_online: profile.is_online ?? profile.online ?? false,
+        id: userId,
+        user_id: userId,
+        full_name: name || "Entregador Cadastrado",
+        phone: profile?.phone || profile?.whatsapp || profile?.celular || null,
+        document: profile?.document || profile?.cpf || profile?.cnpj || null,
+        avatar_url: profile?.avatar_url || null,
+        vehicle_type: profile?.vehicle || profile?.vehicle_type || "moto",
+        vehicle_plate: profile?.license_plate || profile?.vehicle_plate || profile?.plate || null,
+        is_online: isOnline,
+        online: isOnline,
         rating: 5.0,
-        latitude: (profile.latitude !== null && profile.latitude !== undefined && !isNaN(Number(profile.latitude))) ? Number(profile.latitude) : null,
-        longitude: (profile.longitude !== null && profile.longitude !== undefined && !isNaN(Number(profile.longitude))) ? Number(profile.longitude) : null,
+        latitude: (profile?.latitude !== null && profile?.latitude !== undefined && !isNaN(Number(profile?.latitude))) ? Number(profile.latitude) : null,
+        longitude: (profile?.longitude !== null && profile?.longitude !== undefined && !isNaN(Number(profile?.longitude))) ? Number(profile.longitude) : null,
         status: "active",
         commission_rate: 25.00,
         service_types: [],
-        created_at: profile.created_at || new Date().toISOString(),
+        created_at: profile?.created_at || new Date().toISOString(),
       });
-      processedUserIds.add(pUserId);
-      processedDriverIds.add(pUserId);
+      processedUserIds.add(userId);
+      processedDriverIds.add(userId);
     }
   }
 
