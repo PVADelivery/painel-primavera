@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useState } from "react";
 import { BikeIcon } from "@/components/icons/BikeIcon";
 import { useDrivers, useToggleDriverOnline } from "@/services/drivers";
-import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power, Trash2, Edit2, Search, X } from "lucide-react";
+import { Star, Phone, Loader2, MoreHorizontal, Plus, Camera, Power, Trash2, Edit2, Search, X, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,7 @@ function DriversPage() {
     if (q) {
       const qDigits = q.replace(/\D/g, "");
       const matchName = (d.full_name || "").toLowerCase().includes(q);
+      const matchEmail = (d.email || "").toLowerCase().includes(q);
       const matchPlate = (d.vehicle_plate || d.license_plate || "").toLowerCase().includes(q);
       
       const phoneDigits = (d.phone || "").replace(/\D/g, "");
@@ -43,7 +44,7 @@ function DriversPage() {
       const docDigits = (d.document || d.cpf || "").replace(/\D/g, "");
       const matchDoc = (d.document || d.cpf || "").toLowerCase().includes(q) || (qDigits.length > 0 && docDigits.includes(qDigits));
 
-      if (!matchName && !matchPhone && !matchPlate && !matchDoc) return false;
+      if (!matchName && !matchEmail && !matchPhone && !matchPlate && !matchDoc) return false;
     }
 
     if (activeTab === "all") return true;
@@ -237,6 +238,7 @@ function DriversPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Entregador</th>
+                <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">E-mail / Acesso</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Veículo</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Placa</th>
                 <th className="px-2.5 py-2.5 text-left font-semibold text-muted-foreground">Telefone</th>
@@ -249,19 +251,36 @@ function DriversPage() {
             </thead>
             <tbody className="divide-y divide-border/60">
               {isLoading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
               ) : filteredDrivers.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum entregador encontrado</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">Nenhum entregador encontrado</td></tr>
               ) : (
                 filteredDrivers.map((d) => (
                   <tr key={d.id} className="hover:bg-muted/20 transition-colors">
                     <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2.5 min-w-0 max-w-[180px] sm:max-w-[220px]">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0 max-w-[200px] sm:max-w-[240px]">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                           {d.avatar_url ? <img src={d.avatar_url} className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-primary">{(d.full_name || "?")[0]}</span>}
                         </div>
-                        <span className="font-semibold text-foreground truncate" title={d.full_name}>{d.full_name || "—"}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-semibold text-foreground truncate block leading-tight" title={d.full_name}>{d.full_name || "—"}</span>
+                          {d.email && (
+                            <span className="text-[11px] text-muted-foreground truncate block font-mono leading-tight sm:hidden" title={d.email}>
+                              {d.email}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                    </td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap text-xs">
+                      {d.email ? (
+                        <div className="flex items-center gap-1.5 font-mono text-foreground font-medium">
+                          <Mail className="h-3 w-3 text-primary/70 shrink-0" />
+                          <span className="truncate max-w-[190px]" title={d.email}>{d.email}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/40 italic text-[11px]">Não vinculado</span>
+                      )}
                     </td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap text-muted-foreground">{vehicleLabel[d.vehicle_type || "motorcycle"] || d.vehicle_type}</td>
                     <td className="px-2.5 py-2.5 whitespace-nowrap font-mono text-xs text-muted-foreground">{d.vehicle_plate || "—"}</td>

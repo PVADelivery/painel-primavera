@@ -6,6 +6,7 @@ export type DriverWithProfile = {
   id: string;
   user_id: string;
   full_name: string;
+  email?: string | null;
   phone?: string | null;
   document?: string | null;
   avatar_url?: string | null;
@@ -52,10 +53,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .map(r => r.user_id)
     .filter(Boolean);
 
-  // 3. Fetch profiles and customers (valid columns only)
-  const [{ data: allProfiles }, { data: allCustomers }] = await Promise.all([
+  // 3. Fetch profiles, customers, invitations, and customer_credits
+  const [{ data: allProfiles }, { data: allCustomers }, { data: allInvitations }, { data: allCredits }] = await Promise.all([
     supabase.from("profiles").select("*"),
-    supabase.from("customers").select("id, user_id, name, phone"),
+    supabase.from("customers").select("id, user_id, name, phone, email, customer_email"),
+    supabase.from("invitations").select("id, email, role, token, status, created_at"),
+    supabase.from("customer_credits").select("customer_id, customer_phone, customer_email, customer_name"),
   ]);
 
   const profileDriverUserIds = (allProfiles || [])
@@ -119,6 +122,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       (rawCleanPhone && c.phone && String(c.phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
     );
 
+    const credit = allCredits?.find(cr =>
+      (cr.customer_id && (cr.customer_id === driver.user_id || cr.customer_id === driver.id)) ||
+      (dName && (cr.customer_name || "").trim().toLowerCase() === dName) ||
+      (rawCleanPhone && cr.customer_phone && String(cr.customer_phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
+    );
+
     const targetUserId = profile?.user_id || profile?.id || customer?.user_id || customer?.id;
     const finalUserId = driver.user_id || targetUserId || driver.id;
 
@@ -127,10 +136,34 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
       continue;
     }
 
+    const invitation = allInvitations?.find(inv => {
+      if (!inv.email) return false;
+      const invEmail = inv.email.toLowerCase();
+      const rawEmail = (raw.email || "").toLowerCase();
+      if (rawEmail && invEmail === rawEmail) return true;
+      if (customer?.email && invEmail === customer.email.toLowerCase()) return true;
+      if (customer?.customer_email && invEmail === customer.customer_email.toLowerCase()) return true;
+      if (credit?.customer_email && invEmail === credit.customer_email.toLowerCase()) return true;
+      const firstName = dName.split(" ")[0];
+      if (firstName && firstName.length >= 4 && invEmail.includes(firstName)) return true;
+      return false;
+    });
+
+    const driverEmail =
+      raw.email ||
+      profile?.email ||
+      profile?.user_email ||
+      customer?.email ||
+      customer?.customer_email ||
+      credit?.customer_email ||
+      invitation?.email ||
+      null;
+
     resultDrivers.push({
       id: driver.id || finalUserId,
       user_id: finalUserId,
       full_name: driverName,
+      email: driverEmail,
       phone: raw.phone || raw.whatsapp || raw.celular || raw.telephone || profile?.phone || profile?.whatsapp || profile?.celular || customer?.phone || null,
       document: raw.document || raw.cpf || raw.cnpj || profile?.document || profile?.cpf || profile?.cnpj || customer?.cpf || customer?.document || null,
       avatar_url: raw.avatar_url || profile?.avatar_url || null,
@@ -163,16 +196,51 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     if (!processedUserIds.has(userId) && !processedDriverIds.has(userId)) {
       const profile = allProfiles?.find(p => (p.user_id || p.id) === userId);
       const name = profile?.full_name || "";
+      const dName = name.trim().toLowerCase();
+      const rawCleanPhone = (profile?.phone || profile?.whatsapp || profile?.celular || "").replace(/\D/g, "");
       
       const isDummySeed = /^driver\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i.test(name.trim());
       if (isDummySeed) continue;
 
       const isOnline = profile?.is_online ?? profile?.online ?? false;
 
+      const customer = allCustomers?.find(c =>
+        (c.user_id && c.user_id === userId) ||
+        (dName && (c.name || "").trim().toLowerCase() === dName) ||
+        (rawCleanPhone && c.phone && String(c.phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
+      );
+
+      const credit = allCredits?.find(cr =>
+        (cr.customer_id && cr.customer_id === userId) ||
+        (dName && (cr.customer_name || "").trim().toLowerCase() === dName) ||
+        (rawCleanPhone && cr.customer_phone && String(cr.customer_phone).replace(/\D/g, "").slice(-8) === rawCleanPhone.slice(-8))
+      );
+
+      const invitation = allInvitations?.find(inv => {
+        if (!inv.email) return false;
+        const invEmail = inv.email.toLowerCase();
+        if (customer?.email && invEmail === customer.email.toLowerCase()) return true;
+        if (customer?.customer_email && invEmail === customer.customer_email.toLowerCase()) return true;
+        if (credit?.customer_email && invEmail === credit.customer_email.toLowerCase()) return true;
+        const firstName = dName.split(" ")[0];
+        if (firstName && firstName.length >= 4 && invEmail.includes(firstName)) return true;
+        return false;
+      });
+
+      const driverEmail =
+        profile?.email ||
+        profile?.user_email ||
+        customer?.email ||
+        customer?.customer_email ||
+        credit?.customer_email ||
+        invitation?.email ||
+        null;
+
       resultDrivers.push({
         id: userId,
         user_id: userId,
         full_name: name || "Entregador Cadastrado",
+        email: driverEmail,
         phone: profile?.phone || profile?.whatsapp || profile?.celular || null,
         document: profile?.document || profile?.cpf || profile?.cnpj || null,
         avatar_url: profile?.avatar_url || null,

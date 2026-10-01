@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { reportErrorToTelegram } from "@/services/logger";
 import { useQueryClient } from "@tanstack/react-query";
+import { Mail } from "lucide-react";
 
 interface EditDriverDialogProps {
   driver: any;
@@ -233,6 +233,21 @@ export function EditDriverDialog({ driver, open, onOpenChange }: EditDriverDialo
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {driver?.email ? (
+            <div className="rounded-xl bg-primary/10 border border-primary/20 p-2.5 px-3 flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold block leading-none">E-mail de Login do Entregador</span>
+                <span className="text-xs font-mono font-bold text-foreground truncate block mt-0.5">{driver.email}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-muted/40 border border-border/60 p-2.5 px-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+              <span>Sem e-mail vinculado diretamente a este cadastro</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4">
             <div>
               <Label>Nome completo</Label>
