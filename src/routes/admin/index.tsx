@@ -71,6 +71,32 @@ function DashboardPage() {
 
   const trendData = useMemo(() => {
     if (!Array.isArray(deliveries)) return [];
+    if (days === 1) {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const slots = [
+        { label: "00h - 04h", start: 0, end: 4 },
+        { label: "04h - 08h", start: 4, end: 8 },
+        { label: "08h - 12h", start: 8, end: 12 },
+        { label: "12h - 16h", start: 12, end: 16 },
+        { label: "16h - 20h", start: 16, end: 20 },
+        { label: "20h - 24h", start: 20, end: 24 },
+      ];
+      return slots.map((s) => {
+        const total = deliveries
+          .filter((d) => {
+            if (!isDelivered(d.status)) return false;
+            const dt = d.delivered_at || d.completed_at || d.created_at;
+            if (!dt) return false;
+            const date = new Date(dt);
+            if (format(date, "yyyy-MM-dd") !== todayStr) return false;
+            const hour = date.getHours();
+            return hour >= s.start && hour < s.end;
+          })
+          .reduce((sum, d) => sum + Number(d.value ?? d.price ?? 0), 0);
+        return { day: s.label, value: total };
+      });
+    }
+
     const start = startOfDay(subDays(new Date(), days - 1));
     const range = eachDayOfInterval({ start, end: new Date() });
     return range.map((day) => {
@@ -233,7 +259,7 @@ function DashboardPage() {
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
                   formatter={(v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-                <Area type="monotone" dataKey="value" stroke="hsl(217 91% 50%)" strokeWidth={2} fill="url(#grad)" />
+                <Area type="monotone" dataKey="value" stroke="hsl(217 91% 50%)" strokeWidth={2} fill="url(#grad)" dot={{ r: 3, fill: "hsl(217 91% 50%)" }} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           )}
