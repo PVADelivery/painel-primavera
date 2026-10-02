@@ -94,13 +94,21 @@ Deno.serve(async (req) => {
     }
 
     const appName = asText(body["app_name"], 80) || "App Desconhecido";
-    const errorMessage = asText(body["error_message"], 800) || "Sem mensagem de erro";
+    const errorMessage = asText(body["error_message"], 800) || "";
     const stackTrace = asText(body["stack_trace"], 1200);
     const url = asText(body["url"], 250) || "N/A";
     const additionalInfo =
       body["additional_info"] && typeof body["additional_info"] === "object" && !Array.isArray(body["additional_info"])
         ? (body["additional_info"] as Record<string, unknown>)
         : {};
+
+    // Ignora chamadas sem mensagem real de erro (ex: testes do dashboard, pings vazios ou crawlers)
+    if (!errorMessage || errorMessage === "Sem mensagem de erro" || errorMessage.trim() === "") {
+      return new Response(JSON.stringify({ success: true, ignored: true, reason: "Empty error payload ignored" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Identity always comes from the verified token, never from the request body.
     const finalEmail = escapeHtml(authedUserEmail, 100);
