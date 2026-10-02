@@ -13,19 +13,159 @@ export function useCompanyCredits() {
   });
 }
 
-export function useCreditTransactions(limit = 300) {
+export function useCreditTransactions(limit = 500) {
   return useQuery({
     queryKey: ["company-credit-transactions", limit],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_credit_transactions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const [res1, res2] = await Promise.all([
+          supabase
+            .from("company_credit_transactions")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(limit),
+          supabase
+            .from("credit_transactions")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(limit),
+        ]);
+
+        const items1 = res1.data ?? [];
+        const items2 = (res2.data ?? []).map((t: any) => ({
+          id: t.id,
+          company_id: t.company_id,
+          type: t.type === "topup" ? "purchase" : t.type,
+          amount: Number(t.amount ?? 0),
+          balance_after: Number(t.balance_after ?? 0),
+          description: t.description || null,
+          reference_id: t.delivery_id || null,
+          payment_method: t.description?.includes("Pix") ? "Pix" : "Sistema",
+          created_at: t.created_at,
+        }));
+
+        const map = new Map<string, any>();
+        for (const item of items1) {
+          map.set(item.id, item);
+        }
+        for (const item of items2) {
+          const alreadyExists = Array.from(map.values()).some(
+            (existing) =>
+              existing.id === item.id ||
+              (existing.reference_id && item.reference_id && existing.reference_id === item.reference_id)
+          );
+          if (!alreadyExists) {
+            map.set(item.id, item);
+          }
+        }
+
+        return Array.from(map.values()).sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      } catch (err) {
+        console.error("[useCreditTransactions admin error]:", err);
+        return [];
+      }
     },
   });
+}
+
+/**
+ * Realiza o estorno garantido da taxa de uma entrega cancelada para o lojista
+ */
+export async function refundCancelledDelivery(deliveryId: string): Promise<boolean> {
+  if (!deliveryId) return false;
+
+  // 1. Tentar RPC no banco
+  try {
+    const { data: rpcRes, error: rpcErr } = await supabase.rpc("cancel_delivery_and_refund", {
+      p_delivery_id: deliveryId,
+    });
+    if (!rpcErr && (rpcRes as any)?.success) {
+      return true;
+    }
+  } catch (_) {}
+
+  // 2. Fallback direto
+  try {
+    const { data: delivery, error: delErr } = await supabase
+      .from("deliveries")
+      .select("id, company_id, delivery_fee, value, short_id, status")
+      .eq("id", deliveryId)
+      .maybeSingle();
+
+    if (delErr || !delivery || !delivery.company_id) return false;
+
+    const fee = Number(delivery.delivery_fee || delivery.value || 0);
+    if (fee <= 0) return true;
+
+    // Verificar se já estornado
+    const { data: existingRefund } = await supabase
+      .from("company_credit_transactions")
+      .select("id")
+      .eq("reference_id", deliveryId)
+      .maybeSingle();
+
+    if (existingRefund) return true;
+
+    // Tentar RPC add_company_credits
+    try {
+      const { data: addRes, error: addErr } = await supabase.rpc("add_company_credits", {
+        _company_id: delivery.company_id,
+        _amount: fee,
+        _description: `Estorno de entrega cancelada ${delivery.short_id || ""}`.trim(),
+        _payment_method: "Sistema",
+        _type: "refund",
+      });
+      if (!addErr && (addRes as any)?.success) return true;
+    } catch (_) {}
+
+    // Fallback manual no saldo
+    const { data: existingCredit } = await supabase
+      .from("company_credits")
+      .select("balance")
+      .eq("company_id", delivery.company_id)
+      .maybeSingle();
+
+    const curBal = Number(existingCredit?.balance || 0);
+    const newBal = curBal + fee;
+
+    await supabase.from("company_credits").upsert({
+      company_id: delivery.company_id,
+      balance: newBal,
+      updated_at: new Date().toISOString(),
+    });
+
+    const desc = `Estorno de entrega cancelada ${delivery.short_id || ""}`.trim();
+
+    try {
+      await supabase.from("company_credit_transactions").insert({
+        company_id: delivery.company_id,
+        type: "refund",
+        amount: fee,
+        balance_after: newBal,
+        description: desc,
+        reference_id: delivery.id,
+        payment_method: "Sistema",
+      });
+    } catch (_) {}
+
+    try {
+      await supabase.from("credit_transactions").insert({
+        company_id: delivery.company_id,
+        type: "refund",
+        amount: fee,
+        balance_after: newBal,
+        description: desc,
+        delivery_id: delivery.id,
+      });
+    } catch (_) {}
+
+    return true;
+  } catch (err) {
+    console.error("[refundCancelledDelivery admin error]:", err);
+    return false;
+  }
 }
 
 /** Hook para buscar solicitações pendentes de compra de créditos feitas pelos lojistas */

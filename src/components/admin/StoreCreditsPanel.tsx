@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, AlertTriangle, Plus, Search, Building2,
-  ArrowUpCircle, ArrowDownCircle, Minus, History, Filter, Percent,
+  ArrowUpCircle, ArrowDownCircle, Minus, History, Filter, Percent, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -793,24 +793,38 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
           ) : (
             <div className="space-y-2">
               {filteredTxs.map((t) => {
+                const isRefund = t.type === "refund" || t.description?.toLowerCase().includes("estorno");
                 const positive = Number(t.amount) > 0;
                 return (
                   <div key={t.id} className="relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-4 transition-all hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between">
-                    <div className={`absolute bottom-0 left-0 top-0 w-1 ${positive ? "bg-success" : "bg-destructive"}`} />
+                    <div className={`absolute bottom-0 left-0 top-0 w-1 ${
+                      isRefund ? "bg-emerald-500" : positive ? "bg-success" : "bg-destructive"
+                    }`} />
                     <div className="flex items-center gap-3 pl-2">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                        {positive ? <ArrowUpCircle className="h-5 w-5" /> : <ArrowDownCircle className="h-5 w-5" />}
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        isRefund ? "bg-emerald-500/10 text-emerald-500" : positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                      }`}>
+                        {isRefund ? <RotateCcw className="h-5 w-5" /> : positive ? <ArrowUpCircle className="h-5 w-5" /> : <ArrowDownCircle className="h-5 w-5" />}
                       </div>
                       <div>
-                        <p className="font-bold leading-tight">{companyById.get(t.company_id)?.name ?? "Loja removida"}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold leading-tight">{companyById.get(t.company_id)?.name ?? "Loja removida"}</p>
+                          {isRefund && (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <RotateCcw className="h-2.5 w-2.5" /> Estorno
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {t.description || "—"}
                           {t.payment_method ? ` • ${t.payment_method}` : ""}
                         </p>
                       </div>
                     </div>
                     <div className="pl-2 text-left sm:text-right">
-                      <p className={`font-extrabold tabular-nums ${positive ? "text-success" : "text-destructive"}`}>
+                      <p className={`font-extrabold tabular-nums ${
+                        isRefund ? "text-emerald-500" : positive ? "text-success" : "text-destructive"
+                      }`}>
                         {positive ? "+" : "-"} {brl(Math.abs(Number(t.amount)))}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
