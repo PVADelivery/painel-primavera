@@ -171,7 +171,8 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
       if (selectedCompany !== "all" && t.company_id !== selectedCompany) return false;
       if (selectedPayment !== "all" && t.payment_method !== selectedPayment) return false;
 
-      if (selectedType === "purchase" && Number(t.amount) <= 0) return false;
+      if (selectedType === "purchase" && (Number(t.amount) <= 0 || t.type === "refund" || t.description?.toLowerCase().includes("estorno"))) return false;
+      if (selectedType === "refund" && !(t.type === "refund" || t.description?.toLowerCase().includes("estorno") || t.description?.toLowerCase().includes("cancelad"))) return false;
       if (selectedType === "debit" && Number(t.amount) >= 0) return false;
 
       const absAmount = Math.abs(Number(t.amount || 0));
@@ -575,6 +576,7 @@ export function StoreCreditsPanel({ onCreditPurchased }: StoreCreditsPanelProps 
                 <SelectContent>
                   <SelectItem value="all">Todos os Tipos</SelectItem>
                   <SelectItem value="purchase">Compras / Recargas (+)</SelectItem>
+                  <SelectItem value="refund">Estornos / Devoluções</SelectItem>
                   <SelectItem value="debit">Consumos / Entregas (-)</SelectItem>
                 </SelectContent>
               </Select>
