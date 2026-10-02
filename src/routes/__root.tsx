@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import appCss from "../styles.css?url";
 import { initializeGlobalErrorHandlers, reportErrorToTelegram } from "@/services/logger";
 import { useEffect } from "react";
+import { GlobalAttackMonitor } from "@/hooks/GlobalAttackMonitor";
 
 if (typeof window !== "undefined") {
   initializeGlobalErrorHandlers("Painel Administrador");
@@ -165,6 +166,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
+          <GlobalAttackMonitor />
           <Outlet />
           <Toaster position="top-right" richColors />
         </AuthProvider>

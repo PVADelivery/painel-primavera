@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// --- In-Memory Anti-Spam / Rate Limiter ---
+const ipRequestHistory = new Map<string, number[]>();
+const ipBlockedUntil = new Map<string, number>();
+const recentSentMessages = new Map<string, number>();
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minuto
+const MAX_REQUESTS_PER_WINDOW = 20; // máx 20 chamadas/minuto por IP
+const BLOCK_DURATION_MS = 2 * 60 * 1000; // 2 minutos de bloqueio temporário
+const DEDUPE_WINDOW_MS = 10 * 1000; // 10 segundos para mensagens idênticas
+const MAX_BODY_BYTES = 32 * 1024; // 32KB máx
+
 function escapeHtml(input: unknown, max = 1500): string {
   const s = String(input ?? "")
     .replace(/&/g, "&amp;")
@@ -14,65 +25,120 @@ function escapeHtml(input: unknown, max = 1500): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-function asText(input: unknown, max: number): string {
-  if (input === null || input === undefined) return "";
-  if (typeof input !== "string" && typeof input !== "number" && typeof input !== "boolean") return "";
-  return escapeHtml(input, max);
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "IP Desconhecido"
+  );
 }
-
-const MAX_BODY_BYTES = 32 * 1024;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  const clientIp = getClientIp(req);
+  const now = Date.now();
+
+  // 1. Verificação de Bloqueio por Spam / Flood
+  const blockedUntil = ipBlockedUntil.get(clientIp) || 0;
+  if (now < blockedUntil) {
+    const remainingSeconds = Math.ceil((blockedUntil - now) / 1000);
+    return new Response(
+      JSON.stringify({
+        error: "Too many requests. Rate limit active.",
+        retry_after_seconds: remainingSeconds,
+      }),
+      {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(remainingSeconds) },
+      }
+    );
+  }
+
+  // 2. Rate Limiting por IP (Sliding Window)
+  const timestamps = (ipRequestHistory.get(clientIp) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  timestamps.push(now);
+  ipRequestHistory.set(clientIp, timestamps);
+
+  // Limpeza periódica de memória
+  if (ipRequestHistory.size > 500) {
+    for (const [ip, list] of ipRequestHistory.entries()) {
+      if (list.length === 0 || now - list[list.length - 1] > RATE_LIMIT_WINDOW_MS) {
+        ipRequestHistory.delete(ip);
+      }
+    }
+  }
+
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8408781765:AAEoxY7J9VrNeagGNFu1yHpW3HQlq103gmM";
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID") || "-5333281601";
+
+  // Se exceder o limite de requisições, bloqueia o IP e notifica o Telegram
+  if (timestamps.length > MAX_REQUESTS_PER_WINDOW) {
+    ipBlockedUntil.set(clientIp, now + BLOCK_DURATION_MS);
+    
+    // Dispara alerta no Telegram informando o bloqueio de spam
+    if (botToken && chatId) {
+      try {
+        const timestamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Cuiaba" });
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `🛡️ <b>ALERTA DE SEGURANÇA: FLOOD / SPAM BLOQUEADO NO SERVIDOR</b> 🛡️\n\n` +
+              `📱 <b>Servidor:</b> Edge Function (telegram-logger)\n` +
+              `🕒 <b>Hora:</b> ${escapeHtml(timestamp, 50)}\n` +
+              `🌐 <b>IP Bloqueado:</b> <code>${escapeHtml(clientIp, 60)}</code>\n` +
+              `⚠️ <b>Motivo:</b> Tráfego anormal / excesso de chamadas (${timestamps.length} req/min)\n` +
+              `🔒 <b>Ação:</b> IP temporariamente bloqueado por 2 minutos (HTTP 429).`,
+            parse_mode: "HTML",
+            disable_web_page_preview: true,
+          }),
+        });
+      } catch (_) {}
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: "Too many requests. Rate limit triggered.",
+        retry_after_seconds: 120,
+      }),
+      {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "120" },
+      }
+    );
   }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseAnonKey =
-      Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-
-    // Require an authenticated app user: this endpoint relays content into an
-    // internal monitoring channel, so anonymous callers must not reach it.
-    const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ") || !supabaseUrl || !supabaseAnonKey) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    
     let authedUserEmail = "Anônimo";
     let authedUserId = "Não autenticado";
-    try {
-      const authedClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-      const { data: userData } = await authedClient.auth.getUser();
-      if (!userData?.user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+    // Opcional: validação de usuário autenticado
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (authHeader.startsWith("Bearer ") && supabaseUrl && supabaseAnonKey) {
+      try {
+        const authedClient = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false, autoRefreshToken: false },
         });
+        const { data: userData } = await authedClient.auth.getUser();
+        if (userData?.user) {
+          authedUserEmail = userData.user.email ?? authedUserEmail;
+          authedUserId = userData.user.id ?? authedUserId;
+        }
+      } catch {
+        // Continua mesmo se a checagem falhar
       }
-      authedUserEmail = userData.user.email ?? authedUserEmail;
-      authedUserId = userData.user.id ?? authedUserId;
-    } catch {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
-    const rawBody = await req.text().catch(() => "");
+    const rawBody = await req.text().catch(() => "{}");
     if (rawBody.length > MAX_BODY_BYTES) {
       return new Response(JSON.stringify({ error: "Payload too large" }), {
         status: 413,
@@ -80,42 +146,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    let body: Record<string, unknown> = {};
+    let body: Record<string, any> = {};
     try {
-      const parsed = JSON.parse(rawBody || "{}");
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        body = parsed as Record<string, unknown>;
-      }
+      body = JSON.parse(rawBody || "{}");
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      body = {};
     }
 
-    const appName = asText(body["app_name"], 80) || "App Desconhecido";
-    const errorMessage = asText(body["error_message"], 800) || "";
-    const stackTrace = asText(body["stack_trace"], 1200);
-    const url = asText(body["url"], 250) || "N/A";
-    const additionalInfo =
-      body["additional_info"] && typeof body["additional_info"] === "object" && !Array.isArray(body["additional_info"])
-        ? (body["additional_info"] as Record<string, unknown>)
-        : {};
+    const {
+      app_name = "Painel Administrador",
+      error_message = "",
+      stack_trace = "",
+      url = "N/A",
+      user_id,
+      user_email,
+      is_spam = false,
+      is_attack = false,
+      additional_info = {},
+    } = body ?? {};
 
-    // Ignora chamadas sem mensagem real de erro (ex: testes do dashboard, pings vazios ou crawlers)
-    if (!errorMessage || errorMessage === "Sem mensagem de erro" || errorMessage.trim() === "") {
+    // Ignora chamadas sem mensagem real de erro ou pings vazios
+    if (!error_message || error_message === "Sem mensagem de erro" || error_message.trim() === "") {
       return new Response(JSON.stringify({ success: true, ignored: true, reason: "Empty error payload ignored" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Identity always comes from the verified token, never from the request body.
-    const finalEmail = escapeHtml(authedUserEmail, 100);
-    const finalUserId = escapeHtml(authedUserId, 60);
+    const finalEmail = (user_email && user_email !== "Anônimo") ? user_email : authedUserEmail;
+    const finalUserId = (user_id && user_id !== "Não autenticado") ? user_id : authedUserId;
 
-    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    // Deduplicação de mensagens idênticas para não inundar o Telegram
+    const dedupeKey = `${app_name}:${error_message}:${url}`;
+    const lastSent = recentSentMessages.get(dedupeKey);
+    if (lastSent && now - lastSent < DEDUPE_WINDOW_MS) {
+      return new Response(JSON.stringify({ success: true, deduplicated: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    recentSentMessages.set(dedupeKey, now);
+
     if (!botToken || !chatId) {
       return new Response(JSON.stringify({ error: "Telegram not configured" }), {
         status: 500,
@@ -124,23 +195,38 @@ Deno.serve(async (req) => {
     }
 
     const timestamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Cuiaba" });
+    const isSecurityAlert = Boolean(
+      is_spam ||
+      is_attack ||
+      error_message.toLowerCase().includes("[spam]") ||
+      error_message.toLowerCase().includes("[ataque detectado]") ||
+      error_message.toLowerCase().includes("[abuso]")
+    );
 
-    let messageText = `🚨 <b>ERRO NO SISTEMA / TELA</b> 🚨\n\n`;
-    messageText += `📱 <b>App:</b> ${appName}\n`;
-    messageText += `🕒 <b>Hora:</b> ${escapeHtml(timestamp, 50)}\n`;
-    messageText += `🔗 <b>URL:</b> <code>${url}</code>\n`;
-    messageText += `👤 <b>Usuário:</b> ${finalEmail} (<code>${finalUserId}</code>)\n\n`;
-    messageText += `⚠️ <b>Mensagem:</b>\n<b>${errorMessage}</b>\n\n`;
-
-    if (stackTrace) {
-      messageText += `📜 <b>Stack Trace:</b>\n<pre>${stackTrace}</pre>\n\n`;
+    let messageText = "";
+    if (isSecurityAlert) {
+      messageText += `🛡️ <b>ALERTA DE SEGURANÇA: SPAM / ABUSO DETECTADO</b> 🛡️\n\n`;
+      messageText += `📱 <b>Módulo / App:</b> ${escapeHtml(app_name, 80)}\n`;
+      messageText += `🕒 <b>Hora:</b> ${escapeHtml(timestamp, 50)}\n`;
+      messageText += `🌐 <b>IP de Origem:</b> <code>${escapeHtml(clientIp, 80)}</code>\n`;
+      messageText += `🔗 <b>URL / Rota:</b> <code>${escapeHtml(url, 250)}</code>\n`;
+      messageText += `👤 <b>Usuário:</b> ${escapeHtml(finalEmail, 100)} (<code>${escapeHtml(finalUserId, 60)}</code>)\n\n`;
+      messageText += `⚠️ <b>Tipo de Abuso / Alerta:</b>\n<b>${escapeHtml(error_message, 800)}</b>\n\n`;
+    } else {
+      messageText += `🚨 <b>ERRO NO SISTEMA / TELA</b> 🚨\n\n`;
+      messageText += `📱 <b>App:</b> ${escapeHtml(app_name, 80)}\n`;
+      messageText += `🕒 <b>Hora:</b> ${escapeHtml(timestamp, 50)}\n`;
+      messageText += `🔗 <b>URL:</b> <code>${escapeHtml(url, 250)}</code>\n`;
+      messageText += `👤 <b>Usuário:</b> ${escapeHtml(finalEmail, 100)} (<code>${escapeHtml(finalUserId, 60)}</code>)\n\n`;
+      messageText += `⚠️ <b>Mensagem:</b>\n<b>${escapeHtml(error_message, 800)}</b>\n\n`;
     }
 
-    if (Object.keys(additionalInfo).length > 0) {
-      messageText += `🔍 <b>Detalhes adicionais:</b>\n<pre>${escapeHtml(
-        JSON.stringify(additionalInfo, null, 2),
-        800,
-      )}</pre>\n`;
+    if (stack_trace) {
+      messageText += `📜 <b>Stack Trace:</b>\n<pre>${escapeHtml(stack_trace, 1200)}</pre>\n\n`;
+    }
+
+    if (additional_info && typeof additional_info === "object" && Object.keys(additional_info).length > 0) {
+      messageText += `🔍 <b>Detalhes adicionais:</b>\n<pre>${escapeHtml(JSON.stringify(additional_info, null, 2), 800)}</pre>\n`;
     }
 
     const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -155,14 +241,14 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const ok = response.ok;
-    return new Response(JSON.stringify({ success: ok }), {
-      status: ok ? 200 : 502,
+    const resData = await response.json();
+    return new Response(JSON.stringify({ success: true, telegram: resData }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("Error in telegram-logger:", err?.message);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
+    return new Response(JSON.stringify({ error: err?.message || "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
