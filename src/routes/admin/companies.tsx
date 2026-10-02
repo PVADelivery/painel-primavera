@@ -82,7 +82,7 @@ function CompaniesPage() {
     
     // Tenta primeiro via RPC delete_company_cascade para limpar todas as foreign keys
     try {
-      const { data: rpcRes, error: rpcErr } = await supabase.rpc("delete_company_cascade", { p_company_id: companyId });
+      const { data: rpcRes, error: rpcErr } = await (supabase.rpc as any)("delete_company_cascade", { p_company_id: companyId });
       if (!rpcErr && rpcRes && (rpcRes as any).success) {
         toast.success("Empresa e registros associados excluídos com sucesso");
         qc.invalidateQueries({ queryKey: ["companies"] });

@@ -148,15 +148,15 @@ export function AdminChatPage() {
 
           if (latestMsgs && latestMsgs.length > 0) {
             // Procura assunto
-            const subjectMsg = latestMsgs.find((m: any) => m.content.startsWith("[Assunto:"));
+            const subjectMsg = (latestMsgs as any[]).find((m: any) => m?.content?.startsWith?.("[Assunto:"));
             if (subjectMsg) {
-              subject = subjectMsg.content.replace("[Assunto:", "").replace("]", "").trim();
+              subject = (subjectMsg as any).content.replace("[Assunto:", "").replace("]", "").trim();
             }
 
             // Pega a mensagem real mais recente
-            const actualMsg = latestMsgs.find((m: any) => !m.content.startsWith("[Assunto:")) || latestMsgs[0];
-            lastMessage = actualMsg ? actualMsg.content.replace(/\u200B/g, "") : "";
-            lastMessageAt = actualMsg ? actualMsg.created_at : lastMessageAt;
+            const actualMsg = (latestMsgs as any[]).find((m: any) => !m?.content?.startsWith?.("[Assunto:")) || latestMsgs[0];
+            lastMessage = actualMsg ? ((actualMsg as any).content || "").replace(/\u200B/g, "") : "";
+            lastMessageAt = actualMsg ? ((actualMsg as any).created_at || lastMessageAt) : lastMessageAt;
           }
 
           // Identifica o participante principal (diferente do admin atual)
@@ -288,7 +288,7 @@ export function AdminChatPage() {
           return;
         }
 
-        setMessages((data as Message[]) || []);
+        setMessages(((data as unknown) as Message[]) || []);
       } catch (err) {
         console.error("Erro ao buscar mensagens:", err);
       } finally {

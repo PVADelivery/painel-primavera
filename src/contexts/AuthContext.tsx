@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { reportFailedLogin } from "@/services/logger";
 
 export type AppRole = "admin" | "company" | "driver" | "customer";
 
@@ -94,6 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      reportFailedLogin(email, { error_message: error.message }, "MT 24 Horas Express - Painel Admin");
+    }
     return { error };
   };
 

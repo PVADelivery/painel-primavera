@@ -25,7 +25,69 @@ function escapeHtml(input: unknown, max = 1500): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-export async function reportErrorToTelegram(payload: ErrorPayload, appName = "MT 24 Horas Express") {
+export async function reportSpamToTelegram(
+  reason: string,
+  details: Record<string, any> = {},
+  appName = "Painel Admin"
+) {
+  return reportErrorToTelegram(
+    {
+      error_message: `[SPAM / ABUSO] ${reason}`,
+      url: typeof window !== "undefined" ? window.location.href : "N/A",
+      additional_info: details,
+    },
+    appName
+  );
+}
+
+export async function reportFailedLogin(
+  email: string,
+  details: Record<string, any> = {},
+  appName = "Painel Admin"
+) {
+  if (typeof window === "undefined") return;
+  try {
+    await supabase.functions.invoke("telegram-logger", {
+      body: {
+        event_type: "failed_login",
+        app_name: appName,
+        user_email: email,
+        url: window.location.href,
+        error_message: details.error_message || "Tentativa de login com senha incorreta",
+        additional_info: {
+          userAgent: navigator.userAgent,
+          ...details
+        }
+      }
+    });
+  } catch (_) {}
+}
+
+export async function reportInvalidRoute(
+  path: string,
+  details: Record<string, any> = {},
+  appName = "Painel Admin"
+) {
+  if (typeof window === "undefined") return;
+  try {
+    await supabase.functions.invoke("telegram-logger", {
+      body: {
+        event_type: "invalid_route",
+        app_name: appName,
+        url: window.location.href,
+        error_message: `Acesso a link inexistente / 404: ${path}`,
+        additional_info: {
+          path,
+          referrer: document.referrer || "Direto",
+          userAgent: navigator.userAgent,
+          ...details
+        }
+      }
+    });
+  } catch (_) {}
+}
+
+export async function reportErrorToTelegram(payload: ErrorPayload, appName = "Painel Admin") {
   if (typeof window === "undefined") return;
 
   const ua = (typeof navigator !== "undefined" ? navigator.userAgent : "").toLowerCase();

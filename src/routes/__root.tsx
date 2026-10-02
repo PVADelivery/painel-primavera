@@ -10,7 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import appCss from "../styles.css?url";
-import { initializeGlobalErrorHandlers, reportErrorToTelegram } from "@/services/logger";
+import { initializeGlobalErrorHandlers, reportErrorToTelegram, reportInvalidRoute } from "@/services/logger";
 import { useEffect } from "react";
 import { GlobalAttackMonitor } from "@/hooks/GlobalAttackMonitor";
 
@@ -45,15 +45,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
-  notFoundComponent: () => (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-7xl font-bold">404</h1>
-        <p className="mt-2 text-muted-foreground">Página não encontrada</p>
-        <a href="/" className="mt-6 inline-block text-primary hover:underline">Voltar ao início</a>
+  notFoundComponent: () => {
+    useEffect(() => {
+      reportInvalidRoute(
+        typeof window !== "undefined" ? window.location.pathname : "/404",
+        { referrer: typeof document !== "undefined" ? document.referrer : "Direto" },
+        "Painel Administrador"
+      );
+    }, []);
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-7xl font-bold">404</h1>
+          <p className="mt-2 text-muted-foreground">Página não encontrada</p>
+          <a href="/" className="mt-6 inline-block text-primary hover:underline">Voltar ao início</a>
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
   errorComponent: ({ error }) => {
     if (typeof window !== "undefined") {
       const msg = (error?.message || "").toLowerCase();
