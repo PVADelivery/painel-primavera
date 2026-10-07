@@ -174,6 +174,11 @@ function DeliveriesPage() {
     if (!reassignDelivery) return;
     try {
       await reassignMut.mutateAsync({ id: reassignDelivery.id, driverId: selectedDriverId || null });
+      if (selectedDriverId) {
+        await updateStatus.mutateAsync({ id: reassignDelivery.id, status: "accepted" });
+      } else {
+        await updateStatus.mutateAsync({ id: reassignDelivery.id, status: "pending" });
+      }
       toast({ title: "Entregador reatribuído!" });
       setReassignDelivery(null);
       setSelectedDriverId("");
@@ -195,8 +200,8 @@ function DeliveriesPage() {
     if (!dispatchDelivery || !selectedDriverId) return;
     try {
       await reassignMut.mutateAsync({ id: dispatchDelivery.id, driverId: selectedDriverId });
-      await updateStatus.mutateAsync({ id: dispatchDelivery.id, status: "broadcasted" });
-      toast({ title: "OS enviada!", description: "Entrega direcionada ao entregador selecionado" });
+      await updateStatus.mutateAsync({ id: dispatchDelivery.id, status: "accepted" });
+      toast({ title: "OS atribuída!", description: "Entrega direcionada e atribuída ao entregador selecionado" });
       setDispatchDelivery(null);
       setSelectedDriverId("");
     } catch (err: any) {
