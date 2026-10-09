@@ -118,11 +118,13 @@ function DriversPage() {
     });
 
     try {
-      const targetUserId = userId || driverId;
-      if (targetUserId) {
-        try {
-          await (supabase as any).rpc("admin_delete_driver_user", { p_user_id: targetUserId });
-        } catch {}
+      try {
+        await (supabase as any).rpc("admin_delete_driver_user", {
+          p_user_id: userId || null,
+          p_driver_id: driverId || null,
+        });
+      } catch (errRpc) {
+        console.warn("RPC admin_delete_driver_user:", errRpc);
       }
 
       if (driverId) {
