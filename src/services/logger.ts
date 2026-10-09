@@ -137,6 +137,9 @@ export async function reportErrorToTelegram(payload: ErrorPayload, appName = "Pa
     msg.includes("423") ||
     msg.includes("520") ||
     msg.includes("hydration") ||
+    msg.includes("script error") ||
+    ((msg.includes("cannot read properties of null") || msg.includes("cannot read property")) && msg.includes("focus")) ||
+    (stack.includes("select-") && stack.includes("focus")) ||
     stack.includes("418") ||
     stack.includes("421") ||
     stack.includes("422") ||
@@ -292,6 +295,9 @@ export function initializeGlobalErrorHandlers(appName: string) {
     if (
       msgStr.includes("insertBefore") ||
       msgStr.includes("removeChild") ||
+      lower.includes("script error") ||
+      (lineno === 0 && colno === 0 && (!source || source === "") && !error) ||
+      ((lower.includes("cannot read properties of null") || lower.includes("cannot read property")) && lower.includes("focus")) ||
       lower.includes("failed to fetch") ||
       lower.includes("networkerror") ||
       lower.includes("network request failed") ||
@@ -304,7 +310,7 @@ export function initializeGlobalErrorHandlers(appName: string) {
       lower.includes("520") ||
       lower.includes("hydration")
     ) {
-      return true; // Ignore browser-translation, network drops, and recoverable hydration reconciliations
+      return true; // Ignore browser-translation, cross-origin script error, benign focus, network drops, and recoverable hydration reconciliations
     }
     reportErrorToTelegram({
       error_message: String(message),

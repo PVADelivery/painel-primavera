@@ -1131,8 +1131,8 @@ function ReportsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as Empresas</SelectItem>
-                      {companies.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      {companies.filter((c: any) => c && c.id).map((c: any) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name || "Empresa"}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1146,8 +1146,8 @@ function ReportsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os Entregadores</SelectItem>
-                      {drivers.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                      {drivers.filter((d: any) => d && d.id).map((d: any) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.full_name || "Entregador"}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1870,7 +1870,7 @@ function ReportsPage() {
                       <Select value={cfForm.category} onValueChange={(val) => {
                         if (val === 'MANAGE_CATEGORIES') {
                           setManageCategoryType(cfForm.type);
-                          setIsManageCategoriesOpen(true);
+                          setTimeout(() => setIsManageCategoriesOpen(true), 120);
                         } else {
                           setCfForm({ ...cfForm, category: val });
                         }
@@ -2178,7 +2178,7 @@ function ReportsPage() {
                   <Select value={editingCf.category} onValueChange={(val) => {
                     if (val === 'MANAGE_CATEGORIES') {
                       setManageCategoryType(editingCf.type);
-                      setIsManageCategoriesOpen(true);
+                      setTimeout(() => setIsManageCategoriesOpen(true), 120);
                     } else {
                       setEditingCf({ ...editingCf, category: val });
                     }
