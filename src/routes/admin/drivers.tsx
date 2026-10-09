@@ -118,6 +118,13 @@ function DriversPage() {
     });
 
     try {
+      const targetUserId = userId || driverId;
+      if (targetUserId) {
+        try {
+          await (supabase as any).rpc("admin_delete_driver_user", { p_user_id: targetUserId });
+        } catch {}
+      }
+
       if (driverId) {
         await supabase.from("delivery_drivers").update({ status: "deleted", is_online: false } as any).eq("id", driverId);
         await supabase.from("delivery_drivers").delete().eq("id", driverId);
