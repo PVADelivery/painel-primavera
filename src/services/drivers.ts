@@ -53,12 +53,12 @@ export async function fetchDrivers(): Promise<DriverWithProfile[]> {
     .map(r => r.user_id)
     .filter(Boolean);
 
-  // 3. Fetch profiles, customers, invitations, and customer_credits
+  // 3. Fetch profiles, customers, invitations, and customer_credits de forma resiliente
   const [{ data: allProfiles }, { data: allCustomers }, { data: allInvitations }, { data: allCredits }] = await Promise.all([
-    supabase.from("profiles").select("*"),
-    supabase.from("customers").select("id, user_id, name, phone, email, customer_email"),
-    supabase.from("invitations").select("id, email, role, token, status, created_at"),
-    supabase.from("customer_credits").select("customer_id, customer_phone, customer_email, customer_name"),
+    supabase.from("profiles").select("*").catch(() => ({ data: [] })),
+    supabase.from("customers").select("id, user_id, name, phone").catch(() => ({ data: [] })),
+    supabase.from("invitations").select("id, email, role, token, status, created_at").catch(() => ({ data: [] })),
+    supabase.from("customer_credits").select("customer_id, customer_phone, customer_name").catch(() => ({ data: [] })),
   ]);
 
   const profileDriverUserIds = (allProfiles || [])
