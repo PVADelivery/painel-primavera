@@ -74,7 +74,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       </div>
     );
   },
-  errorComponent: ({ error }) => {
+  errorComponent: ({ error: rawError }) => {
+    const error = rawError as Error | undefined;
     if (typeof window !== "undefined") {
       const msg = (error?.message || "").toLowerCase();
       const stack = (error?.stack || "").toLowerCase();
