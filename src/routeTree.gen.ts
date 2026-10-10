@@ -9,34 +9,34 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as InviteTokenRouteImport } from './routes/invite.$token'
-import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
-import { Route as AdminStoreSalesRouteImport } from './routes/admin/store-sales'
-import { Route as AdminSocialRouteImport } from './routes/admin/social'
-import { Route as AdminRidesRouteImport } from './routes/admin/rides'
-import { Route as AdminReportsRouteImport } from './routes/admin/reports'
-import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
-import { Route as AdminProfileRouteImport } from './routes/admin/profile'
-import { Route as AdminPricingRouteImport } from './routes/admin/pricing'
-import { Route as AdminDriversRouteImport } from './routes/admin/drivers'
-import { Route as AdminDirectoryRouteImport } from './routes/admin/directory'
-import { Route as AdminDeliveriesRouteImport } from './routes/admin/deliveries'
-import { Route as AdminCompaniesRouteImport } from './routes/admin/companies'
-import { Route as AdminChatRouteImport } from './routes/admin/chat'
-import { Route as AdminBusinessRouteImport } from './routes/admin/business'
 import { Route as AdminBasesRouteImport } from './routes/admin/bases'
+import { Route as AdminBusinessRouteImport } from './routes/admin/business'
+import { Route as AdminChatRouteImport } from './routes/admin/chat'
+import { Route as AdminCompaniesRouteImport } from './routes/admin/companies'
+import { Route as AdminDeliveriesRouteImport } from './routes/admin/deliveries'
+import { Route as AdminDirectoryRouteImport } from './routes/admin/directory'
+import { Route as AdminDriversRouteImport } from './routes/admin/drivers'
+import { Route as AdminPricingRouteImport } from './routes/admin/pricing'
+import { Route as AdminProfileRouteImport } from './routes/admin/profile'
+import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
+import { Route as AdminReportsRouteImport } from './routes/admin/reports'
+import { Route as AdminRidesRouteImport } from './routes/admin/rides'
+import { Route as AdminSocialRouteImport } from './routes/admin/social'
+import { Route as AdminStoreSalesRouteImport } from './routes/admin/store-sales'
+import { Route as AdminTrackingRouteImport } from './routes/admin/tracking'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -44,74 +44,9 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTrackingRoute = AdminTrackingRouteImport.update({
-  id: '/admin/tracking',
-  path: '/admin/tracking',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminStoreSalesRoute = AdminStoreSalesRouteImport.update({
-  id: '/admin/store-sales',
-  path: '/admin/store-sales',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminSocialRoute = AdminSocialRouteImport.update({
-  id: '/admin/social',
-  path: '/admin/social',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRidesRoute = AdminRidesRouteImport.update({
-  id: '/admin/rides',
-  path: '/admin/rides',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminReportsRoute = AdminReportsRouteImport.update({
-  id: '/admin/reports',
-  path: '/admin/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRegionsRoute = AdminRegionsRouteImport.update({
-  id: '/admin/regions',
-  path: '/admin/regions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminProfileRoute = AdminProfileRouteImport.update({
-  id: '/admin/profile',
-  path: '/admin/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminPricingRoute = AdminPricingRouteImport.update({
-  id: '/admin/pricing',
-  path: '/admin/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDriversRoute = AdminDriversRouteImport.update({
-  id: '/admin/drivers',
-  path: '/admin/drivers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDirectoryRoute = AdminDirectoryRouteImport.update({
-  id: '/admin/directory',
-  path: '/admin/directory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDeliveriesRoute = AdminDeliveriesRouteImport.update({
-  id: '/admin/deliveries',
-  path: '/admin/deliveries',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminCompaniesRoute = AdminCompaniesRouteImport.update({
-  id: '/admin/companies',
-  path: '/admin/companies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminChatRoute = AdminChatRouteImport.update({
-  id: '/admin/chat',
-  path: '/admin/chat',
+const AdminBasesRoute = AdminBasesRouteImport.update({
+  id: '/admin/bases',
+  path: '/admin/bases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminBusinessRoute = AdminBusinessRouteImport.update({
@@ -119,9 +54,74 @@ const AdminBusinessRoute = AdminBusinessRouteImport.update({
   path: '/admin/business',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminBasesRoute = AdminBasesRouteImport.update({
-  id: '/admin/bases',
-  path: '/admin/bases',
+const AdminChatRoute = AdminChatRouteImport.update({
+  id: '/admin/chat',
+  path: '/admin/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCompaniesRoute = AdminCompaniesRouteImport.update({
+  id: '/admin/companies',
+  path: '/admin/companies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDeliveriesRoute = AdminDeliveriesRouteImport.update({
+  id: '/admin/deliveries',
+  path: '/admin/deliveries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDirectoryRoute = AdminDirectoryRouteImport.update({
+  id: '/admin/directory',
+  path: '/admin/directory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDriversRoute = AdminDriversRouteImport.update({
+  id: '/admin/drivers',
+  path: '/admin/drivers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPricingRoute = AdminPricingRouteImport.update({
+  id: '/admin/pricing',
+  path: '/admin/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProfileRoute = AdminProfileRouteImport.update({
+  id: '/admin/profile',
+  path: '/admin/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRegionsRoute = AdminRegionsRouteImport.update({
+  id: '/admin/regions',
+  path: '/admin/regions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRidesRoute = AdminRidesRouteImport.update({
+  id: '/admin/rides',
+  path: '/admin/rides',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSocialRoute = AdminSocialRouteImport.update({
+  id: '/admin/social',
+  path: '/admin/social',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoreSalesRoute = AdminStoreSalesRouteImport.update({
+  id: '/admin/store-sales',
+  path: '/admin/store-sales',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTrackingRoute = AdminTrackingRouteImport.update({
+  id: '/admin/tracking',
+  path: '/admin/tracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -279,18 +279,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -300,102 +300,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/tracking': {
-      id: '/admin/tracking'
-      path: '/admin/tracking'
-      fullPath: '/admin/tracking'
-      preLoaderRoute: typeof AdminTrackingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/store-sales': {
-      id: '/admin/store-sales'
-      path: '/admin/store-sales'
-      fullPath: '/admin/store-sales'
-      preLoaderRoute: typeof AdminStoreSalesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/social': {
-      id: '/admin/social'
-      path: '/admin/social'
-      fullPath: '/admin/social'
-      preLoaderRoute: typeof AdminSocialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/rides': {
-      id: '/admin/rides'
-      path: '/admin/rides'
-      fullPath: '/admin/rides'
-      preLoaderRoute: typeof AdminRidesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/reports': {
-      id: '/admin/reports'
-      path: '/admin/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof AdminReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/regions': {
-      id: '/admin/regions'
-      path: '/admin/regions'
-      fullPath: '/admin/regions'
-      preLoaderRoute: typeof AdminRegionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/profile': {
-      id: '/admin/profile'
-      path: '/admin/profile'
-      fullPath: '/admin/profile'
-      preLoaderRoute: typeof AdminProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/pricing': {
-      id: '/admin/pricing'
-      path: '/admin/pricing'
-      fullPath: '/admin/pricing'
-      preLoaderRoute: typeof AdminPricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/drivers': {
-      id: '/admin/drivers'
-      path: '/admin/drivers'
-      fullPath: '/admin/drivers'
-      preLoaderRoute: typeof AdminDriversRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/directory': {
-      id: '/admin/directory'
-      path: '/admin/directory'
-      fullPath: '/admin/directory'
-      preLoaderRoute: typeof AdminDirectoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/deliveries': {
-      id: '/admin/deliveries'
-      path: '/admin/deliveries'
-      fullPath: '/admin/deliveries'
-      preLoaderRoute: typeof AdminDeliveriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/companies': {
-      id: '/admin/companies'
-      path: '/admin/companies'
-      fullPath: '/admin/companies'
-      preLoaderRoute: typeof AdminCompaniesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/chat': {
-      id: '/admin/chat'
-      path: '/admin/chat'
-      fullPath: '/admin/chat'
-      preLoaderRoute: typeof AdminChatRouteImport
+    '/admin/bases': {
+      id: '/admin/bases'
+      path: '/admin/bases'
+      fullPath: '/admin/bases'
+      preLoaderRoute: typeof AdminBasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/business': {
@@ -405,11 +314,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBusinessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/bases': {
-      id: '/admin/bases'
-      path: '/admin/bases'
-      fullPath: '/admin/bases'
-      preLoaderRoute: typeof AdminBasesRouteImport
+    '/admin/chat': {
+      id: '/admin/chat'
+      path: '/admin/chat'
+      fullPath: '/admin/chat'
+      preLoaderRoute: typeof AdminChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/companies': {
+      id: '/admin/companies'
+      path: '/admin/companies'
+      fullPath: '/admin/companies'
+      preLoaderRoute: typeof AdminCompaniesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/deliveries': {
+      id: '/admin/deliveries'
+      path: '/admin/deliveries'
+      fullPath: '/admin/deliveries'
+      preLoaderRoute: typeof AdminDeliveriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/directory': {
+      id: '/admin/directory'
+      path: '/admin/directory'
+      fullPath: '/admin/directory'
+      preLoaderRoute: typeof AdminDirectoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/drivers': {
+      id: '/admin/drivers'
+      path: '/admin/drivers'
+      fullPath: '/admin/drivers'
+      preLoaderRoute: typeof AdminDriversRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/pricing': {
+      id: '/admin/pricing'
+      path: '/admin/pricing'
+      fullPath: '/admin/pricing'
+      preLoaderRoute: typeof AdminPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/profile': {
+      id: '/admin/profile'
+      path: '/admin/profile'
+      fullPath: '/admin/profile'
+      preLoaderRoute: typeof AdminProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/regions': {
+      id: '/admin/regions'
+      path: '/admin/regions'
+      fullPath: '/admin/regions'
+      preLoaderRoute: typeof AdminRegionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/rides': {
+      id: '/admin/rides'
+      path: '/admin/rides'
+      fullPath: '/admin/rides'
+      preLoaderRoute: typeof AdminRidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/social': {
+      id: '/admin/social'
+      path: '/admin/social'
+      fullPath: '/admin/social'
+      preLoaderRoute: typeof AdminSocialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/store-sales': {
+      id: '/admin/store-sales'
+      path: '/admin/store-sales'
+      fullPath: '/admin/store-sales'
+      preLoaderRoute: typeof AdminStoreSalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/tracking': {
+      id: '/admin/tracking'
+      path: '/admin/tracking'
+      fullPath: '/admin/tracking'
+      preLoaderRoute: typeof AdminTrackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

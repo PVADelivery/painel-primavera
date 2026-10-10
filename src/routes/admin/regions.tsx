@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/admin/regions")({
   component: RegionsPage,
   errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-sm text-destructive">{error.message}</div>
+    <div role="alert" className="p-8 text-sm text-destructive">{(error as Error).message}</div>
   ),
   notFoundComponent: () => <div className="p-8 text-sm">Nenhuma região encontrada.</div>,
   head: () => ({
