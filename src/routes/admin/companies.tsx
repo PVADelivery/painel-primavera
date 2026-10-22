@@ -262,11 +262,7 @@ function CompaniesPage() {
       </div>
 
       {/* ── BONASOFT Watermark ── */}
-      <div className="pt-8 pb-4 flex justify-center opacity-40 select-none pointer-events-none">
-        <span className="text-[10px] font-black tracking-[0.5em] text-muted-foreground uppercase">
-          B O N A S O F T
-        </span>
-      </div>
+      <div className="pt-8 pb-4 flex justify-center opacity-40 select-none "> <a href="https://wa.me/5566992734632?text=Ol%C3%A1!%20Conheci%20a%20BonaSoft%20atrav%C3%A9s%20do%20aplicativo%20MT%2024%20Horas%20e%20gostaria%20de%20conhecer%20melhor%20os%20servi%C3%A7os%20de%20desenvolvimento%20de%20aplicativos%20e%20sistemas.%20Podemos%20conversar%3F" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black tracking-[0.5em] text-muted-foreground uppercase cursor-pointer">B O N A S O F T</a> </div>
     </AdminLayout>
   );
 }
