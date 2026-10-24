@@ -86,7 +86,12 @@ Deno.serve(async (req) => {
     });
 
     if (authError) {
-      return new Response(JSON.stringify({ error: authError.message }), {
+      const isAlready = authError.message?.toLowerCase().includes("already") || (authError as any).status === 422;
+      return new Response(JSON.stringify({ 
+        error: isAlready 
+          ? "Este endereço de e-mail já está cadastrado no sistema. Por favor, faça login com sua senha." 
+          : (authError.message || "Erro ao criar usuário") 
+      }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

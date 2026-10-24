@@ -90,7 +90,7 @@ function DriversPage() {
       );
     }
     return true;
-  });
+  }).sort((a, b) => (a.full_name || "").trim().localeCompare((b.full_name || "").trim(), "pt-BR", { sensitivity: "base" }));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
