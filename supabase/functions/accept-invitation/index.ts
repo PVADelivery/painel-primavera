@@ -66,16 +66,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify email matches invitation — only for invitations created with a real email.
-    // Open link invitations use a placeholder email (convite_<token>@...), so the
-    // partner is free to register with their own address.
-    const isOpenLinkInvite = typeof invitation.email === "string" && invitation.email.startsWith("convite_");
-    if (!isOpenLinkInvite && invitation.email !== email) {
-      return new Response(JSON.stringify({ error: "Email não corresponde ao convite" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Links de convite aceitam o e-mail digitado pelo parceiro/entregador
+    const isOpenLinkInvite = true;
 
     const validRoles = ["admin", "driver", "company", "customer"];
     if (!validRoles.includes(invitation.role)) {
