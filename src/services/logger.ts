@@ -270,8 +270,11 @@ export function initializeGlobalErrorHandlers(appName: string) {
             !msgStr ||
             msgStr.includes("cancelada pelo usuário") ||
             lower.includes("failed to fetch") ||
+            lower.includes("load failed") ||
             lower.includes("networkerror") ||
-            lower.includes("network request failed");
+            lower.includes("network request failed") ||
+            lower.includes("falha de conexão") ||
+            lower.includes("abort");
 
           if (typeof msgStr === "string" && !isIgnored) {
             reportErrorToTelegram({
