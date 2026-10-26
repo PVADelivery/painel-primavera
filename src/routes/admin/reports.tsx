@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useMemo, useState, useEffect, useRef } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
-  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check,
+  Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check, CheckCircle2,
   Percent, Sparkles, Coins, History, RotateCcw, AlertTriangle, Eye
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -133,14 +133,20 @@ function ReportsPage() {
   const [payNotes, setPayNotes] = useState("");
   const [submittingPay, setSubmittingPay] = useState(false);
   const [driverSearchTerm, setDriverSearchTerm] = useState("");
-  const [payoutCalcMode, setPayoutCalcMode] = useState<"all" | "period">("all");
+  const [payoutCalcMode, setPayoutCalcMode] = useState<"all" | "period">("period");
   const [historyModalDriver, setHistoryModalDriver] = useState<{ name: string; id: string; payouts: any[] } | null>(null);
   const isSubmittingPayRef = useRef(false);
 
   const openPayDriverModal = (drv: { name: string; id: string; due: number; deliveries: number; totalEarned?: number; paidAmount?: number; isFullyPaid?: boolean }) => {
+    if (drv.isFullyPaid || drv.due <= 0.05) {
+      toast({
+        title: "Entregador Já Quitado",
+        description: `O repasse de ${drv.name} já foi registrado e liquidado (${drv.deliveries} entregas). Não há saldo pendente para pagamento.`,
+      });
+      return;
+    }
     setPayDriverDialogData(drv);
     setPayAmount(drv.due > 0 ? drv.due.toFixed(2) : "0.00");
-    // Sempre sugere a data de hoje por padrão, sem obrigar a jogar para o último dia do mês
     setPayDate(new Date().toISOString().split("T")[0]);
     setPayMethod("Pix");
     setPayNotes("");
@@ -154,7 +160,26 @@ function ReportsPage() {
       return;
     }
 
+    if (payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05) {
+      toast({
+        title: "Repasse Já Efetuado",
+        description: `O entregador ${payDriverDialogData.name} já está quitado neste período. Não é permitido gerar repasses duplicados.`,
+        variant: "destructive"
+      });
+      setPayDriverDialogData(null);
+      return;
+    }
+
     const amountVal = Number(payAmount);
+    if (amountVal > (payDriverDialogData.due + 0.10)) {
+      toast({
+        title: "Valor Excede o Saldo Devido",
+        description: `O valor máximo a repassar para ${payDriverDialogData.name} é de ${payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     const dateStr = payDate || new Date().toISOString().split("T")[0];
     const periodLabel = dateFrom && dateTo ? ` (Ref. ${dateFrom} a ${dateTo})` : "";
     const descriptionStr = `Repasse Entregador: ${payDriverDialogData.name} [ID: ${payDriverDialogData.id || "base"}] (${payDriverDialogData.deliveries} entregas)${periodLabel}${payNotes ? ` - ${payNotes}` : ''}`;
@@ -188,9 +213,22 @@ function ReportsPage() {
 
       if (insertError) throw insertError;
 
+      // Optimistic update imediato no fluxo de caixa local para zerar o saldo na mesma hora na interface
+      const newEntry = {
+        id: "temp-" + Date.now(),
+        description: descriptionStr,
+        category: "Repasse Motoboy",
+        amount: amountVal,
+        type: "expense",
+        date: dateStr,
+        origin: payMethod || "Pix",
+        created_at: new Date().toISOString()
+      };
+      setCashFlows((prev: any[]) => [newEntry, ...(Array.isArray(prev) ? prev : [])]);
+
       toast({
         title: "Baixa de Repasse Registrada com Sucesso!",
-        description: `R$ ${amountVal.toFixed(2)} lançados como pagamento para ${payDriverDialogData.name} na data ${dateStr}.`,
+        description: `R$ ${amountVal.toFixed(2)} lançados como pagamento para ${payDriverDialogData.name} na data ${dateStr}. O entregador foi quitado.`,
       });
 
       setPayDriverDialogData(null);
@@ -632,23 +670,24 @@ function ReportsPage() {
       const idMatch = cf.description?.match(/\[ID:\s*([^\]]+)\]/i);
       const taggedId = idMatch?.[1]?.trim();
 
-      let matchedKey: string | null = null;
-      if (taggedId) {
-        matchedKey = taggedId;
+      let matchedDriver: any = null;
+      if (taggedId && taggedId !== "base") {
+        matchedDriver = drivers.find((d: any) => d.id === taggedId || d.user_id === taggedId);
       }
 
       // 2. Tenta encontrar por nome de motorista cadastrado
-      let matchedName: string | null = null;
-      for (const d of drivers) {
-        const dNorm = cleanStr(d.full_name);
-        if (dNorm && dNorm.length >= 3 && descNorm.includes(dNorm)) {
-          matchedName = dNorm;
-          if (!matchedKey) matchedKey = d.id;
-          break;
+      if (!matchedDriver) {
+        for (const d of drivers) {
+          const dNorm = cleanStr(d.full_name);
+          if (dNorm && dNorm.length >= 3 && descNorm.includes(dNorm)) {
+            matchedDriver = d;
+            break;
+          }
         }
       }
 
       // 3. Fallback: extrai nome da descrição via regex flexível
+      let matchedName = matchedDriver ? cleanStr(matchedDriver.full_name) : null;
       if (!matchedName) {
         const regexMatch = cf.description?.match(/(?:Repasse|Pagamento)\s*(?:de\s+)?(?:Entregador|Motoboy)?\s*[:–-]?\s*([^(\[\n]+)/i);
         if (regexMatch && regexMatch[1]) {
@@ -656,13 +695,20 @@ function ReportsPage() {
         }
       }
 
-      const finalKey = matchedName || matchedKey || "outro";
+      const driverId = matchedDriver?.id || (taggedId && taggedId !== "base" ? taggedId : null);
+      const driverUserId = matchedDriver?.user_id || null;
+
+      // Lista de chaves unificadas para registrar o pagamento
+      const keys = new Set<string>();
+      if (matchedName) keys.add(matchedName);
+      if (driverId) keys.add(driverId);
+      if (driverUserId) keys.add(driverUserId);
+      if (keys.size === 0) keys.add("outro");
 
       // Acumula valor pago no mapa histórico (All Time)
-      allTimeMap[finalKey] = (allTimeMap[finalKey] || 0) + amount;
-      if (matchedKey && matchedKey !== finalKey) {
-        allTimeMap[matchedKey] = (allTimeMap[matchedKey] || 0) + amount;
-      }
+      keys.forEach((k) => {
+        allTimeMap[k] = (allTimeMap[k] || 0) + amount;
+      });
 
       // Checa se o lançamento pertence ao período selecionado
       let isInPeriod = true;
@@ -675,19 +721,16 @@ function ReportsPage() {
       }
 
       if (isInPeriod) {
-        periodMap[finalKey] = (periodMap[finalKey] || 0) + amount;
-        if (matchedKey && matchedKey !== finalKey) {
-          periodMap[matchedKey] = (periodMap[matchedKey] || 0) + amount;
-        }
+        keys.forEach((k) => {
+          periodMap[k] = (periodMap[k] || 0) + amount;
+        });
       }
 
       // Registra no histórico de repasses deste entregador
-      if (!history[finalKey]) history[finalKey] = [];
-      history[finalKey].push(cf);
-      if (matchedKey && matchedKey !== finalKey) {
-        if (!history[matchedKey]) history[matchedKey] = [];
-        history[matchedKey].push(cf);
-      }
+      keys.forEach((k) => {
+        if (!history[k]) history[k] = [];
+        history[k].push(cf);
+      });
     });
 
     return {
@@ -707,6 +750,7 @@ function ReportsPage() {
       const key = d.id || normName;
       map.set(key, {
         id: d.id,
+        user_id: d.user_id,
         name: d.full_name || "Motoboy",
         normName,
         allTimeDeliveries: 0,
@@ -716,35 +760,38 @@ function ReportsPage() {
       });
     });
 
+    // Helper robusto para encontrar entregador no mapa
+    const findDriverInMap = (driverId: string | null, normName: string) => {
+      if (driverId && map.has(driverId)) return map.get(driverId);
+      for (const v of map.values()) {
+        if (driverId && (v.id === driverId || (v.user_id && v.user_id === driverId))) return v;
+        if (v.normName === normName) return v;
+      }
+      return null;
+    };
+
     // 2. Processar todas as entregas concluídas da base (All Time)
     allDeliveries.forEach((d: any) => {
       if (!isCompletedDelivery(d.status)) return;
       const rawName = (d.driver_name || "Motoboy Base").trim();
       const normName = cleanStr(rawName);
-      const key = d.driver_id || normName;
-
-      if (!map.has(key)) {
-        let foundKey: string | null = null;
-        for (const [k, v] of map.entries()) {
-          if (v.normName === normName) { foundKey = k; break; }
-        }
-        if (foundKey) {
-          map.get(foundKey)!.allTimeDeliveries += 1;
-          map.get(foundKey)!.allTimeEarned += (Number(d.delivery_fee || 0) * 0.75);
-          return;
-        }
-        map.set(key, {
+      
+      let item = findDriverInMap(d.driver_id, normName);
+      if (!item) {
+        const key = d.driver_id || normName;
+        item = {
           id: d.driver_id || normName,
+          user_id: null,
           name: rawName,
           normName,
           allTimeDeliveries: 0,
           allTimeEarned: 0,
           periodDeliveries: 0,
           periodEarned: 0,
-        });
+        };
+        map.set(key, item);
       }
 
-      const item = map.get(key)!;
       item.allTimeDeliveries += 1;
       item.allTimeEarned += (Number(d.delivery_fee || 0) * 0.75);
     });
@@ -754,14 +801,7 @@ function ReportsPage() {
       if (!isCompletedDelivery(d.status)) return;
       const rawName = (d.driver_name || "Motoboy Base").trim();
       const normName = cleanStr(rawName);
-      const key = d.driver_id || normName;
-
-      let targetItem = map.get(key);
-      if (!targetItem) {
-        for (const v of map.values()) {
-          if (v.normName === normName) { targetItem = v; break; }
-        }
-      }
+      const targetItem = findDriverInMap(d.driver_id, normName);
 
       if (targetItem) {
         targetItem.periodDeliveries += 1;
@@ -771,8 +811,8 @@ function ReportsPage() {
 
     // 4. Calcular saldos e quitações para cada entregador
     return Array.from(map.values()).map((drv) => {
-      const allTimePaid = allTimePaymentsMap[drv.normName] || allTimePaymentsMap[drv.id] || 0;
-      const periodPaid = periodPaymentsMap[drv.normName] || periodPaymentsMap[drv.id] || 0;
+      const allTimePaid = allTimePaymentsMap[drv.normName] || allTimePaymentsMap[drv.id] || (drv.user_id ? allTimePaymentsMap[drv.user_id] : 0) || 0;
+      const periodPaid = periodPaymentsMap[drv.normName] || periodPaymentsMap[drv.id] || (drv.user_id ? periodPaymentsMap[drv.user_id] : 0) || 0;
 
       const allTimeDue = Math.max(0, drv.allTimeEarned - allTimePaid);
       const periodDue = Math.max(0, drv.periodEarned - periodPaid);
@@ -782,8 +822,8 @@ function ReportsPage() {
       const paidAmount = isAllMode ? allTimePaid : periodPaid;
       const due = isAllMode ? allTimeDue : periodDue;
       const deliveries = isAllMode ? drv.allTimeDeliveries : drv.periodDeliveries;
-      const isFullyPaid = totalEarned > 0 && due <= 0.05;
-      const payouts = driverPayoutsHistory[drv.normName] || driverPayoutsHistory[drv.id] || [];
+      const isFullyPaid = due <= 0.05 && (totalEarned > 0 || paidAmount > 0);
+      const payouts = driverPayoutsHistory[drv.normName] || driverPayoutsHistory[drv.id] || (drv.user_id ? driverPayoutsHistory[drv.user_id] : []) || [];
 
       return {
         ...drv,
@@ -1031,11 +1071,14 @@ function ReportsPage() {
 
         <Button
           onClick={() => {
-            const firstPending = allDriversForPayout.find(d => d.due > 0) || allDriversForPayout[0];
+            const firstPending = allDriversForPayout.find(d => d.due > 0.05 && !d.isFullyPaid);
             if (firstPending) {
               openPayDriverModal({ name: firstPending.name, id: firstPending.id || "", due: firstPending.due, deliveries: firstPending.deliveries, totalEarned: firstPending.totalEarned, paidAmount: firstPending.paidAmount, isFullyPaid: firstPending.isFullyPaid });
             } else {
-              openPayDriverModal({ name: "Selecione o Entregador", id: "", due: 0, deliveries: 0 });
+              toast({
+                title: "Todos os entregadores estão quitados!",
+                description: "Não há nenhum entregador com saldo pendente de repasse para o período selecionado.",
+              });
             }
           }}
           className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-5 py-2.5 rounded-2xl shadow-lg shadow-emerald-600/20 gap-2 shrink-0 border border-emerald-500/30"
@@ -1479,7 +1522,7 @@ function ReportsPage() {
                               <span>Extrato ({drv.payouts.length})</span>
                             </Button>
 
-                            {drv.isFullyPaid ? (
+                            {drv.isFullyPaid || drv.due <= 0.05 ? (
                               <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1.5 rounded-xl border border-emerald-500/20">
                                 <Check className="h-3.5 w-3.5" /> Quitado
                               </span>
@@ -1580,7 +1623,7 @@ function ReportsPage() {
                             >
                               <History className="h-3.5 w-3.5" />
                             </Button>
-                            {drv.isFullyPaid ? (
+                            {drv.isFullyPaid || drv.due <= 0.05 ? (
                               <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 font-extrabold text-xs px-2.5 py-1.5 rounded-xl border border-emerald-500/20">
                                 <Check className="h-3.5 w-3.5" /> Quitado
                               </span>
@@ -2318,7 +2361,8 @@ function ReportsPage() {
                     onValueChange={(selectedName) => {
                       const found = allDriversForPayout.find(d => d.name === selectedName);
                       if (found) {
-                        openPayDriverModal({ name: found.name, id: found.id || "", due: found.due, deliveries: found.deliveries, totalEarned: found.totalEarned, paidAmount: found.paidAmount, isFullyPaid: found.isFullyPaid });
+                        setPayDriverDialogData(found);
+                        setPayAmount(found.due > 0 ? found.due.toFixed(2) : "0.00");
                       }
                     }}
                   >
@@ -2331,13 +2375,20 @@ function ReportsPage() {
                         .map((drv) => (
                           <SelectItem key={drv.id || drv.name} value={drv.name} className="font-medium text-xs sm:text-sm">
                             <span className="truncate">
-                              {drv.name} ({drv.deliveries} entregas — {drv.isFullyPaid ? "✅ Quitado" : `${drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} a pagar`})
+                              {drv.name} ({drv.deliveries} entregas — {drv.isFullyPaid || drv.due <= 0.05 ? "✅ Quitado" : `${drv.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} a pagar`})
                             </span>
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {(payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05) && (
+                  <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center gap-2.5 text-emerald-600 text-xs font-bold">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <span>Este entregador já foi totalmente quitado neste período. Não há repasses pendentes a serem realizados.</span>
+                  </div>
+                )}
 
                 <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2 w-full overflow-hidden">
                   <div className="flex items-center justify-between">
@@ -2363,8 +2414,8 @@ function ReportsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Saldo Devido</p>
-                      <p className="font-black text-amber-600">
-                        {payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      <p className={`font-black ${payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05 ? "text-emerald-600" : "text-amber-600"}`}>
+                        {payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05 ? "R$ 0,00 (Quitado)" : payDriverDialogData.due.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </p>
                     </div>
                   </div>
@@ -2374,7 +2425,7 @@ function ReportsPage() {
                   <div className="space-y-1.5 w-full">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="payAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Valor da Baixa (R$)</Label>
-                      {payDriverDialogData.due > 0 && (
+                      {payDriverDialogData.due > 0 && !payDriverDialogData.isFullyPaid && (
                         <button
                           type="button"
                           onClick={() => setPayAmount(payDriverDialogData.due.toFixed(2))}
@@ -2388,7 +2439,8 @@ function ReportsPage() {
                       id="payAmount"
                       value={payAmount}
                       onChangeValue={(v) => setPayAmount(v)}
-                      className="h-12 w-full rounded-2xl border border-input bg-card px-4 py-2 text-base font-bold shadow-sm"
+                      disabled={payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05}
+                      className="h-12 w-full rounded-2xl border border-input bg-card px-4 py-2 text-base font-bold shadow-sm disabled:opacity-50"
                       required
                     />
                   </div>
@@ -2400,7 +2452,8 @@ function ReportsPage() {
                       type="date"
                       value={payDate}
                       onChange={(e) => setPayDate(e.target.value)}
-                      className="h-12 rounded-2xl border-input bg-card px-4 font-bold"
+                      disabled={payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05}
+                      className="h-12 rounded-2xl border-input bg-card px-4 font-bold disabled:opacity-50"
                       required
                     />
                   </div>
@@ -2409,8 +2462,8 @@ function ReportsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                   <div className="space-y-1.5 w-full">
                     <Label htmlFor="payMethod" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</Label>
-                    <Select value={payMethod} onValueChange={setPayMethod}>
-                      <SelectTrigger className="font-bold rounded-2xl h-12 w-full border-border bg-card">
+                    <Select value={payMethod} onValueChange={setPayMethod} disabled={payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05}>
+                      <SelectTrigger className="font-bold rounded-2xl h-12 w-full border-border bg-card disabled:opacity-50">
                         <SelectValue placeholder="Forma de pagamento" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2430,7 +2483,8 @@ function ReportsPage() {
                       placeholder="Ex: Quitação semanal de corridas"
                       value={payNotes}
                       onChange={(e) => setPayNotes(e.target.value)}
-                      className="h-12 rounded-2xl border-input bg-card px-4 font-medium"
+                      disabled={payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05}
+                      className="h-12 rounded-2xl border-input bg-card px-4 font-medium disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -2439,9 +2493,13 @@ function ReportsPage() {
                   <Button type="button" variant="outline" onClick={() => setPayDriverDialogData(null)} className="rounded-2xl h-12 px-5 font-bold flex-1 sm:flex-none">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={submittingPay} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20 disabled:opacity-50">
+                  <Button 
+                    type="submit" 
+                    disabled={submittingPay || !payDriverDialogData || payDriverDialogData.due <= 0.05 || payDriverDialogData.isFullyPaid || !payAmount || Number(payAmount) <= 0} 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl h-12 px-6 gap-2 flex-1 sm:flex-none shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                  >
                     <DollarSign className="h-5 w-5" />
-                    {submittingPay ? "Registrando Baixa..." : "Confirmar Baixa de Repasse"}
+                    {submittingPay ? "Registrando Baixa..." : (payDriverDialogData.isFullyPaid || payDriverDialogData.due <= 0.05) ? "Entregador Já Quitado" : "Confirmar Baixa de Repasse"}
                   </Button>
                 </DialogFooter>
               </form>
