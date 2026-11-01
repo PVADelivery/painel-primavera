@@ -264,7 +264,7 @@ function CompaniesPage() {
 
       {/* ── BONASOFT Watermark ── */}
       <div className="mt-12 pb-6 flex justify-center select-none">
-        <BonaSoftLogo showSubtitle />
+        <BonaSoftLogo />
       </div>
     </AdminLayout>
   );
