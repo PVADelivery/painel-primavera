@@ -18,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
   Building2, Home, Car, Plus, Search, Trash2, Edit3, Phone,
-  CheckCircle2, XCircle, MapPin, Tag, Fuel, Gauge, Sparkles, Filter,
+  CheckCircle2, XCircle, MapPin, Tag, Fuel, Gauge, Filter,
   UploadCloud, Image as ImageIcon, Loader2, Star, X, Copy, Clock
 } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/WhatsappIcon";
@@ -405,7 +405,7 @@ export function BusinessAdminPage() {
                   {properties.filter((p) => p.deal_type === "venda").length}
                 </p>
               </div>
-              <Sparkles className="h-8 w-8 text-amber-500/30" />
+              <Home className="h-8 w-8 text-amber-500/30" />
             </CardContent>
           </Card>
           <Card className="bg-card/70 border-border/80 shadow-sm">

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import {
   Wallet, TrendingUp, TrendingDown, Plus, Search, User,
-  Sparkles, History, Filter, CheckCircle2, Users,
+  Gift, History, Filter, CheckCircle2, Users,
   DollarSign, Phone, Mail, FileText, ArrowDownLeft, ArrowUpRight, PlusCircle, Check,
   X, UserCheck, ShieldCheck, Zap, ExternalLink, MapPin, Calendar, Clock, CreditCard,
   ArrowLeft, Loader2, Pencil, RotateCcw, Trash2, AlertTriangle
@@ -548,7 +548,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
             </Button>
             <div>
               <h2 className="text-lg font-black flex items-center gap-2 text-foreground">
-                <Sparkles className="w-5 h-5 text-primary" /> Central de Gestão & Recarga de Créditos
+                <Wallet className="w-5 h-5 text-primary" /> Central de Gestão & Recarga de Créditos
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
                 Workspace financeiro para gerenciar carteiras de clientes e efetivar recargas instantâneas (+10% Bônus)
@@ -958,7 +958,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
 
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-emerald-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
+                        <Gift className="w-4 h-4 text-emerald-500" /> Bônus de +{rechargeForm.bonusPercentage}% Concedido:
                       </span>
                       <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                         + {brl(currentBonusVal)}
@@ -1260,7 +1260,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
             <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                  <span>Bônus Concedidos</span> <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Bônus Concedidos</span> <Gift className="w-3.5 h-3.5 text-amber-500" />
                 </CardTitle>
                 <Plus className="h-4 w-4 text-amber-500" />
               </CardHeader>
@@ -1314,7 +1314,7 @@ export function CustomerCreditsPanel({ onCreditRecharged }: CustomerCreditsPanel
                   onClick={() => handleOpenWorkspaceFor()}
                   className="font-black text-xs gap-1.5 rounded-xl h-9 bg-primary text-black hover:bg-primary/90 shadow-md cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4 text-black" /> Central de Créditos
+                  <Wallet className="w-4 h-4 text-black" /> Central de Créditos
                 </Button>
               </div>
 

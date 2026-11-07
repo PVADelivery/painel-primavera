@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Package, MapPin, Store, User, Phone, CreditCard, DollarSign,
-  Loader2, Sparkles, Shirt, FileText
+  Loader2, PlusCircle, Shirt, FileText
 } from "lucide-react";
 
 interface Props {
@@ -608,7 +608,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Criar Entrega Avulsa
+                  <PlusCircle className="h-4 w-4 mr-2" /> Criar Entrega Avulsa
                 </>
               )}
             </Button>

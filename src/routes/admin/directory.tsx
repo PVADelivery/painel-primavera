@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, Sparkles, X, Pencil, ArrowDownAZ } from "lucide-react";
+import { Building2, Plus, MoreHorizontal, Trash, Edit, Upload, Image as ImageIcon, Search, Check, ChevronDown, Tag, Smile, X, Pencil, ArrowDownAZ } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -566,7 +566,7 @@ function CategoryManager() {
       <DialogContent className="sm:max-w-lg rounded-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-black">
-            <Sparkles className="h-5 w-5 text-primary" /> Gerenciar Categorias com Emojis
+            <Tag className="h-5 w-5 text-primary" /> Gerenciar Categorias com Emojis
           </DialogTitle>
         </DialogHeader>
 

@@ -31,7 +31,6 @@ import {
   EyeOff,
   AlertCircle,
   ExternalLink,
-  Sparkles,
   Tag,
   Calendar,
   User,

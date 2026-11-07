@@ -25,7 +25,6 @@ import {
   MessageCircle,
   HelpCircle,
   ShoppingBag,
-  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/chat")({
@@ -803,7 +802,7 @@ export function AdminChatPage() {
                 {/* Quick Replies */}
                 <div className="px-3 pt-2 pb-1 border-t border-border/40 bg-card/40 flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
                   <span className="text-[11px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1 pl-1">
-                    <Sparkles className="h-3 w-3 text-amber-500" />
+                    <MessageCircle className="h-3 w-3 text-amber-500" />
                     Respostas Rápidas:
                   </span>
                   {QUICK_REPLIES.map((reply, idx) => (

@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Bell, Check, Trash2, Wallet, Truck, ShoppingBag, Car, MessageSquare,
-  Sparkles, ArrowRight, CheckCircle2, Clock, Building2, User
+  ArrowRight, CheckCircle2, Clock, Building2, User
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -269,7 +269,7 @@ export function NotificationsPopover() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-black text-base text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" /> Central de Notificações
+                <Bell className="w-4 h-4 text-amber-500" /> Central de Notificações
               </h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 font-black px-2 py-0.5 rounded-full border border-amber-500/30">

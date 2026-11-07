@@ -6,7 +6,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { 
   DollarSign, TrendingUp, Package, ArrowUpCircle, ArrowDownCircle, 
   Trash2, Pencil, Calendar, Clock as ClockIcon, AlertCircle, Tag, Plus, X, Settings, Filter, Download, Printer, Search, FileText, Check, CheckCircle2,
-  Percent, Sparkles, Coins, History, RotateCcw, AlertTriangle, Eye
+  Percent, Coins, History, RotateCcw, AlertTriangle, Eye
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
