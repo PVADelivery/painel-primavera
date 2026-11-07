@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { formatDeliveryValue } from "@/lib/delivery";
+import { formatDeliveryValue, formatDisplayAddress } from "@/lib/delivery";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DeliveryStatusBadge } from "@/components/admin/DeliveryStatusBadge";
 import { AdminNewDeliveryModal } from "@/components/admin/AdminNewDeliveryModal";
@@ -246,7 +246,7 @@ function DeliveriesPage() {
         <div class="label">Cliente</div>
         <div class="value">${delivery.customer_name} ${(delivery as any).customer_phone ? `(${(delivery as any).customer_phone})` : ""}</div>
         <div class="label">Endereço</div>
-        <div class="value">${delivery.dropoff_address || delivery.address || "—"}</div>
+        <div class="value">${formatDisplayAddress(delivery.dropoff_address || delivery.address)}</div>
         <div class="label">Empresa / Solicitante</div>
         <div class="value">${(delivery as any).is_customer_errand || !delivery.company_id ? "CLIENTE MARKETPLACE" : delivery.companies?.name || "CLIENTE MARKETPLACE"}</div>
         <div class="label">Status</div>
@@ -525,7 +525,7 @@ function AdminDispatchWindowWidget({
                         )}
                       </td>
                       <td className="p-4 hidden lg:table-cell">
-                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">{delivery.dropoff_address || delivery.address}</p>
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">{formatDisplayAddress(delivery.dropoff_address || delivery.address)}</p>
                       </td>
                       <td className="p-4">
                         {delivery.delivery_drivers ? (
@@ -741,7 +741,7 @@ function AdminDispatchWindowWidget({
                   <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest px-1">Endereço de Coleta (Partida)</p>
                   <div className="p-3 bg-card border border-emerald-500/30 rounded-xl flex items-start gap-3">
                     <MapPin className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <p className="text-sm font-medium text-foreground">{(detailDelivery as any).pickup_address}</p>
+                    <p className="text-sm font-medium text-foreground">{formatDisplayAddress((detailDelivery as any).pickup_address)}</p>
                   </div>
                 </div>
               )}
@@ -750,7 +750,7 @@ function AdminDispatchWindowWidget({
                 <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest px-1">Endereço de Entrega (Destino)</p>
                 <div className="p-3 bg-card border border-rose-500/30 rounded-xl flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium text-foreground">{detailDelivery.dropoff_address || detailDelivery.address || "—"}</p>
+                  <p className="text-sm font-medium text-foreground">{formatDisplayAddress(detailDelivery.dropoff_address || detailDelivery.address)}</p>
                 </div>
               </div>
               
@@ -898,7 +898,7 @@ function AdminDispatchWindowWidget({
                 <p className="text-sm font-medium text-foreground">
                   #{dispatchDelivery.id.slice(0, 8).toUpperCase()} — {dispatchDelivery.customer_name}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">{dispatchDelivery.dropoff_address || dispatchDelivery.address}</p>
+                <p className="text-xs text-muted-foreground mt-1">{formatDisplayAddress(dispatchDelivery.dropoff_address || dispatchDelivery.address)}</p>
               </div>
 
               <div>

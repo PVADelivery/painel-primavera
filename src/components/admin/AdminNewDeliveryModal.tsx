@@ -6,6 +6,7 @@ import { useRegions } from "@/services/regions";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { resolveRegionDeliveryFee } from "@/lib/pricingResolver";
+import { formatCleanDeliveryAddress } from "@/lib/delivery";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
@@ -166,9 +167,7 @@ export function AdminNewDeliveryModal({ open, onOpenChange, onSuccess }: Props) 
 
     try {
       const shortId = `ADM-${Math.floor(1000 + Math.random() * 9000)}`;
-      const fullAddr = addressNumber
-        ? `${address.trim()}, ${addressNumber.trim()}${neighborhood ? ` - ${neighborhood.trim()}` : ""}`
-        : `${address.trim()}${neighborhood ? ` - ${neighborhood.trim()}` : ""}`;
+      const fullAddr = formatCleanDeliveryAddress(address, addressNumber, neighborhood, complement);
 
       const numFee = Number(deliveryFee.replace(",", ".")) || 10.0;
       const numOrderVal = Number(orderValue.replace(",", ".")) || 0;
