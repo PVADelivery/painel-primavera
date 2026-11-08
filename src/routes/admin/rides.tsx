@@ -94,10 +94,21 @@ function AdminDispatchWindowWidget({
 }) {
   const [now, setNow] = useState(Date.now());
 
+  const hasPending = useMemo(() => {
+    return rides.some(r => {
+      if (r.driver_id) return false;
+      if (["completed", "cancelled"].includes(r.status)) return false;
+      if (!r.created_at) return false;
+      return getElapsedSeconds(r.created_at) < 120;
+    });
+  }, [rides]);
+
   useEffect(() => {
+    if (!hasPending) return;
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [hasPending]);
 
   const pendingDispatchList = rides.filter(r => {
     if (r.driver_id) return false;

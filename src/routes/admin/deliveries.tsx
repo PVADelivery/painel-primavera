@@ -307,12 +307,22 @@ function AdminDispatchWindowWidget({
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(0);
 
+  const hasPending = useMemo(() => {
+    return deliveries.some(d => {
+      if (d.driver_id) return false;
+      if (["delivered", "cancelled", "completed"].includes(d.status)) return false;
+      if (!d.created_at) return false;
+      return getElapsedSeconds(d.created_at) < 120;
+    });
+  }, [deliveries]);
+
   useEffect(() => {
     setMounted(true);
+    if (!hasPending) return;
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [hasPending]);
 
   if (!mounted) return null;
 
